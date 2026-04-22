@@ -25,7 +25,7 @@ export default async function LotesPage() {
 
   const { data: exams } = await supabase
     .from('exams')
-    .select('id, year, color, status, created_at, specialties(name, exam_boards(name))')
+    .select('id, year, booklet_color, status, created_at, specialties(name, exam_boards(name))')
     .order('created_at', { ascending: false })
 
   return (
@@ -78,7 +78,7 @@ export default async function LotesPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">{exam.year}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{exam.color ?? '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground capitalize">{exam.booklet_color ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.pending}`}>
                         {STATUS_LABELS[statusKey] ?? statusKey}

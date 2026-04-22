@@ -30,9 +30,7 @@ export async function POST(request: Request) {
   // 1. Busca questão
   const { data: question, error: qErr } = await supabase
     .from('questions')
-    .select(
-      'id, question_no, exam_id, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e, correct_answer'
-    )
+    .select('id, question_number, exam_id, stem, alternatives, correct_answer')
     .eq('id', question_id)
     .single()
 
@@ -40,16 +38,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Questão não encontrada' }, { status: 404 })
   }
 
+  const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+
   // 2. Tenta obter gabarito — primeiro em questions.correct_answer, depois em answer_keys
   let correctAnswer: string = question.correct_answer ?? ''
   if (!correctAnswer) {
     const { data: ak } = await supabase
       .from('answer_keys')
-      .select('answer')
+      .select('correct_answer')
       .eq('exam_id', question.exam_id)
-      .eq('question_no', question.question_no)
+      .eq('question_number', question.question_number)
       .single()
-    correctAnswer = ak?.answer ?? ''
+    correctAnswer = ak?.correct_answer ?? ''
   }
 
   const gabaritoText = correctAnswer
@@ -59,12 +59,12 @@ export async function POST(request: Request) {
   // 3. Monta prompt
   const prompt = `Escreva um comentário didático (200–350 palavras) para esta questão TEMI/AMIB.
 
-Questão ${question.question_no}: ${question.stem}
-A) ${question.alternative_a ?? ''}
-B) ${question.alternative_b ?? ''}
-C) ${question.alternative_c ?? ''}
-D) ${question.alternative_d ?? ''}
-E) ${question.alternative_e ?? ''}
+Questão ${question.question_number}: ${question.stem}
+A) ${alternatives['A'] ?? ''}
+B) ${alternatives['B'] ?? ''}
+C) ${alternatives['C'] ?? ''}
+D) ${alternatives['D'] ?? ''}
+E) ${alternatives['E'] ?? ''}
 ${gabaritoText}
 
 Explique por que o gabarito está correto, justifique por que as demais alternativas estão erradas e contextualize com a prática clínica em UTI. Tom didático, direto, em português.
@@ -90,10 +90,10 @@ Retorne APENAS o texto do comentário, sem título, sem markdown.`
     .from('question_comments')
     .insert({
       question_id,
-      type: 'ai_generated',
+      comment_type: 'explicacao',
       content: commentText.trim(),
-      model_used: MODELS.opus,
-      is_published: false,
+      ai_model: MODELS.opus,
+      created_by_ai: true,
     })
     .select('id')
     .single()

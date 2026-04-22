@@ -9,23 +9,17 @@ export type Job = {
   status: string
   attempts: number
   error: string | null
-  retry_after: string | null
   created_at: string
-  updated_at: string
+  updated_at: string | null
+  retry_after: string | null
 }
 
 export type JobHandler = (job: Job) => Promise<void>
 
-// Dispatcher de handlers: preenchido por cada módulo de pipeline (Sessões 2.2 e 2.3)
 const handlers = new Map<string, JobHandler>()
 
 export function registerHandler(type: string, handler: JobHandler) {
   handlers.set(type, handler)
-}
-
-// Backoff exponencial: 60s × 2^(attempt-1) — D08
-function retryAfterMs(attempts: number): number {
-  return 60_000 * Math.pow(2, attempts - 1)
 }
 
 /**
@@ -61,10 +55,9 @@ export async function processBatch(concurrency = 5): Promise<{
       const handler = handlers.get(job.type)
 
       if (!handler) {
-        // Handler ainda não implementado — libera o job sem consumir tentativa
         await supabase
           .from('jobs')
-          .update({ status: 'pending', attempts: job.attempts - 1, updated_at: new Date().toISOString() })
+          .update({ status: 'pending', attempts: job.attempts - 1 })
           .eq('id', job.id)
         skipped++
         return
@@ -85,22 +78,17 @@ export async function processBatch(concurrency = 5): Promise<{
         console.error(`[worker] job ${job.id} (${job.type}) falhou:`, errorMsg)
 
         if (job.attempts >= 3) {
-          // Esgotou tentativas
           await supabase
             .from('jobs')
             .update({ status: 'failed', error: errorMsg, updated_at: new Date().toISOString() })
             .eq('id', job.id)
         } else {
-          // Reagendar com backoff
-          const retryAfter = new Date(Date.now() + retryAfterMs(job.attempts)).toISOString()
+          // Backoff exponencial: 60s × 2^(attempt-1)
+          const backoffMs = 60_000 * Math.pow(2, job.attempts - 1)
+          const retryAfter = new Date(Date.now() + backoffMs).toISOString()
           await supabase
             .from('jobs')
-            .update({
-              status: 'pending',
-              error: errorMsg,
-              retry_after: retryAfter,
-              updated_at: new Date().toISOString(),
-            })
+            .update({ status: 'pending', error: errorMsg, retry_after: retryAfter })
             .eq('id', job.id)
         }
       }
@@ -110,9 +98,6 @@ export async function processBatch(concurrency = 5): Promise<{
   return { processed, errors, skipped }
 }
 
-/**
- * Enfileira um novo job.
- */
 export async function enqueueJob(
   type: Job['type'],
   payload: Record<string, unknown>,

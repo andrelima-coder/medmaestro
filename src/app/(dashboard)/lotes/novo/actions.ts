@@ -1,7 +1,9 @@
 'use server'
 
+import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { uploadFile } from '@/lib/storage/signed-urls'
+import { logAudit } from '@/lib/audit'
 
 export type CreateExamState = {
   error?: string
@@ -12,14 +14,15 @@ export async function createExamAction(
   _prev: CreateExamState,
   formData: FormData
 ): Promise<CreateExamState> {
+  const boardId = formData.get('board_id') as string | null
   const specialtyId = formData.get('specialty_id') as string | null
   const yearRaw = formData.get('year') as string | null
   const color = (formData.get('color') as string | null)?.toUpperCase()
   const pdfProva = formData.get('pdf_prova') as File | null
   const pdfGabarito = formData.get('pdf_gabarito') as File | null
 
-  if (!specialtyId || !yearRaw || !color) {
-    return { error: 'Especialidade, ano e cor são obrigatórios.' }
+  if (!boardId || !specialtyId || !yearRaw || !color) {
+    return { error: 'Banca, especialidade, ano e cor são obrigatórios.' }
   }
 
   const year = parseInt(yearRaw, 10)
@@ -31,9 +34,15 @@ export async function createExamAction(
     return { error: 'PDF da prova é obrigatório.' }
   }
 
+  // Autentica usuário para rastreabilidade
+  const supabaseAuth = await createClient()
+  const {
+    data: { user },
+  } = await supabaseAuth.auth.getUser()
+  if (!user) return { error: 'Não autenticado.' }
+
   const supabase = createServiceClient()
 
-  // Busca specialty slug para compor o path
   const { data: specialty, error: spErr } = await supabase
     .from('specialties')
     .select('slug')
@@ -77,14 +86,15 @@ export async function createExamAction(
     .from('exams')
     .upsert(
       {
+        board_id: boardId,
         specialty_id: specialtyId,
         year,
-        color: color.toLowerCase(),
-        pdf_path: pdfPath,
-        gabarito_path: gabaritoPath,
-        status: 'pending',
+        booklet_color: color.toLowerCase(),
+        source_pdf_path: pdfPath,
+        answer_key_pdf_path: gabaritoPath,
+        created_by: user.id,
       },
-      { onConflict: 'specialty_id,year,color' }
+      { onConflict: 'board_id,specialty_id,year,booklet_color' }
     )
     .select('id')
     .single()
@@ -93,7 +103,16 @@ export async function createExamAction(
     return { error: `Falha ao criar exame: ${examErr?.message}` }
   }
 
-  // Dispara parse-gabarito em background (síncrono, rápido) se gabarito foi enviado
+  // Log de auditoria — quem fez upload de qual prova
+  await logAudit(user.id, 'exam', exam.id, 'exam_uploaded', null, {
+    specialty_id: specialtyId,
+    year,
+    booklet_color: color.toLowerCase(),
+    pdf_path: pdfPath,
+    has_gabarito: !!gabaritoPath,
+  })
+
+  // Dispara parse-gabarito em background se gabarito foi enviado
   if (gabaritoPath) {
     const workerSecret = process.env.WORKER_SECRET ?? ''
     try {
@@ -107,7 +126,7 @@ export async function createExamAction(
         body: JSON.stringify({ exam_id: exam.id, booklet_color: color }),
       })
     } catch {
-      // Não bloqueia o fluxo — gabarito pode ser processado depois
+      // Não bloqueia o fluxo
     }
   }
 

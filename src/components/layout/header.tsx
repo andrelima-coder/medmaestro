@@ -1,5 +1,5 @@
-import { Search } from 'lucide-react'
 import { Breadcrumb } from './breadcrumb'
+import { HeaderSearch } from './header-search'
 import { LogoutButton } from './logout-button'
 import { ROLE_LABELS, type UserRole } from '@/types'
 
@@ -32,15 +32,7 @@ export function Header({ fullName, email, role }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {/* Search — ativado na Sessão 4.1 */}
-        <div className="relative hidden lg:flex items-center">
-          <Search className="absolute left-2.5 size-3.5 text-muted-foreground/40 pointer-events-none" />
-          <input
-            placeholder="Buscar questão…"
-            disabled
-            className="h-8 w-48 rounded-lg border border-white/[0.08] bg-white/[0.04] pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none cursor-not-allowed opacity-60"
-          />
-        </div>
+        <HeaderSearch />
 
         {/* Avatar + nome */}
         <div className="flex items-center gap-2">

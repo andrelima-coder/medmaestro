@@ -5,20 +5,18 @@ import { createServiceClient } from '@/lib/supabase/service'
 export const metadata = { title: 'Fila de Revisão — MedMaestro' }
 
 const STATUS_LABELS: Record<string, string> = {
-  extracted: 'Extraído',
-  flagged: 'Sinalizado',
-  reviewing: 'Em revisão',
+  pending_extraction: 'Aguardando',
+  in_review: 'Em revisão',
 }
 
 const STATUS_CLASSES: Record<string, string> = {
-  extracted: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  flagged: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  reviewing: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  pending_extraction: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  in_review: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 }
 
 function confidenceBar(score: number | null): string {
   if (score === null) return '—'
-  return `${Math.round(score * 100)}%`
+  return `${score}%`
 }
 
 export default async function RevisaoPage() {
@@ -30,21 +28,19 @@ export default async function RevisaoPage() {
   const service = createServiceClient()
   const now = new Date().toISOString()
 
-  // Busca questões pendentes de revisão com join em exames e assignments
   const { data: questions } = await service
     .from('questions')
     .select(
-      'id, question_no, stem, status, has_image, confidence_score, exam_id, exams(year, color, specialties(name)), review_assignments(reviewer_id, expires_at)'
+      'id, question_number, stem, status, has_images, extraction_confidence, exam_id, exams(year, booklet_color, specialties(name)), review_assignments(assigned_to, expires_at, status)'
     )
-    .in('status', ['extracted', 'flagged', 'reviewing'])
+    .in('status', ['pending_extraction', 'in_review'])
 
-  // Coleta reviewer_ids únicos para buscar nomes
   const reviewerIds = [
     ...new Set(
       (questions ?? [])
         .map((q) => {
-          const ra = q.review_assignments as unknown as { reviewer_id: string; expires_at: string }[] | null
-          return ra?.[0]?.reviewer_id
+          const ra = q.review_assignments as unknown as { assigned_to: string; expires_at: string; status: string }[] | null
+          return ra?.[0]?.assigned_to
         })
         .filter(Boolean) as string[]
     ),
@@ -61,17 +57,16 @@ export default async function RevisaoPage() {
     }
   }
 
-  // Ordena: flagged → has_image → confidence_score asc
-  const STATUS_RANK: Record<string, number> = { flagged: 0, reviewing: 1, extracted: 2 }
+  const STATUS_RANK: Record<string, number> = { in_review: 0, pending_extraction: 1 }
   const sorted = (questions ?? []).slice().sort((a, b) => {
-    const rankA = STATUS_RANK[a.status ?? 'extracted'] ?? 2
-    const rankB = STATUS_RANK[b.status ?? 'extracted'] ?? 2
+    const rankA = STATUS_RANK[a.status ?? 'pending_extraction'] ?? 1
+    const rankB = STATUS_RANK[b.status ?? 'pending_extraction'] ?? 1
     if (rankA !== rankB) return rankA - rankB
-    const imgA = a.has_image ? 0 : 1
-    const imgB = b.has_image ? 0 : 1
+    const imgA = (a.has_images as boolean | null) ? 0 : 1
+    const imgB = (b.has_images as boolean | null) ? 0 : 1
     if (imgA !== imgB) return imgA - imgB
-    const confA = a.confidence_score ?? 1
-    const confB = b.confidence_score ?? 1
+    const confA = (a.extraction_confidence as number | null) ?? 100
+    const confB = (b.extraction_confidence as number | null) ?? 100
     return confA - confB
   })
 
@@ -108,16 +103,16 @@ export default async function RevisaoPage() {
             </thead>
             <tbody>
               {sorted.map((q) => {
-                const exam = q.exams as unknown as { year: number; color: string | null; specialties: { name: string } | null } | null
-                const ra = q.review_assignments as unknown as { reviewer_id: string; expires_at: string }[] | null
+                const exam = q.exams as unknown as { year: number; booklet_color: string | null; specialties: { name: string } | null } | null
+                const ra = q.review_assignments as unknown as { assigned_to: string; expires_at: string; status: string }[] | null
                 const assignment = ra?.[0] ?? null
                 const isActivelyLocked =
-                  assignment &&
+                  assignment?.status === 'in_progress' &&
                   new Date(assignment.expires_at) > new Date(now) &&
-                  assignment.reviewer_id !== user?.id
-                const reviewerName = assignment ? (profileMap[assignment.reviewer_id] ?? 'Revisor') : null
+                  assignment.assigned_to !== user?.id
+                const reviewerName = assignment ? (profileMap[assignment.assigned_to] ?? 'Revisor') : null
                 const stem = (q.stem ?? '').slice(0, 80) + ((q.stem?.length ?? 0) > 80 ? '…' : '')
-                const statusKey = q.status ?? 'extracted'
+                const statusKey = q.status ?? 'pending_extraction'
 
                 return (
                   <tr
@@ -125,27 +120,27 @@ export default async function RevisaoPage() {
                     className="border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors"
                   >
                     <td className="px-4 py-3 max-w-xs">
-                      <p className="font-medium text-foreground">Q{q.question_no}</p>
+                      <p className="font-medium text-foreground">Q{q.question_number}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">{stem || '—'}</p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {exam?.specialties?.name ?? '—'}{exam ? ` · ${exam.year}` : ''}
-                      {exam?.color ? ` · ${exam.color.charAt(0).toUpperCase() + exam.color.slice(1)}` : ''}
+                      {exam?.booklet_color ? ` · ${exam.booklet_color.charAt(0).toUpperCase() + exam.booklet_color.slice(1)}` : ''}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.extracted}`}>
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.pending_extraction}`}>
                         {STATUS_LABELS[statusKey] ?? statusKey}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {q.has_image ? (
+                      {(q.has_images as boolean | null) ? (
                         <span title="Contém imagem" className="text-purple-400">⬛</span>
                       ) : (
                         <span className="text-white/20">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                      {confidenceBar(q.confidence_score)}
+                      {confidenceBar(q.extraction_confidence as number | null)}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {isActivelyLocked && reviewerName ? reviewerName : '—'}

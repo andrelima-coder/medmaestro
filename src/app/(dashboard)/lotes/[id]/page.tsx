@@ -10,7 +10,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
 
   const { data: exam } = await supabase
     .from('exams')
-    .select('id, year, color, status, specialties(name)')
+    .select('id, year, booklet_color, status, specialties(name)')
     .eq('id', id)
     .single()
 
@@ -26,7 +26,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
       <div>
         <h1 className="text-xl font-semibold text-foreground">
           {(exam.specialties as unknown as { name: string } | null)?.name ?? 'Exame'} {exam.year}
-          {exam.color ? ` · ${exam.color.charAt(0).toUpperCase() + exam.color.slice(1)}` : ''}
+          {exam.booklet_color ? ` · ${exam.booklet_color.charAt(0).toUpperCase() + exam.booklet_color.slice(1)}` : ''}
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Progresso da extração</p>
       </div>
@@ -36,7 +36,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
           id: exam.id,
           status: exam.status as 'pending' | 'extracting' | 'done' | 'error',
           year: exam.year,
-          color: exam.color,
+          booklet_color: exam.booklet_color,
           specialties: exam.specialties as unknown as { name: string } | null,
         }}
         initialCount={count ?? 0}

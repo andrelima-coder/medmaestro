@@ -5,17 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createExamAction, type CreateExamState } from '@/app/(dashboard)/lotes/novo/actions'
 
-type Specialty = {
-  id: string
-  name: string
-  exam_boards: { name: string } | null
-}
+type Specialty = { id: string; name: string }
+type Board = { id: string; name: string; short_name: string }
 
 const COLORS = ['AMARELO', 'AZUL', 'ROSA', 'VERDE'] as const
 
 const initialState: CreateExamState = {}
 
-export function UploadForm({ specialties }: { specialties: Specialty[] }) {
+export function UploadForm({ specialties, boards }: { specialties: Specialty[]; boards: Board[] }) {
   const router = useRouter()
   const [state, action, pending] = useActionState(createExamAction, initialState)
 
@@ -34,6 +31,25 @@ export function UploadForm({ specialties }: { specialties: Specialty[] }) {
       )}
 
       <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-foreground" htmlFor="board_id">
+          Banca
+        </label>
+        <select
+          id="board_id"
+          name="board_id"
+          required
+          className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground focus:border-ring focus:outline-none"
+        >
+          <option value="">Selecione...</option>
+          {boards.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.short_name} — {b.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-foreground" htmlFor="specialty_id">
           Especialidade
         </label>
@@ -46,7 +62,7 @@ export function UploadForm({ specialties }: { specialties: Specialty[] }) {
           <option value="">Selecione...</option>
           {specialties.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.exam_boards?.name ? `${s.exam_boards.name} — ` : ''}{s.name}
+              {s.name}
             </option>
           ))}
         </select>

@@ -34,12 +34,9 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient()
 
-  // 1. Busca questão original
   const { data: question, error: qErr } = await supabase
     .from('questions')
-    .select(
-      'id, question_no, exam_id, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e'
-    )
+    .select('id, question_number, exam_id, stem, alternatives')
     .eq('id', question_id)
     .single()
 
@@ -47,26 +44,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Questão não encontrada' }, { status: 404 })
   }
 
-  // 2. Determina novo question_no
+  const alts = (question.alternatives as Record<string, string> | null) ?? {}
+
   const { data: maxRow } = await supabase
     .from('questions')
-    .select('question_no')
+    .select('question_number')
     .eq('exam_id', question.exam_id)
-    .order('question_no', { ascending: false })
+    .order('question_number', { ascending: false })
     .limit(1)
     .single()
 
-  const newQuestionNo = (maxRow?.question_no ?? 0) + 1
+  const newQuestionNumber = ((maxRow?.question_number as number | null) ?? 0) + 1
 
-  // 3. Monta prompt
   const prompt = `Você é um professor de medicina intensiva. Crie uma variante didática desta questão com um cenário clínico diferente, mas que teste o mesmo conhecimento e objetivo de aprendizagem. Use português, nível UTI.
 
 Questão original: ${question.stem}
-A) ${question.alternative_a ?? ''}
-B) ${question.alternative_b ?? ''}
-C) ${question.alternative_c ?? ''}
-D) ${question.alternative_d ?? ''}
-E) ${question.alternative_e ?? ''}
+A) ${alts['A'] ?? ''}
+B) ${alts['B'] ?? ''}
+C) ${alts['C'] ?? ''}
+D) ${alts['D'] ?? ''}
+E) ${alts['E'] ?? ''}
 
 Retorne APENAS JSON (sem markdown):
 {
@@ -76,7 +73,6 @@ Retorne APENAS JSON (sem markdown):
   "rationale": "breve justificativa da alternativa correta"
 }`
 
-  // 4. Chama Claude Opus
   let generated: GeneratedQuestion
   try {
     const raw = await complete({
@@ -92,29 +88,22 @@ Retorne APENAS JSON (sem markdown):
     )
   }
 
-  // 5. Valida correct answer
   const correctAnswer = generated.correct?.toUpperCase()
   if (!correctAnswer || !/^[A-E]$/.test(correctAnswer)) {
     return NextResponse.json({ error: 'Resposta correta inválida retornada pelo modelo' }, { status: 500 })
   }
 
-  // 6. Insere nova questão
   const { data: inserted, error: insertErr } = await supabase
     .from('questions')
     .insert({
       exam_id: question.exam_id,
-      question_no: newQuestionNo,
+      question_number: newQuestionNumber,
       stem: generated.stem,
-      alternative_a: generated.alternatives['A'] ?? null,
-      alternative_b: generated.alternatives['B'] ?? null,
-      alternative_c: generated.alternatives['C'] ?? null,
-      alternative_d: generated.alternatives['D'] ?? null,
-      alternative_e: generated.alternatives['E'] ?? null,
+      alternatives: generated.alternatives,
       correct_answer: correctAnswer,
-      has_image: false,
-      confidence_score: 0.8,
-      extraction_model: MODELS.opus,
-      status: 'extracted',
+      has_images: false,
+      extraction_confidence: 80,
+      status: 'pending_extraction',
     })
     .select('id')
     .single()
@@ -129,6 +118,6 @@ Retorne APENAS JSON (sem markdown):
   return NextResponse.json({
     ok: true,
     new_question_id: inserted.id,
-    new_question_no: newQuestionNo,
+    new_question_number: newQuestionNumber,
   })
 }

@@ -32,21 +32,21 @@ export async function POST(request: Request) {
   // 1. Busca exame
   const { data: exam, error: examError } = await supabase
     .from('exams')
-    .select('id, gabarito_path')
+    .select('id, answer_key_pdf_path')
     .eq('id', exam_id)
     .single()
 
   if (examError || !exam) {
     return NextResponse.json({ error: 'Exame não encontrado' }, { status: 404 })
   }
-  if (!exam.gabarito_path) {
-    return NextResponse.json({ error: 'Exame não possui gabarito_path' }, { status: 422 })
+  if (!exam.answer_key_pdf_path) {
+    return NextResponse.json({ error: 'Exame não possui gabarito em PDF' }, { status: 422 })
   }
 
   // 2. Baixa PDF do bucket
   const { data: fileData, error: dlError } = await supabase.storage
     .from('exam-pdfs')
-    .download(exam.gabarito_path)
+    .download(exam.answer_key_pdf_path)
 
   if (dlError || !fileData) {
     return NextResponse.json(
@@ -92,14 +92,14 @@ export async function POST(request: Request) {
   // 5. Upsert em answer_keys
   const rows = questionNumbers.map((qNum) => ({
     exam_id,
-    question_no: qNum,
-    answer: answers[qNum],
-    is_altered: result.alteracoes.some((a) => a.question === qNum && a.color === color),
+    question_number: qNum,
+    correct_answer: answers[qNum],
+    notes: result.alteracoes.some((a) => a.question === qNum && a.color === color) ? 'alterada' : null,
   }))
 
   const { error: upsertError } = await supabase
     .from('answer_keys')
-    .upsert(rows, { onConflict: 'exam_id,question_no' })
+    .upsert(rows, { onConflict: 'exam_id,question_number' })
 
   if (upsertError) {
     return NextResponse.json(

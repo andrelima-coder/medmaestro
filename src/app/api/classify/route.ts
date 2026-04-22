@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   // 1. Busca questão
   const { data: question, error: qErr } = await supabase
     .from('questions')
-    .select('id, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e')
+    .select('id, stem, alternatives')
     .eq('id', question_id)
     .single()
 
@@ -44,10 +44,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Questão não encontrada' }, { status: 404 })
   }
 
-  // 2. Busca tags ativas com dimensão da taxonomia
+  const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+
+  // 2. Busca tags ativas — dimension está diretamente na tabela
   const { data: tags } = await supabase
     .from('tags')
-    .select('id, label, prompt_hint, taxonomies!inner(dimension)')
+    .select('id, label, dimension')
     .eq('is_active', true)
 
   if (!tags || tags.length === 0) {
@@ -59,9 +61,9 @@ export async function POST(request: Request) {
   const tagByLabel: Record<string, string> = {} // label → id
 
   for (const tag of tags) {
-    const dimension = (tag.taxonomies as unknown as { dimension: string }).dimension
-    if (!tagsByDimension[dimension]) tagsByDimension[dimension] = []
-    tagsByDimension[dimension].push(tag.label)
+    const dim = tag.dimension as string
+    if (!tagsByDimension[dim]) tagsByDimension[dim] = []
+    tagsByDimension[dim].push(tag.label)
     tagByLabel[tag.label] = tag.id
   }
 
@@ -74,11 +76,11 @@ Dimensões e tags disponíveis:
 ${buildTagsPrompt(tagsByDimension)}`
 
   const questionText = `Questão: ${question.stem}
-A) ${question.alternative_a ?? ''}
-B) ${question.alternative_b ?? ''}
-C) ${question.alternative_c ?? ''}
-D) ${question.alternative_d ?? ''}
-E) ${question.alternative_e ?? ''}`
+A) ${alternatives['A'] ?? ''}
+B) ${alternatives['B'] ?? ''}
+C) ${alternatives['C'] ?? ''}
+D) ${alternatives['D'] ?? ''}
+E) ${alternatives['E'] ?? ''}`
 
   // 5. Chama Claude Sonnet
   let result: { tags: string[] }
@@ -110,7 +112,7 @@ E) ${question.alternative_e ?? ''}`
   const rows = validTagIds.map((tag_id) => ({
     question_id,
     tag_id,
-    origin: 'ai' as const,
+    added_by_type: 'ai',
   }))
 
   const { error: upsertErr } = await supabase

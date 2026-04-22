@@ -1,5 +1,6 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
@@ -18,15 +19,18 @@ export async function renewClaim(
   const service = createServiceClient()
   const now = new Date()
 
-  // Verifica que este usuário ainda é o revisor ativo
   const { data: existing } = await service
     .from('review_assignments')
-    .select('reviewer_id, expires_at')
+    .select('assigned_to, expires_at, status')
     .eq('question_id', questionId)
     .single()
 
-  // Outro revisor com assignment válido assumiu
-  if (existing && existing.reviewer_id !== user.id && new Date(existing.expires_at) > now) {
+  if (
+    existing &&
+    existing.assigned_to !== user.id &&
+    existing.status === 'in_progress' &&
+    new Date(existing.expires_at) > now
+  ) {
     return { ok: false }
   }
 
@@ -35,7 +39,8 @@ export async function renewClaim(
   const { error } = await service.from('review_assignments').upsert(
     {
       question_id: questionId,
-      reviewer_id: user.id,
+      assigned_to: user.id,
+      status: 'in_progress',
       assigned_at: now.toISOString(),
       expires_at: expiresAt,
     },
@@ -44,4 +49,76 @@ export async function renewClaim(
 
   if (error) return { ok: false }
   return { ok: true, expiresAt }
+}
+
+type ReviewAction = 'approve' | 'reject' | 'flag'
+
+const ACTION_STATUS: Record<ReviewAction, string> = {
+  approve: 'approved',
+  reject: 'rejected',
+  flag: 'pending_extraction',
+}
+
+export async function submitReviewAction(
+  questionId: string,
+  action: ReviewAction,
+  note?: string
+): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const service = createServiceClient()
+
+  const { data: question, error: qErr } = await service
+    .from('questions')
+    .select('*')
+    .eq('id', questionId)
+    .single()
+
+  if (qErr || !question) throw new Error('Questão não encontrada')
+
+  const newStatus = ACTION_STATUS[action]
+
+  const { data: lastRev } = await service
+    .from('question_revisions')
+    .select('revision_number')
+    .eq('question_id', questionId)
+    .order('revision_number', { ascending: false })
+    .limit(1)
+    .single()
+
+  const nextRevision = (lastRev?.revision_number ?? 0) + 1
+
+  await service.from('question_revisions').insert({
+    question_id: questionId,
+    revision_number: nextRevision,
+    created_by: user.id,
+    snapshot: question,
+    change_reason: note ? `${action}: ${note}` : action,
+  })
+
+  await service
+    .from('questions')
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .eq('id', questionId)
+
+  await service
+    .from('review_assignments')
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .eq('question_id', questionId)
+    .eq('assigned_to', user.id)
+
+  await service.from('audit_logs').insert({
+    user_id: user.id,
+    entity_type: 'question',
+    entity_id: questionId,
+    action,
+    before_data: { status: question.status },
+    after_data: { status: newStatus, note: note ?? null },
+  })
+
+  redirect('/revisao')
 }

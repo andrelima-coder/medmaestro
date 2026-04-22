@@ -12,7 +12,7 @@ Para cada questão, retorne um objeto JSON com:
 - stem: enunciado completo
 - alternatives: { "A": "...", "B": "...", "C": "...", "D": "...", "E": "..." }
 - has_images: boolean (true se a questão contém imagens, figuras ou tabelas)
-- image_type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico"|"tabela"|"esquema"|"outro" (null se has_images=false)
+- image_type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico_pv"|"grafico_guyton"|"grafico_ventilacao"|"capnografia"|"rotem"|"eeg"|"tabela"|"esquema"|"outro" (null se has_images=false)
 - image_scope: "statement"|"alternative_a"|"alternative_b"|"alternative_c"|"alternative_d"|"alternative_e" (null se sem imagem)
 - confidence: 1 a 5 (confiança na extração — 5 = perfeito, 1 = muito incerto)
 - is_complete: boolean (true se todas as alternativas estão visíveis nestas páginas)
@@ -30,16 +30,21 @@ type ExtractedQuestion = {
   is_complete: boolean
 }
 
-// Mapeia o tipo de imagem retornado pelo Claude ao enum do banco
+// Valores válidos do enum image_type no banco (Português)
 const IMAGE_TYPE_MAP: Record<string, string> = {
   ecg: 'ecg',
-  radiografia: 'xray',
-  tomografia: 'ct_scan',
-  ultrassom: 'ultrasound',
-  grafico: 'graph',
-  tabela: 'table',
-  esquema: 'diagram',
-  outro: 'other',
+  radiografia: 'radiografia',
+  tomografia: 'tomografia',
+  ultrassom: 'ultrassom',
+  grafico_pv: 'grafico_pv',
+  grafico_guyton: 'grafico_guyton',
+  grafico_ventilacao: 'grafico_ventilacao',
+  capnografia: 'capnografia',
+  rotem: 'rotem',
+  eeg: 'eeg',
+  tabela: 'tabela',
+  esquema: 'esquema',
+  outro: 'outro',
 }
 
 function checkAuth(request: Request): boolean {
@@ -70,7 +75,7 @@ export async function POST(request: Request) {
   // 1. Busca exame + specialty slug para montar o path das imagens
   const { data: exam, error: examError } = await supabase
     .from('exams')
-    .select('id, pdf_path, year, color, specialty_id, specialties(slug)')
+    .select('id, pdf_path, year, booklet_color, specialty_id, specialties(slug)')
     .eq('id', exam_id)
     .single()
 
@@ -144,8 +149,7 @@ export async function POST(request: Request) {
     for (const q of extracted) {
       if (!q.is_complete) continue // ignora questões cortadas entre páginas
 
-      const confidenceScore = Math.max(0, Math.min(5, q.confidence)) / 5
-      const status = q.confidence >= 4 ? 'extracted' : 'flagged'
+      const extractionConfidence = Math.round((Math.max(0, Math.min(5, q.confidence)) / 5) * 100)
 
       // 5. Insere questão no banco
       const { data: inserted, error: insertError } = await supabase
@@ -153,19 +157,14 @@ export async function POST(request: Request) {
         .upsert(
           {
             exam_id,
-            question_no: q.question_number,
+            question_number: q.question_number,
             stem: q.stem,
-            alternative_a: q.alternatives['A'] ?? null,
-            alternative_b: q.alternatives['B'] ?? null,
-            alternative_c: q.alternatives['C'] ?? null,
-            alternative_d: q.alternatives['D'] ?? null,
-            alternative_e: q.alternatives['E'] ?? null,
-            has_image: q.has_images,
-            confidence_score: confidenceScore,
-            extraction_model: MODELS.sonnet,
-            status,
+            alternatives: q.alternatives,
+            has_images: q.has_images,
+            extraction_confidence: extractionConfidence,
+            status: 'pending_extraction',
           },
-          { onConflict: 'exam_id,question_no' }
+          { onConflict: 'exam_id,question_number' }
         )
         .select('id')
         .single()
@@ -179,11 +178,11 @@ export async function POST(request: Request) {
 
       // 6. Upload de imagens e registro em question_images
       if (q.has_images && q.image_scope) {
-        const imageType = IMAGE_TYPE_MAP[q.image_type ?? 'outro'] ?? 'other'
+        const imageType = IMAGE_TYPE_MAP[q.image_type ?? 'outro'] ?? 'outro'
         const imageScope = q.image_scope.toLowerCase()
 
         for (const page of batch) {
-          const imagePath = `${specialtySlug}/${exam.year}/${exam.color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
+          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
 
           try {
             await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')

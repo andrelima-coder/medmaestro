@@ -10,7 +10,7 @@ type Exam = {
   id: string
   status: ExamStatus
   year: number
-  color: string | null
+  booklet_color: string | null
   specialties: { name: string } | null
 }
 
@@ -119,7 +119,7 @@ export function ExamProgress({
           <div>
             <p className="text-sm text-muted-foreground">
               {exam.specialties?.name ?? 'Especialidade'} · {exam.year}
-              {exam.color ? ` · ${exam.color.charAt(0).toUpperCase() + exam.color.slice(1)}` : ''}
+              {exam.booklet_color ? ` · ${exam.booklet_color.charAt(0).toUpperCase() + exam.booklet_color.slice(1)}` : ''}
             </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{count}</p>
             <p className="text-xs text-muted-foreground">questões extraídas</p>

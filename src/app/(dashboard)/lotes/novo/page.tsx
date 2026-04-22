@@ -6,10 +6,10 @@ export const metadata = { title: 'Novo lote — MedMaestro' }
 export default async function NovoLotePage() {
   const supabase = await createClient()
 
-  const { data: specialties } = await supabase
-    .from('specialties')
-    .select('id, name, exam_boards(name)')
-    .order('name')
+  const [{ data: specialties }, { data: boards }] = await Promise.all([
+    supabase.from('specialties').select('id, name').order('name'),
+    supabase.from('exam_boards').select('id, name, short_name').order('name'),
+  ])
 
   return (
     <div className="aurora-bg flex flex-col gap-6">
@@ -21,7 +21,10 @@ export default async function NovoLotePage() {
       </div>
 
       <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6">
-        <UploadForm specialties={(specialties ?? []) as unknown as Parameters<typeof UploadForm>[0]['specialties']} />
+        <UploadForm
+          specialties={(specialties ?? []) as { id: string; name: string }[]}
+          boards={(boards ?? []) as { id: string; name: string; short_name: string }[]}
+        />
       </div>
     </div>
   )

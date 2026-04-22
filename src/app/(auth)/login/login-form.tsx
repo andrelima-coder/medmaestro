@@ -1,11 +1,14 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
+import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 import { loginAction } from './actions'
 import { cn } from '@/lib/utils'
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginAction, null)
+  const [showPassword, setShowPassword] = useState(false)
 
   return (
     <div className="w-full max-w-sm">
@@ -15,7 +18,7 @@ export function LoginForm() {
           Med<span className="text-[var(--mm-gold)]">Maestro</span>
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Banco de questões TEMI — AMIB
+          Sistema de gestão de banco de provas baseados e dados — By André Lima
         </p>
       </div>
 
@@ -48,23 +51,39 @@ export function LoginForm() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="password" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Senha
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              placeholder="••••••••"
-              className={cn(
-                'h-10 w-full rounded-lg border border-white/8 bg-white/4 px-3 text-sm text-foreground',
-                'placeholder:text-muted-foreground/50',
-                'outline-none transition-colors',
-                'focus:border-[var(--mm-gold)]/40 focus:bg-white/6',
-              )}
-            />
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Senha
+              </label>
+              <Link href="/forgot-password" className="text-xs text-[var(--mm-gold)] hover:underline">
+                Esqueceu a senha?
+              </Link>
+            </div>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                placeholder="••••••••"
+                className={cn(
+                  'h-10 w-full rounded-lg border border-white/8 bg-white/4 px-3 pr-10 text-sm text-foreground',
+                  'placeholder:text-muted-foreground/50',
+                  'outline-none transition-colors',
+                  'focus:border-[var(--mm-gold)]/40 focus:bg-white/6',
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {state?.error && (

@@ -4,7 +4,7 @@ import { writeFile, readFile, readdir, unlink } from 'fs/promises'
 import { join } from 'path'
 
 const execFileAsync = promisify(execFile)
-const PDFTOPPM = '/usr/local/bin/pdftoppm'
+const PDFTOPPM = process.env.PDFTOPPM_PATH ?? 'pdftoppm'
 
 export type RasterizedPage = {
   pageNumber: number
@@ -32,7 +32,7 @@ export async function rasterizePdf(
 
     await execFileAsync(PDFTOPPM, args).catch((err: NodeJS.ErrnoException) => {
       if (err.code === 'ENOENT') {
-        throw new Error('pdftoppm não encontrado em /usr/local/bin/pdftoppm')
+        throw new Error(`pdftoppm não encontrado (PATH: ${PDFTOPPM}). Instale poppler-utils e configure PDFTOPPM_PATH se necessário.`)
       }
       throw new Error(`pdftoppm falhou: ${(err as Error).message}`)
     })
