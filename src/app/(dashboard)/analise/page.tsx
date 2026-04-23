@@ -62,7 +62,7 @@ export default async function AnalisePage() {
   questions.forEach((q) => {
     const exam = examById[q.exam_id as string]
     if (!exam) return
-    const board = exam.exam_boards as { name: string; short_name: string } | null
+    const board = exam.exam_boards as unknown as { name: string; short_name: string } | null
     const key = board?.name ?? 'Sem banca'
     if (!boardMap[key]) boardMap[key] = { name: key, total: 0, approved: 0 }
     boardMap[key].total++
@@ -75,7 +75,7 @@ export default async function AnalisePage() {
   questions.forEach((q) => {
     const exam = examById[q.exam_id as string]
     if (!exam) return
-    const spec = exam.specialties as { name: string } | null
+    const spec = exam.specialties as unknown as { name: string } | null
     const key = spec?.name ?? 'Sem especialidade'
     if (!specMap[key]) specMap[key] = { name: key, total: 0, approved: 0 }
     specMap[key].total++
@@ -86,7 +86,7 @@ export default async function AnalisePage() {
   // Tags mais usadas
   const tagCount: Record<string, { label: string; dimension: string; count: number }> = {}
   ;(tagLinks ?? []).forEach((tl) => {
-    const tag = tl.tags as { label: string; dimension: string } | null
+    const tag = tl.tags as unknown as { label: string; dimension: string } | null
     if (!tag) return
     const key = tl.tag_id as string
     if (!tagCount[key]) tagCount[key] = { label: tag.label, dimension: tag.dimension, count: 0 }
