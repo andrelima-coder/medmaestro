@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { UserRoleSelect } from '@/components/admin/user-role-select'
+import { InviteUserForm } from '@/components/admin/invite-user-form'
 
 export const metadata = { title: 'Usuários — MedMaestro' }
 
@@ -36,11 +37,17 @@ export default async function UsuariosPage() {
 
   return (
     <div className="aurora-bg flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Usuários</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {profiles?.length ?? 0} usuário{(profiles?.length ?? 0) !== 1 ? 's' : ''} cadastrado{(profiles?.length ?? 0) !== 1 ? 's' : ''}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Usuários</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {profiles?.length ?? 0} usuário{(profiles?.length ?? 0) !== 1 ? 's' : ''} cadastrado{(profiles?.length ?? 0) !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 min-w-0 w-72 shrink-0">
+          <p className="text-xs text-muted-foreground">Convidar por e-mail</p>
+          <InviteUserForm />
+        </div>
       </div>
 
       <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
