@@ -173,6 +173,82 @@ export async function removeQuestionFromSimulado(
   return { ok: true }
 }
 
+export async function updateSimuladoQuestionNote(
+  simuladoId: string,
+  sqId: string,
+  note: string
+): Promise<{ ok: boolean; error?: string }> {
+  const user = await getUser()
+  if (!user) return { ok: false, error: 'Não autenticado' }
+
+  const service = createServiceClient()
+
+  const { data: simulado } = await service
+    .from('simulados')
+    .select('id')
+    .eq('id', simuladoId)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!simulado) return { ok: false, error: 'Simulado não encontrado' }
+
+  const { error } = await service
+    .from('simulado_questions')
+    .update({ note: note.trim() || null })
+    .eq('id', sqId)
+    .eq('simulado_id', simuladoId)
+
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath(`/simulados/${simuladoId}`)
+  return { ok: true }
+}
+
+export async function moveSimuladoQuestion(
+  simuladoId: string,
+  sqId: string,
+  direction: 'up' | 'down'
+): Promise<{ ok: boolean; error?: string }> {
+  const user = await getUser()
+  if (!user) return { ok: false, error: 'Não autenticado' }
+
+  const service = createServiceClient()
+
+  const { data: simulado } = await service
+    .from('simulados')
+    .select('id')
+    .eq('id', simuladoId)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!simulado) return { ok: false, error: 'Simulado não encontrado' }
+
+  const { data: rows } = await service
+    .from('simulado_questions')
+    .select('id, position')
+    .eq('simulado_id', simuladoId)
+    .order('position', { ascending: true })
+
+  if (!rows || rows.length < 2) return { ok: true }
+
+  const idx = rows.findIndex((r) => r.id === sqId)
+  if (idx === -1) return { ok: false, error: 'Questão não encontrada' }
+
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+  if (swapIdx < 0 || swapIdx >= rows.length) return { ok: true }
+
+  const current = rows[idx]
+  const swap = rows[swapIdx]
+
+  await Promise.all([
+    service.from('simulado_questions').update({ position: swap.position }).eq('id', current.id),
+    service.from('simulado_questions').update({ position: current.position }).eq('id', swap.id),
+  ])
+
+  revalidatePath(`/simulados/${simuladoId}`)
+  return { ok: true }
+}
+
 export async function searchQuestionsForSimulado(
   simuladoId: string,
   q: string
