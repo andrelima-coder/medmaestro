@@ -75,15 +75,15 @@ export async function POST(request: Request) {
   // 1. Busca exame + specialty slug para montar o path das imagens
   const { data: exam, error: examError } = await supabase
     .from('exams')
-    .select('id, pdf_path, year, booklet_color, specialty_id, specialties(slug)')
+    .select('id, source_pdf_path, year, booklet_color, specialty_id, specialties(slug)')
     .eq('id', exam_id)
     .single()
 
   if (examError || !exam) {
     return NextResponse.json({ error: 'Exame não encontrado' }, { status: 404 })
   }
-  if (!exam.pdf_path) {
-    return NextResponse.json({ error: 'Exame não possui pdf_path' }, { status: 422 })
+  if (!exam.source_pdf_path) {
+    return NextResponse.json({ error: 'Exame não possui PDF da prova' }, { status: 422 })
   }
 
   const specialtyRaw = exam.specialties as { slug: string } | { slug: string }[] | null
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
   // 2. Baixa PDF do bucket
   const { data: fileData, error: dlError } = await supabase.storage
     .from('exam-pdfs')
-    .download(exam.pdf_path)
+    .download(exam.source_pdf_path)
 
   if (dlError || !fileData) {
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)

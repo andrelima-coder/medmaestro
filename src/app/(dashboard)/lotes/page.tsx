@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { Button } from '@/components/ui/button'
 
 export const metadata = { title: 'Lotes — MedMaestro' }
@@ -22,10 +24,13 @@ const STATUS_CLASSES: Record<string, string> = {
 
 export default async function LotesPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  const { data: exams } = await supabase
+  const service = createServiceClient()
+  const { data: exams } = await service
     .from('exams')
-    .select('id, year, booklet_color, status, created_at, specialties(name, exam_boards(name))')
+    .select('id, year, booklet_color, status, created_at, exam_boards(name), specialties(name)')
     .order('created_at', { ascending: false })
 
   return (
@@ -42,7 +47,10 @@ export default async function LotesPage() {
 
       {!exams || exams.length === 0 ? (
         <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-10 text-center text-sm text-muted-foreground">
-          Nenhum lote enviado ainda.
+          Nenhum lote enviado ainda.{' '}
+          <Link href="/lotes/novo" className="text-[var(--mm-gold)] hover:underline">
+            Enviar primeiro lote →
+          </Link>
         </div>
       ) : (
         <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
@@ -58,27 +66,33 @@ export default async function LotesPage() {
             </thead>
             <tbody>
               {exams.map((exam) => {
-                const specialty = exam.specialties as unknown as { name: string; exam_boards: { name: string } | null } | null
-                const boardName = specialty?.exam_boards?.name ?? ''
+                const board = exam.exam_boards as unknown as { name: string } | null
+                const specialty = exam.specialties as unknown as { name: string } | null
+                const boardName = board?.name ?? ''
                 const specialtyName = specialty?.name ?? '—'
                 const label = boardName ? `${boardName} · ${specialtyName}` : specialtyName
-                const statusKey = exam.status ?? 'pending'
-                const date = new Date(exam.created_at).toLocaleDateString('pt-BR', {
-                  day: '2-digit', month: '2-digit', year: 'numeric'
+                const statusKey = (exam.status as string | null) ?? 'pending'
+                const date = new Date(exam.created_at as string).toLocaleDateString('pt-BR', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
                 })
 
                 return (
                   <tr
-                    key={exam.id}
+                    key={exam.id as string}
                     className="border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <Link href={`/lotes/${exam.id}`} className="font-medium text-foreground hover:text-primary transition-colors">
+                      <Link
+                        href={`/lotes/${exam.id}`}
+                        className="font-medium text-foreground hover:text-[var(--mm-gold)] transition-colors"
+                      >
                         {label}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-muted-foreground">{exam.year}</td>
-                    <td className="px-4 py-3 text-muted-foreground capitalize">{exam.booklet_color ?? '—'}</td>
+                    <td className="px-4 py-3 tabular-nums text-muted-foreground">{exam.year as number}</td>
+                    <td className="px-4 py-3 text-muted-foreground capitalize">
+                      {(exam.booklet_color as string | null) ?? '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.pending}`}>
                         {STATUS_LABELS[statusKey] ?? statusKey}

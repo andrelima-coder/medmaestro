@@ -1,14 +1,19 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { UploadForm } from '@/components/lotes/upload-form'
 
 export const metadata = { title: 'Novo lote — MedMaestro' }
 
 export default async function NovoLotePage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
+  const service = createServiceClient()
   const [{ data: specialties }, { data: boards }] = await Promise.all([
-    supabase.from('specialties').select('id, name').order('name'),
-    supabase.from('exam_boards').select('id, name, short_name').order('name'),
+    service.from('specialties').select('id, name').order('name'),
+    service.from('exam_boards').select('id, name, short_name').order('name'),
   ])
 
   return (
