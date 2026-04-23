@@ -97,7 +97,18 @@ export default async function SimuladoDetailPage({
             {questions.length} questão{questions.length !== 1 ? 'ões' : ''}
           </p>
         </div>
-        {isOwner && <SimuladoDelete simuladoId={id} />}
+        <div className="flex items-center gap-2 shrink-0">
+          {questions.length > 0 && (
+            <a
+              href={`/api/simulados/${id}/export`}
+              download
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-xs text-foreground"
+            >
+              ↓ Exportar Word
+            </a>
+          )}
+          {isOwner && <SimuladoDelete simuladoId={id} />}
+        </div>
       </div>
 
       <div className="flex gap-6 items-start">
