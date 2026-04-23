@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { AnaliseCharts } from '@/components/analise/analise-charts'
 
 export const metadata = { title: 'Análise — MedMaestro' }
 
@@ -31,7 +32,6 @@ export default async function AnalisePage() {
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if ((ROLE_RANK[profile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) redirect('/dashboard')
 
-  // Queries paralelas
   const [{ data: allQuestions }, { data: allExams }, { data: tagLinks }] = await Promise.all([
     service.from('questions').select('status, exam_id'),
     service
@@ -56,8 +56,9 @@ export default async function AnalisePage() {
     .map(([status, count]) => ({ status, count }))
     .sort((a, b) => b.count - a.count)
 
-  // Por banca
   const examById = Object.fromEntries(exams.map((e) => [e.id, e]))
+
+  // Por banca
   const boardMap: Record<string, { name: string; total: number; approved: number }> = {}
   questions.forEach((q) => {
     const exam = examById[q.exam_id as string]
@@ -70,7 +71,7 @@ export default async function AnalisePage() {
   })
   const byBoard = Object.values(boardMap).sort((a, b) => b.total - a.total)
 
-  // Por especialidade
+  // Por especialidade — top 10 para KPI e cards
   const specMap: Record<string, { name: string; total: number; approved: number }> = {}
   questions.forEach((q) => {
     const exam = examById[q.exam_id as string]
@@ -93,6 +94,27 @@ export default async function AnalisePage() {
     tagCount[key].count++
   })
   const topTags = Object.values(tagCount).sort((a, b) => b.count - a.count).slice(0, 8)
+
+  // Dados para gráficos: especialidade × ano × total/aprovadas
+  const specYearMap: Record<string, { specialty: string; year: number; total: number; approved: number }> = {}
+  questions.forEach((q) => {
+    const exam = examById[q.exam_id as string]
+    if (!exam) return
+    const spec = exam.specialties as unknown as { name: string } | null
+    const specName = spec?.name ?? 'Sem especialidade'
+    const year = exam.year as number
+    if (!year) return
+    const key = `${specName}__${year}`
+    if (!specYearMap[key]) specYearMap[key] = { specialty: specName, year, total: 0, approved: 0 }
+    specYearMap[key].total++
+    if (q.status === 'approved') specYearMap[key].approved++
+  })
+  const specByYear = Object.values(specYearMap)
+  const years = [...new Set(specByYear.map((r) => r.year))].sort()
+  const topSpecialties = Object.values(specMap)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 6)
+    .map((s) => s.name)
 
   return (
     <div className="aurora-bg flex flex-col gap-6">
@@ -199,6 +221,13 @@ export default async function AnalisePage() {
               </div>
             )}
           </div>
+
+          {/* Gráficos Recharts */}
+          <AnaliseCharts
+            specByYear={specByYear}
+            years={years}
+            topSpecialties={topSpecialties}
+          />
 
           {/* Tags mais usadas */}
           {topTags.length > 0 && (
