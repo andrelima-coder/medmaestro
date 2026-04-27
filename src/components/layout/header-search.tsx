@@ -1,17 +1,28 @@
 'use client'
 
 import { Search } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useRef, useEffect } from 'react'
 
 export function HeaderSearch() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Sincroniza o campo com o parâmetro ?q= atual
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.value = searchParams.get('q') ?? ''
+    }
+  }, [searchParams])
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const q = inputRef.current?.value.trim()
-    if (!q) return
+    if (!q) {
+      router.push('/questoes')
+      return
+    }
     router.push(`/questoes?q=${encodeURIComponent(q)}`)
   }
 
@@ -21,6 +32,7 @@ export function HeaderSearch() {
       <input
         ref={inputRef}
         placeholder="Buscar questão…"
+        defaultValue={searchParams.get('q') ?? ''}
         className="h-8 w-48 rounded-lg border border-white/[0.08] bg-white/[0.04] pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
       />
     </form>

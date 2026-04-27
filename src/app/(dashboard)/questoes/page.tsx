@@ -11,6 +11,7 @@ type SearchParams = {
   dificuldade?: string
   year?: string
   page?: string
+  q?: string
 }
 
 const STATUS_CONFIG: Record<
@@ -64,6 +65,7 @@ const STATUS_CONFIG: Record<
 function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): string {
   const p = new URLSearchParams()
   const merged = { ...params, ...overrides }
+  if (merged.q) p.set('q', merged.q)
   if (merged.modulo) p.set('modulo', merged.modulo)
   if (merged.tema) p.set('tema', merged.tema)
   if (merged.dificuldade) p.set('dificuldade', merged.dificuldade)
@@ -82,6 +84,7 @@ export default async function QuestoesPage({
   const temaFilter = params.tema ?? ''
   const dificuldadeFilter = params.dificuldade ?? ''
   const yearFilter = params.year ? parseInt(params.year) : null
+  const qFilter = params.q?.trim() ?? ''
   const page = Math.max(1, parseInt(params.page ?? '1'))
   const offset = (page - 1) * PAGE_SIZE
 
@@ -168,6 +171,10 @@ export default async function QuestoesPage({
     query = query.eq('exams.year', yearFilter)
   }
 
+  if (qFilter) {
+    query = query.ilike('stem', `%${qFilter}%`)
+  }
+
   if (questionIdFilter !== null) {
     if (questionIdFilter.length === 0) {
       return (
@@ -191,6 +198,7 @@ export default async function QuestoesPage({
 
   // Chips ativos
   const activeFilters: { label: string; removeKey: string }[] = []
+  if (qFilter) activeFilters.push({ label: `"${qFilter}"`, removeKey: 'q' })
   if (moduloFilter) activeFilters.push({ label: `Módulo: ${moduloFilter}`, removeKey: 'modulo' })
   if (temaFilter) activeFilters.push({ label: `Tema: ${temaFilter}`, removeKey: 'tema' })
   if (dificuldadeFilter) activeFilters.push({ label: `Dificuldade: ${dificuldadeFilter}`, removeKey: 'dificuldade' })

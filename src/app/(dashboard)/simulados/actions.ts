@@ -249,6 +249,38 @@ export async function moveSimuladoQuestion(
   return { ok: true }
 }
 
+export async function reorderSimuladoQuestions(
+  simuladoId: string,
+  orderedSqIds: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  const user = await getUser()
+  if (!user) return { ok: false, error: 'Não autenticado' }
+
+  const service = createServiceClient()
+
+  const { data: simulado } = await service
+    .from('simulados')
+    .select('id')
+    .eq('id', simuladoId)
+    .eq('created_by', user.id)
+    .single()
+
+  if (!simulado) return { ok: false, error: 'Simulado não encontrado' }
+
+  await Promise.all(
+    orderedSqIds.map((sqId, i) =>
+      service
+        .from('simulado_questions')
+        .update({ position: i + 1 })
+        .eq('id', sqId)
+        .eq('simulado_id', simuladoId)
+    )
+  )
+
+  revalidatePath(`/simulados/${simuladoId}`)
+  return { ok: true }
+}
+
 export async function searchQuestionsForSimulado(
   simuladoId: string,
   q: string

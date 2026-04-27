@@ -5,8 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { SimuladoTitle } from '@/components/simulados/simulado-title'
 import { SimuladoDelete } from '@/components/simulados/simulado-delete'
 import { QuestionPicker } from '@/components/simulados/question-picker'
-import { removeQuestionFromSimulado, moveSimuladoQuestion } from '../actions'
-import { QuestionNote } from '@/components/simulados/question-note'
+import { SimuladoQuestionList } from '@/components/simulados/question-list'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -118,9 +117,11 @@ export default async function SimuladoDetailPage({
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           <h2 className="text-sm font-semibold text-foreground">Questões</h2>
 
-          {questions.length === 0 ? (
+          {isOwner ? (
+            <SimuladoQuestionList simuladoId={id} initialQuestions={questions} />
+          ) : questions.length === 0 ? (
             <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
-              Nenhuma questão adicionada. Use o painel ao lado para buscar questões.
+              Nenhuma questão adicionada.
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -130,27 +131,6 @@ export default async function SimuladoDetailPage({
                   className="rounded-xl border border-white/5 bg-[var(--mm-surface)]/40 px-4 py-3 flex flex-col gap-2"
                 >
                   <div className="flex items-start gap-3">
-                    {/* Botões de reordenação */}
-                    {isOwner && (
-                      <div className="flex flex-col gap-0.5 shrink-0 mt-0.5">
-                        <form action={async () => { 'use server'; await moveSimuladoQuestion(id, q.sqId, 'up') }}>
-                          <button
-                            type="submit"
-                            disabled={i === 0}
-                            className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors text-[10px]"
-                            aria-label="Mover para cima"
-                          >▲</button>
-                        </form>
-                        <form action={async () => { 'use server'; await moveSimuladoQuestion(id, q.sqId, 'down') }}>
-                          <button
-                            type="submit"
-                            disabled={i === questions.length - 1}
-                            className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors text-[10px]"
-                            aria-label="Mover para baixo"
-                          >▼</button>
-                        </form>
-                      </div>
-                    )}
                     <span className="text-xs tabular-nums text-muted-foreground/50 shrink-0 w-5 pt-0.5">
                       {i + 1}.
                     </span>
@@ -161,36 +141,13 @@ export default async function SimuladoDetailPage({
                       </p>
                       <p className="text-sm text-foreground mt-0.5 line-clamp-2">{q.stem}</p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Link
-                        href={`/questoes/${q.questionId}`}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Ver
-                      </Link>
-                      {isOwner && (
-                        <form
-                          action={async () => {
-                            'use server'
-                            await removeQuestionFromSimulado(id, q.questionId)
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
-                          >
-                            Remover
-                          </button>
-                        </form>
-                      )}
-                    </div>
+                    <Link
+                      href={`/questoes/${q.questionId}`}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      Ver
+                    </Link>
                   </div>
-                  {/* Nota do professor */}
-                  {isOwner && (
-                    <div className="pl-8">
-                      <QuestionNote simuladoId={id} sqId={q.sqId} initialNote={q.note} />
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

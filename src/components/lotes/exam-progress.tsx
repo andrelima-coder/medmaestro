@@ -114,36 +114,19 @@ export function ExamProgress({
 
     const supabase = createClient()
     pollRef.current = setInterval(async () => {
-      const [questionsRes, tagsRes] = await Promise.all([
+      const [questionsRes, classifiedRes] = await Promise.all([
         supabase
           .from('questions')
           .select('*', { count: 'exact', head: true })
           .eq('exam_id', exam.id),
         supabase
-          .from('question_tags')
-          .select('question_id', { count: 'exact', head: true })
-          .in(
-            'question_id',
-            // subconsulta via RPC não disponível no JS client — usamos join manual abaixo
-            ['__placeholder__']
-          ),
+          .from('questions')
+          .select('question_tags!inner(question_id)', { count: 'exact', head: true })
+          .eq('exam_id', exam.id),
       ])
 
       if (questionsRes.count !== null) setCount(questionsRes.count)
-
-      // Conta questões com pelo menos 1 tag
-      const { data: taggedIds } = await supabase
-        .from('question_tags')
-        .select('question_id')
-        .eq('question_id', exam.id) // placeholder, refinamos abaixo
-
-      // Contagem real: questões deste exame que já têm tags
-      const { count: tagCount } = await supabase
-        .from('questions')
-        .select('question_tags!inner(question_id)', { count: 'exact', head: true })
-        .eq('exam_id', exam.id)
-
-      if (tagCount !== null) setClassifiedCount(tagCount)
+      if (classifiedRes.count !== null) setClassifiedCount(classifiedRes.count)
     }, 3000)
 
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
