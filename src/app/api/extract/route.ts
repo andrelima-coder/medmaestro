@@ -54,6 +54,46 @@ function checkAuth(request: Request): boolean {
   return request.headers.get('authorization') === `Bearer ${secret}`
 }
 
+const COMMENTS_BATCH_SIZE = 3
+
+// Gera comentários didáticos para questões do exame via /api/comments.
+// Só roda quando auto_comments != 'none'. Falhas individuais são toleradas.
+async function runComments(exam_id: string, mode: string): Promise<void> {
+  if (mode === 'none') return
+
+  const supabase = createServiceClient()
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const workerSecret = process.env.WORKER_SECRET ?? ''
+
+  let qQuery = supabase
+    .from('questions')
+    .select('id, extraction_confidence')
+    .eq('exam_id', exam_id)
+
+  if (mode === 'low_confidence') {
+    qQuery = qQuery.lte('extraction_confidence', 2)
+  }
+
+  const { data: questions } = await qQuery
+  if (!questions || questions.length === 0) return
+
+  for (let i = 0; i < questions.length; i += COMMENTS_BATCH_SIZE) {
+    const batch = questions.slice(i, i + COMMENTS_BATCH_SIZE)
+    await Promise.allSettled(
+      batch.map((q) =>
+        fetch(`${baseUrl}/api/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(workerSecret && { Authorization: `Bearer ${workerSecret}` }),
+          },
+          body: JSON.stringify({ question_id: q.id }),
+        }).catch(() => null)
+      )
+    )
+  }
+}
+
 // Classifica todas as questões de um exame chamando /api/classify em lotes.
 // Falhas individuais são toleradas — o exame não fica em erro por conta delas.
 async function runClassification(exam_id: string): Promise<void> {
@@ -223,7 +263,15 @@ async function runExtraction(exam_id: string) {
   await supabase.from('exams').update({ status: 'classifying' }).eq('id', exam_id)
   await runClassification(exam_id)
 
-  // 4. Status final
+  // 4. Geração de comentários (respeita preferência do exame)
+  const { data: examPrefs } = await supabase
+    .from('exams')
+    .select('auto_comments')
+    .eq('id', exam_id)
+    .single()
+  await runComments(exam_id, (examPrefs?.auto_comments as string | null) ?? 'none')
+
+  // 5. Status final
   await supabase
     .from('exams')
     .update({ status: hasErrors ? 'error' : 'done' })

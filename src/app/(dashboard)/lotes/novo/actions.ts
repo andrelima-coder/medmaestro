@@ -111,7 +111,6 @@ export async function createExamAction(
     }
   }
 
-  // Persiste o exame — notes guarda preferência de comentários até haver coluna dedicada
   const { data: exam, error: examErr } = await supabase
     .from('exams')
     .upsert(
@@ -123,7 +122,7 @@ export async function createExamAction(
         source_pdf_path: pdfPath,
         answer_key_pdf_path: gabaritoPath,
         answer_key_color: answerKeyColorRaw,
-        notes: autoComments !== 'none' ? `auto_comments:${autoComments}` : null,
+        auto_comments: autoComments,
         created_by: user.id,
       },
       { onConflict: 'board_id,specialty_id,year,booklet_color' }
