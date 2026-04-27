@@ -111,7 +111,7 @@ export default async function QuestaoDetailPage({
   const statusKey = (question.status ?? 'pending_extraction') as QuestionStatus
 
   return (
-    <div className="aurora-bg flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3">
         <Link

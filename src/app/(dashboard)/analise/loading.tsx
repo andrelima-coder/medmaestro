@@ -1,6 +1,6 @@
 export default function AnaliseLoading() {
   return (
-    <div className="aurora-bg flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="h-7 w-32 rounded-lg bg-white/5 animate-pulse" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (

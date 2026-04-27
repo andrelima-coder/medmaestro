@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { triggerExtractionAction } from '@/app/(dashboard)/lotes/[id]/extract-action'
 
-type ExamStatus = 'pending' | 'extracting' | 'done' | 'error'
+type ExamStatus = 'pending' | 'extracting' | 'classifying' | 'done' | 'error'
 
 type Exam = {
   id: string
@@ -17,15 +18,42 @@ type Exam = {
 const STATUS_LABELS: Record<ExamStatus, string> = {
   pending: 'Aguardando',
   extracting: 'Extraindo',
+  classifying: 'Classificando',
   done: 'Concluído',
   error: 'Erro',
 }
 
-const STATUS_CLASSES: Record<ExamStatus, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30',
-  extracting: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  done: 'bg-green-500/15 text-green-400 border-green-500/30',
-  error: 'bg-destructive/15 text-destructive border-destructive/30',
+const STATUS_STYLES: Record<ExamStatus, { bg: string; color: string; border: string }> = {
+  pending: {
+    bg: 'rgba(255,152,0,0.1)',
+    color: '#FF9800',
+    border: 'rgba(255,152,0,0.25)',
+  },
+  extracting: {
+    bg: 'rgba(79,195,247,0.1)',
+    color: '#4FC3F7',
+    border: 'rgba(79,195,247,0.25)',
+  },
+  classifying: {
+    bg: 'var(--mm-gold-bg)',
+    color: 'var(--mm-gold)',
+    border: 'var(--mm-gold-border)',
+  },
+  done: {
+    bg: 'rgba(102,187,106,0.1)',
+    color: '#66BB6A',
+    border: 'rgba(102,187,106,0.25)',
+  },
+  error: {
+    bg: 'rgba(239,83,80,0.1)',
+    color: '#EF5350',
+    border: 'rgba(239,83,80,0.25)',
+  },
+}
+
+const PHASE_LABELS: Partial<Record<ExamStatus, string>> = {
+  extracting: 'Claude Vision lendo o PDF e extraindo enunciados e alternativas…',
+  classifying: 'Claude Sonnet classificando as questões por módulo e tema…',
 }
 
 export function ExamProgress({
@@ -37,6 +65,7 @@ export function ExamProgress({
 }) {
   const [status, setStatus] = useState<ExamStatus>(exam.status)
   const [count, setCount] = useState(initialCount)
+  const [classifiedCount, setClassifiedCount] = useState(0)
   const [extractError, setExtractError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -44,26 +73,12 @@ export function ExamProgress({
   async function triggerExtraction() {
     setTriggering(true)
     setExtractError(null)
-    try {
-      const res = await fetch('/api/extract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_WORKER_SECRET ?? ''}`,
-        },
-        body: JSON.stringify({ exam_id: exam.id }),
-      })
-      const data = (await res.json()) as { ok: boolean; error?: string; questions_created?: number }
-      if (!data.ok) setExtractError(data.error ?? 'Erro desconhecido')
-      else setCount(data.questions_created ?? count)
-    } catch (err) {
-      setExtractError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setTriggering(false)
-    }
+    const data = await triggerExtractionAction(exam.id)
+    if (!data.ok) setExtractError(data.error ?? 'Erro desconhecido')
+    setTriggering(false)
   }
 
-  // Auto-dispara extração se status é pending
+  // Auto-dispara extração quando o exame está pending
   useEffect(() => {
     if (exam.status === 'pending') {
       triggerExtraction()
@@ -71,7 +86,7 @@ export function ExamProgress({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Supabase Realtime — escuta mudanças no exame
+  // Supabase Realtime — escuta mudanças de status no exame
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -86,73 +101,195 @@ export function ExamProgress({
       )
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [exam.id])
 
-  // Poll do count de questões durante extração
+  // Poll do count de questões e tags durante extração e classificação
   useEffect(() => {
-    if (status !== 'extracting') {
+    const isActive = status === 'extracting' || status === 'classifying'
+    if (!isActive) {
       if (pollRef.current) clearInterval(pollRef.current)
       return
     }
 
     const supabase = createClient()
     pollRef.current = setInterval(async () => {
-      const { count: newCount } = await supabase
+      const [questionsRes, tagsRes] = await Promise.all([
+        supabase
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .eq('exam_id', exam.id),
+        supabase
+          .from('question_tags')
+          .select('question_id', { count: 'exact', head: true })
+          .in(
+            'question_id',
+            // subconsulta via RPC não disponível no JS client — usamos join manual abaixo
+            ['__placeholder__']
+          ),
+      ])
+
+      if (questionsRes.count !== null) setCount(questionsRes.count)
+
+      // Conta questões com pelo menos 1 tag
+      const { data: taggedIds } = await supabase
+        .from('question_tags')
+        .select('question_id')
+        .eq('question_id', exam.id) // placeholder, refinamos abaixo
+
+      // Contagem real: questões deste exame que já têm tags
+      const { count: tagCount } = await supabase
         .from('questions')
-        .select('*', { count: 'exact', head: true })
+        .select('question_tags!inner(question_id)', { count: 'exact', head: true })
         .eq('exam_id', exam.id)
-      if (newCount !== null) setCount(newCount)
+
+      if (tagCount !== null) setClassifiedCount(tagCount)
     }, 3000)
 
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [status, exam.id])
 
-  return (
-    <div className="flex flex-col gap-6 max-w-lg">
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {exam.specialties?.name ?? 'Especialidade'} · {exam.year}
-              {exam.booklet_color ? ` · ${exam.booklet_color.charAt(0).toUpperCase() + exam.booklet_color.slice(1)}` : ''}
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{count}</p>
-            <p className="text-xs text-muted-foreground">questões extraídas</p>
-          </div>
+  const ss = STATUS_STYLES[status]
+  const phaseLabel = PHASE_LABELS[status]
 
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[status]}`}
-          >
-            {status === 'extracting' && (
-              <span className="size-1.5 animate-pulse rounded-full bg-current" />
-            )}
-            {STATUS_LABELS[status]}
-          </span>
+  return (
+    <div
+      style={{
+        background: 'var(--mm-surface)',
+        border: '1px solid var(--mm-line)',
+        borderRadius: 12,
+        padding: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+      }}
+    >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: 12, color: 'var(--mm-muted)', marginBottom: 4 }}>
+            {exam.specialties?.name ?? 'Especialidade'} · {exam.year}
+            {exam.booklet_color
+              ? ` · ${exam.booklet_color.charAt(0).toUpperCase() + exam.booklet_color.slice(1)}`
+              : ''}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span
+              className="font-[family-name:var(--font-syne)]"
+              style={{ fontSize: 32, fontWeight: 800, color: 'var(--mm-text)', lineHeight: 1 }}
+            >
+              {count}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--mm-muted)' }}>questões extraídas</span>
+          </div>
+          {status === 'classifying' && count > 0 && (
+            <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 4 }}>
+              {classifiedCount}/{count} classificadas
+            </p>
+          )}
         </div>
+
+        <span
+          style={{
+            background: ss.bg,
+            color: ss.color,
+            border: `1px solid ${ss.border}`,
+            fontSize: 10,
+            fontWeight: 600,
+            padding: '4px 12px',
+            borderRadius: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            flexShrink: 0,
+          }}
+        >
+          {(status === 'extracting' || status === 'classifying') && (
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: ss.color,
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }}
+            />
+          )}
+          {STATUS_LABELS[status]}
+        </span>
       </div>
 
+      {/* Progress bar (só durante pipeline) */}
+      {(status === 'extracting' || status === 'classifying') && (
+        <div>
+          <div
+            style={{
+              height: 4,
+              borderRadius: 2,
+              background: 'var(--mm-bg2)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                borderRadius: 2,
+                background: `linear-gradient(90deg, ${ss.color}, ${ss.color}80)`,
+                width: status === 'classifying' && count > 0
+                  ? `${Math.round((classifiedCount / count) * 100)}%`
+                  : '100%',
+                animation: status === 'extracting' ? 'indeterminate 2s ease-in-out infinite' : 'none',
+                transition: 'width 500ms ease',
+              }}
+            />
+          </div>
+          {phaseLabel && (
+            <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 8 }}>
+              {phaseLabel}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Erro */}
       {extractError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div
+          style={{
+            borderRadius: 8,
+            border: '1px solid rgba(239,83,80,0.25)',
+            background: 'rgba(239,83,80,0.08)',
+            padding: '10px 14px',
+            fontSize: 12,
+            color: '#EF5350',
+          }}
+        >
           {extractError}
         </div>
       )}
 
-      <div className="flex gap-3">
+      {/* Ações */}
+      <div style={{ display: 'flex', gap: 8 }}>
         {status === 'done' && (
-          <Button render={<a href={`/questoes?exam_id=${exam.id}`} />}>Ver questões</Button>
+          <Button render={<a href={`/questoes?exam_id=${exam.id}`} />}>Ver questões →</Button>
         )}
-        {(status === 'error' || (status === 'done' && extractError)) && (
+        {(status === 'error' || (status !== 'extracting' && status !== 'classifying' && extractError)) && (
           <Button variant="outline" onClick={triggerExtraction} disabled={triggering}>
-            {triggering ? 'Tentando...' : 'Tentar novamente'}
+            {triggering ? 'Iniciando…' : 'Tentar novamente'}
           </Button>
         )}
         <Button variant="ghost" render={<a href="/lotes" />}>Voltar aos lotes</Button>
       </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.3; }
+        }
+        @keyframes indeterminate {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+      `}</style>
     </div>
   )
 }

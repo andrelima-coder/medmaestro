@@ -108,11 +108,23 @@ export async function POST(request: Request) {
     )
   }
 
+  // Sincroniza correct_answer para questões já extraídas (caso extract já tenha rodado)
+  let synced = 0
+  try {
+    const { data: syncCount } = await supabase.rpc('sync_correct_answers', {
+      p_exam_id: exam_id,
+    })
+    synced = syncCount ?? 0
+  } catch {
+    // Não bloqueia — pode ser que as questões ainda não existam
+  }
+
   const alteracoesForColor = result.alteracoes.filter((a) => a.color === color)
 
   return NextResponse.json({
     ok: true,
     questions_saved: rows.length,
+    correct_answers_synced: synced,
     alteracoes_applied: alteracoesForColor.length,
   })
 }

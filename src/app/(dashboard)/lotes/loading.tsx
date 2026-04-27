@@ -1,6 +1,6 @@
 export default function LotesLoading() {
   return (
-    <div className="aurora-bg flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="h-7 w-24 rounded-lg bg-white/5 animate-pulse" />
         <div className="h-8 w-28 rounded-lg bg-white/5 animate-pulse" />

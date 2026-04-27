@@ -7,30 +7,42 @@ export const metadata = { title: 'Novo lote — MedMaestro' }
 
 export default async function NovoLotePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const service = createServiceClient()
-  const [{ data: specialties }, { data: boards }] = await Promise.all([
-    service.from('specialties').select('id, name').order('name'),
-    service.from('exam_boards').select('id, name, short_name').order('name'),
-  ])
+  const { data: boards } = await service
+    .from('exam_boards')
+    .select('id, name, short_name, supports_booklet_colors, default_specialty_id')
+    .order('name')
 
   return (
-    <div className="aurora-bg flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Novo lote</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Envie o PDF da prova e, opcionalmente, o gabarito.
+        <h1
+          className="font-[family-name:var(--font-syne)]"
+          style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
+        >
+          Novo lote de importação
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 4 }}>
+          Envie o caderno de prova e o gabarito correspondente
         </p>
       </div>
 
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6">
-        <UploadForm
-          specialties={(specialties ?? []) as { id: string; name: string }[]}
-          boards={(boards ?? []) as { id: string; name: string; short_name: string }[]}
-        />
-      </div>
+      <UploadForm
+        boards={
+          (boards ?? []) as {
+            id: string
+            name: string
+            short_name: string
+            supports_booklet_colors: boolean
+            default_specialty_id: string | null
+          }[]
+        }
+      />
     </div>
   )
 }

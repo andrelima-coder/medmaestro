@@ -84,7 +84,7 @@ export function SidebarClient({ sections }: SidebarClientProps) {
                       className={cn(
                         'flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors',
                         isActive
-                          ? 'sidebar-item-active text-foreground'
+                          ? 'sidebar-item-active'
                           : 'text-sidebar-foreground hover:bg-white/[0.04] hover:text-foreground',
                         collapsed && 'justify-center'
                       )}

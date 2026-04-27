@@ -36,7 +36,7 @@ export function Header({ fullName, email, role }: HeaderProps) {
 
         {/* Avatar + nome */}
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-[var(--mm-gold)] to-[var(--mm-orange)] text-[10px] font-bold text-white shrink-0">
+          <div className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-[var(--mm-gold)] to-[var(--mm-gold2)] text-[10px] font-bold text-white shrink-0">
             {initials}
           </div>
           <div className="hidden md:flex flex-col leading-none">

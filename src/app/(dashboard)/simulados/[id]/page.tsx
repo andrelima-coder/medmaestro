@@ -76,7 +76,7 @@ export default async function SimuladoDetailPage({
   const addedIds = questions.map((q) => q.questionId)
 
   return (
-    <div className="aurora-bg flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3">
         <Link

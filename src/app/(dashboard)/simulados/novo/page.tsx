@@ -13,7 +13,7 @@ export default function NovoSimuladoPage() {
   )
 
   return (
-    <div className="aurora-bg flex flex-col gap-6 max-w-lg">
+    <div className="flex flex-col gap-6 max-w-lg">
       <div className="flex items-center gap-3">
         <Link
           href="/simulados"

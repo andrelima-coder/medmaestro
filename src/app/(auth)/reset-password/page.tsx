@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
             disabled={isPending}
             className={cn(
               'mt-1 h-10 w-full rounded-lg text-sm font-medium text-white',
-              'bg-gradient-to-r from-[var(--mm-gold)] to-[var(--mm-orange)]',
+              'bg-gradient-to-r from-[var(--mm-gold)] to-[var(--mm-gold2)]',
               'transition-opacity hover:opacity-90 active:opacity-80',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}

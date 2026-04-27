@@ -17,13 +17,16 @@ export async function createExamAction(
   const boardId = formData.get('board_id') as string | null
   const specialtyId = formData.get('specialty_id') as string | null
   const yearRaw = formData.get('year') as string | null
-  const color = (formData.get('color') as string | null)?.toUpperCase()
+  const colorRaw = (formData.get('color') as string | null)?.toLowerCase().trim() || null
+  // answer_key_color: empty string → null (gabarito sem cor ou não informado)
+  const answerKeyColorRaw = (formData.get('answer_key_color') as string | null)?.toLowerCase().trim() || null
+  const autoComments = (formData.get('auto_comments') as string | null) ?? 'none'
   const pdfProva = formData.get('pdf_prova') as File | null
   const pdfGabarito = formData.get('pdf_gabarito') as File | null
 
-  if (!boardId || !specialtyId || !yearRaw || !color) {
-    return { error: 'Banca, especialidade, ano e cor são obrigatórios.' }
-  }
+  if (!boardId) return { error: 'Banca é obrigatória.' }
+  if (!specialtyId) return { error: 'Especialidade não pôde ser derivada da banca selecionada.' }
+  if (!yearRaw) return { error: 'Ano é obrigatório.' }
 
   const year = parseInt(yearRaw, 10)
   if (isNaN(year) || year < 2000 || year > 2050) {
@@ -34,7 +37,7 @@ export async function createExamAction(
     return { error: 'PDF da prova é obrigatório.' }
   }
 
-  // Autentica usuário para rastreabilidade
+  // Autentica usuário
   const supabaseAuth = await createClient()
   const {
     data: { user },
@@ -43,18 +46,33 @@ export async function createExamAction(
 
   const supabase = createServiceClient()
 
+  // Verifica se a banca suporta cores
+  const { data: board } = await supabase
+    .from('exam_boards')
+    .select('supports_booklet_colors')
+    .eq('id', boardId)
+    .single()
+
+  const requiresColor = board?.supports_booklet_colors ?? true
+  if (requiresColor && !colorRaw) {
+    return { error: 'Cor do caderno é obrigatória para esta banca.' }
+  }
+
+  const bookletColor = requiresColor ? colorRaw : null
+
+  // Deriva slug da especialidade para o path de storage
   const { data: specialty, error: spErr } = await supabase
     .from('specialties')
     .select('slug')
     .eq('id', specialtyId)
     .single()
 
-  if (spErr || !specialty) {
-    return { error: 'Especialidade não encontrada.' }
-  }
+  if (spErr || !specialty) return { error: 'Especialidade não encontrada.' }
 
   const slug = specialty.slug
-  const basePath = `${slug}/${year}/${color.toLowerCase()}`
+  const basePath = bookletColor
+    ? `${slug}/${year}/${bookletColor}`
+    : `${slug}/${year}`
 
   // Upload PDF da prova
   let pdfPath: string
@@ -62,26 +80,38 @@ export async function createExamAction(
     const provaBuffer = Buffer.from(await pdfProva.arrayBuffer())
     pdfPath = await uploadFile('exam-pdfs', `${basePath}/prova.pdf`, provaBuffer, 'application/pdf')
   } catch (err) {
-    return { error: `Falha ao enviar PDF da prova: ${err instanceof Error ? err.message : String(err)}` }
+    return {
+      error: `Falha ao enviar PDF da prova: ${err instanceof Error ? err.message : String(err)}`,
+    }
   }
 
-  // Upload PDF do gabarito (opcional)
+  // Upload do gabarito (opcional, aceita múltiplos formatos)
   let gabaritoPath: string | null = null
   if (pdfGabarito && pdfGabarito.size > 0) {
+    const ext = pdfGabarito.name.split('.').pop()?.toLowerCase() ?? 'pdf'
+    const mimeMap: Record<string, string> = {
+      pdf: 'application/pdf',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      txt: 'text/plain',
+      md: 'text/markdown',
+    }
+    const mime = mimeMap[ext] ?? 'application/octet-stream'
     try {
       const gabaritoBuffer = Buffer.from(await pdfGabarito.arrayBuffer())
       gabaritoPath = await uploadFile(
         'exam-pdfs',
-        `${basePath}/gabarito.pdf`,
+        `${basePath}/gabarito.${ext}`,
         gabaritoBuffer,
-        'application/pdf'
+        mime
       )
     } catch (err) {
-      return { error: `Falha ao enviar PDF do gabarito: ${err instanceof Error ? err.message : String(err)}` }
+      return {
+        error: `Falha ao enviar gabarito: ${err instanceof Error ? err.message : String(err)}`,
+      }
     }
   }
 
-  // Cria ou atualiza o exame no banco
+  // Persiste o exame — notes guarda preferência de comentários até haver coluna dedicada
   const { data: exam, error: examErr } = await supabase
     .from('exams')
     .upsert(
@@ -89,9 +119,11 @@ export async function createExamAction(
         board_id: boardId,
         specialty_id: specialtyId,
         year,
-        booklet_color: color.toLowerCase(),
+        booklet_color: bookletColor,
         source_pdf_path: pdfPath,
         answer_key_pdf_path: gabaritoPath,
+        answer_key_color: answerKeyColorRaw,
+        notes: autoComments !== 'none' ? `auto_comments:${autoComments}` : null,
         created_by: user.id,
       },
       { onConflict: 'board_id,specialty_id,year,booklet_color' }
@@ -103,16 +135,17 @@ export async function createExamAction(
     return { error: `Falha ao criar exame: ${examErr?.message}` }
   }
 
-  // Log de auditoria — quem fez upload de qual prova
   await logAudit(user.id, 'exam', exam.id, 'exam_uploaded', null, {
     specialty_id: specialtyId,
     year,
-    booklet_color: color.toLowerCase(),
+    booklet_color: bookletColor,
+    answer_key_color: answerKeyColorRaw,
     pdf_path: pdfPath,
     has_gabarito: !!gabaritoPath,
+    auto_comments: autoComments,
   })
 
-  // Dispara parse-gabarito em background se gabarito foi enviado
+  // Dispara parse do gabarito em background
   if (gabaritoPath) {
     const workerSecret = process.env.WORKER_SECRET ?? ''
     try {
@@ -123,7 +156,7 @@ export async function createExamAction(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${workerSecret}`,
         },
-        body: JSON.stringify({ exam_id: exam.id, booklet_color: color }),
+        body: JSON.stringify({ exam_id: exam.id, booklet_color: bookletColor }),
       })
     } catch {
       // Não bloqueia o fluxo

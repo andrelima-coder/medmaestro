@@ -36,7 +36,7 @@ export default async function UsuariosPage() {
   const callerRole = (callerProfile?.role ?? 'analista') as 'analista' | 'professor' | 'admin' | 'superadmin'
 
   return (
-    <div className="aurora-bg flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Usuários</h1>

@@ -14,7 +14,7 @@ export default function DashboardError({
   }, [error])
 
   return (
-    <div className="aurora-bg flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
       <p className="text-3xl">⚠️</p>
       <h2 className="text-base font-semibold text-foreground">Algo deu errado</h2>
       <p className="text-sm text-muted-foreground max-w-sm">

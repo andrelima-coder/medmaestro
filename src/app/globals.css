@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-dm-sans);
+  --font-heading: var(--font-syne);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,123 +39,120 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 2);
+  --radius-2xl: calc(var(--radius) * 2.5);
 
-  /* MedMaestro semantic tokens */
-  --color-mm-purple: var(--mm-purple);
-  --color-mm-orange: var(--mm-orange);
+  /* MedMaestro brand tokens */
   --color-mm-gold: var(--mm-gold);
+  --color-mm-gold2: var(--mm-gold2);
   --color-mm-surface: var(--mm-surface);
   --color-mm-surface-elevated: var(--mm-surface-elevated);
 }
 
 :root {
-  /* MedMaestro — dark-only design system */
-  --background: oklch(0.09 0.012 280);
-  --foreground: oklch(0.94 0.008 280);
-  --card: oklch(0.12 0.014 280);
-  --card-foreground: oklch(0.94 0.008 280);
-  --popover: oklch(0.13 0.015 280);
-  --popover-foreground: oklch(0.94 0.008 280);
-  --primary: oklch(0.65 0.22 290);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.16 0.016 280);
-  --secondary-foreground: oklch(0.85 0.01 280);
-  --muted: oklch(0.16 0.016 280);
-  --muted-foreground: oklch(0.55 0.02 280);
-  --accent: oklch(0.16 0.016 280);
-  --accent-foreground: oklch(0.85 0.01 280);
-  --destructive: oklch(0.62 0.22 25);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.65 0.22 290 / 50%);
-  --radius: 0.625rem;
+  /* ================================================================
+     MedMaestro design system — baseado em prototipo_plataforma_temi.html
+     Paleta gold/navy escuro · Fontes: Syne (heading) + DM Sans (body)
+  ================================================================ */
 
-  /* Charts */
-  --chart-1: oklch(0.65 0.22 290);
-  --chart-2: oklch(0.72 0.18 55);
-  --chart-3: oklch(0.62 0.18 160);
-  --chart-4: oklch(0.68 0.16 220);
-  --chart-5: oklch(0.60 0.20 25);
+  /* shadcn/Tailwind aliases */
+  --background: #05080F;
+  --foreground: #E8EDF5;
+  --card: #111D35;
+  --card-foreground: #E8EDF5;
+  --popover: #090D1A;
+  --popover-foreground: #E8EDF5;
+  --primary: #D4A843;
+  --primary-foreground: #0a0a0a;
+  --secondary: #090D1A;
+  --secondary-foreground: #A8B4CC;
+  --muted: #0D1526;
+  --muted-foreground: #5A6880;
+  --accent: rgba(212, 168, 67, 0.08);
+  --accent-foreground: #D4A843;
+  --destructive: #EF5350;
+  --border: rgba(255, 255, 255, 0.07);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: rgba(212, 168, 67, 0.40);
+  --radius: 8px;
+
+  /* Charts — ordem Pareto dos módulos TEMI */
+  --chart-1: #D4A843; /* M1 Respiratório — gold */
+  --chart-2: #4FC3F7; /* M2 Cardiovascular — blue */
+  --chart-3: #66BB6A; /* M3 Infecções — green */
+  --chart-4: #AB47BC; /* M4 Neuro — purple */
+  --chart-5: #FF9800; /* M5+ outros — orange */
 
   /* Sidebar */
-  --sidebar: oklch(0.07 0.014 280);
-  --sidebar-foreground: oklch(0.85 0.01 280);
-  --sidebar-primary: oklch(0.65 0.22 290);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.12 0.016 280);
-  --sidebar-accent-foreground: oklch(0.85 0.01 280);
-  --sidebar-border: oklch(1 0 0 / 6%);
-  --sidebar-ring: oklch(0.65 0.22 290 / 40%);
+  --sidebar: #090D1A;
+  --sidebar-foreground: #A8B4CC;
+  --sidebar-primary: #D4A843;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: rgba(212, 168, 67, 0.08);
+  --sidebar-accent-foreground: #D4A843;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: rgba(212, 168, 67, 0.40);
 
-  /* MedMaestro brand */
-  --mm-purple: oklch(0.65 0.22 290);
-  --mm-orange: oklch(0.72 0.20 38);
-  --mm-gold: oklch(0.78 0.16 72);
-  --mm-surface: oklch(0.12 0.014 280);
-  --mm-surface-elevated: oklch(0.15 0.016 280);
-
-  /* Glow effects */
-  --glow-purple: 0 0 40px oklch(0.65 0.22 290 / 18%);
-  --glow-orange: 0 0 40px oklch(0.72 0.20 38 / 18%);
-  --glow-gold: 0 0 24px oklch(0.78 0.16 72 / 20%);
+  /* MedMaestro brand — espelham as variáveis do protótipo */
+  --mm-gold: #D4A843;
+  --mm-gold2: #E8C35A;
+  --mm-gold-bg: rgba(212, 168, 67, 0.08);
+  --mm-gold-border: rgba(212, 168, 67, 0.25);
+  --mm-surface: #111D35;
+  --mm-surface-elevated: #162240;
+  --mm-bg2: #090D1A;
+  --mm-bg3: #0D1526;
+  --mm-text: #E8EDF5;
+  --mm-text2: #A8B4CC;
+  --mm-muted: #5A6880;
+  --mm-line: rgba(255, 255, 255, 0.07);
+  --mm-line2: rgba(255, 255, 255, 0.13);
+  --mm-line3: rgba(255, 255, 255, 0.22);
+  --mm-green: #66BB6A;
+  --mm-red: #EF5350;
+  --mm-blue: #4FC3F7;
+  --mm-orange: #FF9800;
+  --mm-purple: #AB47BC;
 }
 
-/* Aurora background orbs */
-.aurora-bg {
-  position: relative;
-  isolation: isolate;
-}
-.aurora-bg::before,
-.aurora-bg::after {
-  content: "";
+/* Noise texture overlay — idêntico ao protótipo */
+body::after {
+  content: '';
   position: fixed;
-  border-radius: 50%;
-  filter: blur(80px);
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   pointer-events: none;
-  z-index: -1;
-}
-.aurora-bg::before {
-  width: 700px;
-  height: 700px;
-  top: -200px;
-  left: -200px;
-  background: radial-gradient(circle, oklch(0.65 0.22 290 / 12%) 0%, transparent 70%);
-}
-.aurora-bg::after {
-  width: 600px;
-  height: 600px;
-  bottom: -150px;
-  right: -150px;
-  background: radial-gradient(circle, oklch(0.72 0.20 38 / 10%) 0%, transparent 70%);
+  z-index: 9999;
+  opacity: 0.4;
 }
 
-/* Semantic card glows */
-.glow-purple { box-shadow: var(--glow-purple); border-color: oklch(0.65 0.22 290 / 35%) !important; }
-.glow-orange  { box-shadow: var(--glow-orange);  border-color: oklch(0.72 0.20 38 / 40%) !important; }
-.glow-gold    { box-shadow: var(--glow-gold);    border-color: oklch(0.78 0.16 72 / 40%) !important; }
-
-/* Live badge pulse */
-@keyframes pulse-orange {
-  0%, 100% { box-shadow: 0 0 0 0 oklch(0.72 0.20 38 / 50%); }
-  50%       { box-shadow: 0 0 0 5px oklch(0.72 0.20 38 / 0%); }
-}
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: oklch(0.72 0.20 38);
-  animation: pulse-orange 1.8s ease-in-out infinite;
-}
-
-/* Sidebar active accent bar */
+/* Sidebar item ativo — pill gold com borda, idêntico ao protótipo */
 .sidebar-item-active {
-  box-shadow: inset 3px 0 0 var(--mm-gold);
-  background: oklch(1 0 0 / 4%);
+  background: rgba(212, 168, 67, 0.08) !important;
+  border: 1px solid rgba(212, 168, 67, 0.25) !important;
+  color: #D4A843 !important;
+}
+
+/* Gold glow para cards em destaque */
+.glow-gold {
+  box-shadow: 0 0 24px rgba(212, 168, 67, 0.15);
+  border-color: rgba(212, 168, 67, 0.25) !important;
+}
+
+/* Badge IA — purple reservado para indicadores de IA */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 8px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(171, 71, 188, 0.15);
+  color: #AB47BC;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 @layer base {
