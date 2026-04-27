@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { RetriggerButton } from '@/components/lotes/retrigger-button'
 
 export const metadata = { title: 'Lotes — MedMaestro' }
 
@@ -89,6 +90,14 @@ export default async function LotesPage() {
     }
   }
 
+  const allExams = exams ?? []
+  const statsDone = allExams.filter((e) => e.status === 'done').length
+  const statsProcessing = allExams.filter(
+    (e) => e.status === 'extracting' || e.status === 'classifying'
+  ).length
+  const statsError = allExams.filter((e) => e.status === 'error').length
+  const statsPending = allExams.filter((e) => e.status === 'pending').length
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -125,6 +134,41 @@ export default async function LotesPage() {
           + Novo lote
         </Link>
       </div>
+
+      {/* Stats */}
+      {allExams.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {[
+            { label: 'Concluídos', value: statsDone, color: '#66BB6A' },
+            { label: 'Em processo', value: statsProcessing, color: '#4FC3F7' },
+            { label: 'Pendentes', value: statsPending, color: '#FF9800' },
+            { label: 'Com erro', value: statsError, color: '#EF5350' },
+          ].map((s) => (
+            <div
+              key={s.label}
+              style={{
+                background: 'var(--mm-surface)',
+                border: '1px solid var(--mm-line)',
+                borderRadius: 10,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <span
+                className="font-[family-name:var(--font-syne)]"
+                style={{ fontSize: 24, fontWeight: 800, color: s.color, lineHeight: 1 }}
+              >
+                {s.value}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--mm-muted)', lineHeight: 1.3 }}>
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabela */}
       <div
@@ -250,6 +294,9 @@ export default async function LotesPage() {
                           >
                             Revisar →
                           </Link>
+                        )}
+                        {(statusKey === 'error' || statusKey === 'pending') && (
+                          <RetriggerButton examId={eid} />
                         )}
                       </div>
                     </td>
