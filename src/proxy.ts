@@ -3,11 +3,26 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/api/auth/callback']
 
+// Rotas com auth via WORKER_SECRET (Bearer) — não devem passar pelo proxy de sessão Supabase
+const WORKER_ROUTES = [
+  '/api/extract',
+  '/api/parse-gabarito',
+  '/api/classify',
+  '/api/comments',
+  '/api/worker',
+  '/api/health',
+]
+
 const ADMIN_ROUTES = ['/auditoria', '/configuracoes/usuarios']
 const SUPERADMIN_ROUTES = ['/configuracoes/hierarquia', '/configuracoes/tags']
 const PROFESSOR_ROUTES = ['/simulados']
 
 export async function proxy(request: NextRequest) {
+  // Worker routes têm auth Bearer próprio — não exigem cookie de sessão Supabase
+  if (WORKER_ROUTES.some((r) => request.nextUrl.pathname.startsWith(r))) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
