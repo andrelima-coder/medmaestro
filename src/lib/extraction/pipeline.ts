@@ -229,6 +229,151 @@ Retorne APENAS o texto do comentário, sem título, sem markdown.`
   }
 }
 
+// Detecta question_numbers faltantes (gaps) e re-chama Claude com janela
+// de páginas adjacentes (centradas na posição estimada). Cobre questões
+// que cruzam fronteira de batch (e.g. enunciado em pg N e alternativas-imagem em pg N+1).
+async function recoverMissingQuestions(
+  exam_id: string,
+  pages: Awaited<ReturnType<typeof rasterizePdf>>,
+  specialtySlug: string,
+  exam: { year: number; booklet_color: string | null }
+): Promise<void> {
+  const supabase = createServiceClient()
+
+  const { data: existing } = await supabase
+    .from('questions')
+    .select('question_number')
+    .eq('exam_id', exam_id)
+
+  if (!existing || existing.length === 0) return
+
+  const present = new Set(existing.map((q) => q.question_number as number))
+  const max = Math.max(...present)
+  const missing: number[] = []
+  for (let i = 1; i <= max; i++) if (!present.has(i)) missing.push(i)
+
+  if (missing.length === 0) {
+    console.log(`[extract ${exam_id}] Recovery: nenhum gap detectado`)
+    return
+  }
+
+  console.log(`[extract ${exam_id}] Recovery: ${missing.length} gaps: ${missing.join(',')}`)
+  await setProgress(
+    exam_id,
+    'extracting',
+    pages.length,
+    pages.length,
+    `Recuperando questões faltantes (${missing.join(', ')})`
+  )
+
+  // Estimativa de questões por página
+  const qPerPage = max / pages.length
+
+  // Agrupa números faltantes próximos (≤2 de distância) para evitar chamadas redundantes
+  const groups: number[][] = []
+  for (const q of missing) {
+    const last = groups[groups.length - 1]
+    if (last && q - last[last.length - 1] <= 2) last.push(q)
+    else groups.push([q])
+  }
+
+  for (const group of groups) {
+    const startQ = group[0]
+    const endQ = group[group.length - 1]
+    const centerPage = Math.round((startQ + endQ) / 2 / qPerPage)
+    const startIdx = Math.max(0, centerPage - 2)
+    const targetPages = pages.slice(startIdx, startIdx + MAX_IMAGES_PER_CALL)
+    if (targetPages.length === 0) continue
+
+    const pageRange = `${targetPages[0].pageNumber}–${targetPages[targetPages.length - 1].pageNumber}`
+    const prompt = `Você é um extrator focado em questões médicas que cruzam fronteira de página.
+
+Analise estas ${targetPages.length} páginas e EXTRAIA APENAS as questões com número ∈ {${group.join(', ')}}.
+
+Estas questões podem ter enunciado em uma página e alternativas (ou imagens grandes como ECG, gráficos, tabelas) em outra. SEMPRE marque is_complete=true mesmo se faltar uma alternativa — preencha a alternativa ausente com "" (string vazia).
+
+Quando uma alternativa for IMAGEM (ECG, gráfico, capnografia, etc.), preencha com texto descritivo curto: "ECG A — ritmo X" ou "Gráfico A — curva Y".
+
+Para cada questão pedida, retorne JSON:
+- question_number (inteiro)
+- stem (enunciado completo)
+- alternatives: { "A": "...", "B": "...", "C": "...", "D": "...", "E": "" }  (E pode ser "" se questão tem só 4)
+- has_images: boolean
+- image_type: tipo (null se has_images=false)
+- image_scope: "statement"|"alternative_a"|...|"alternative_d"|"alternative_e"
+- confidence: 1-5
+- is_complete: true (sempre)
+
+Retorne APENAS array JSON. Se não achar uma das questões, omita.`
+
+    let extracted: ExtractedQuestion[]
+    try {
+      const raw = await extractFromImages({
+        imageBase64s: targetPages.map((p) => p.jpegBase64),
+        prompt,
+      })
+      extracted = parseJSON<ExtractedQuestion[]>(raw)
+      console.log(
+        `[extract ${exam_id}] Recovery group {${group.join(',')}} pgs ${pageRange}: ${extracted.length} retornadas`
+      )
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[extract ${exam_id}] Recovery {${group.join(',')}} falhou: ${msg}`)
+      continue
+    }
+
+    for (const q of extracted) {
+      if (!group.includes(q.question_number)) continue
+      const conf = Math.max(1, Math.min(5, Math.round(q.confidence)))
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('questions')
+        .upsert(
+          {
+            exam_id,
+            question_number: q.question_number,
+            stem: q.stem,
+            alternatives: q.alternatives,
+            has_images: q.has_images,
+            extraction_confidence: conf,
+            status: 'pending_extraction',
+          },
+          { onConflict: 'exam_id,question_number' }
+        )
+        .select('id')
+        .single()
+
+      if (insertError || !inserted) {
+        console.error(
+          `[extract ${exam_id}] Recovery insert Q${q.question_number} falhou: ${insertError?.message}`
+        )
+        continue
+      }
+
+      // Sobe imagens das páginas-alvo se a questão tem imagem
+      if (q.has_images && q.image_scope) {
+        const imageType = IMAGE_TYPE_MAP[q.image_type ?? 'outro'] ?? 'outro'
+        const imageScope = q.image_scope.toLowerCase()
+        for (const page of targetPages) {
+          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
+          try {
+            await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
+            await supabase.from('question_images').insert({
+              question_id: inserted.id,
+              image_scope: imageScope,
+              image_type: imageType,
+              full_page_path: imagePath,
+              page_number: page.pageNumber,
+            })
+          } catch {
+            // não bloqueia recovery por falha de imagem
+          }
+        }
+      }
+    }
+  }
+}
+
 async function runClassification(exam_id: string): Promise<void> {
   const supabase = createServiceClient()
 
@@ -440,6 +585,20 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
       pagesProcessed,
       pages.length,
       `Extraindo questões (${pagesProcessed}/${pages.length} páginas)`
+    )
+  }
+
+  // Pós-loop: tenta recuperar questões que cruzaram fronteira de batch
+  try {
+    await recoverMissingQuestions(
+      exam_id,
+      pages,
+      specialtySlug,
+      { year: exam.year as number, booklet_color: exam.booklet_color as string | null }
+    )
+  } catch (err) {
+    console.error(
+      `[extract ${exam_id}] Recovery falhou: ${err instanceof Error ? err.message : String(err)}`
     )
   }
 
