@@ -150,10 +150,18 @@ E) ${alternatives['E'] ?? ''}`
   const rows = validTagIds.map((tag_id) => ({
     question_id: questionId,
     tag_id,
-    added_by_type: 'ai',
+    added_by_type: 'ai_auto',
   }))
 
-  await supabase.from('question_tags').upsert(rows, { onConflict: 'question_id,tag_id' })
+  const { error: tagInsertError } = await supabase
+    .from('question_tags')
+    .upsert(rows, { onConflict: 'question_id,tag_id' })
+
+  if (tagInsertError) {
+    console.error(
+      `[classify ${questionId}] Insert tags falhou: ${tagInsertError.message}`
+    )
+  }
 }
 
 export async function generateComment(questionId: string): Promise<void> {
@@ -206,13 +214,19 @@ Retorne APENAS o texto do comentário, sem título, sem markdown.`
     return
   }
 
-  await supabase.from('question_comments').insert({
+  const { error: commentInsertError } = await supabase.from('question_comments').insert({
     question_id: questionId,
     comment_type: 'explicacao',
     content: commentText.trim(),
     ai_model: MODELS.opus,
     created_by_ai: true,
   })
+
+  if (commentInsertError) {
+    console.error(
+      `[comment ${questionId}] Insert falhou: ${commentInsertError.message}`
+    )
+  }
 }
 
 async function runClassification(exam_id: string): Promise<void> {
