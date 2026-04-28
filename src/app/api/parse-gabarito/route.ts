@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
-import { PDFParse } from 'pdf-parse'
-import { createServiceClient } from '@/lib/supabase/service'
-import { parseGabarito } from '@/lib/gabarito/parser'
+import { parseGabaritoForExam } from '@/lib/gabarito/run'
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.WORKER_SECRET
@@ -23,108 +21,22 @@ export async function POST(request: Request) {
 
   const { exam_id, booklet_color } = body
   if (!exam_id || !booklet_color) {
-    return NextResponse.json({ error: 'exam_id e booklet_color são obrigatórios' }, { status: 400 })
-  }
-
-  const color = booklet_color.toUpperCase()
-  const supabase = createServiceClient()
-
-  // 1. Busca exame
-  const { data: exam, error: examError } = await supabase
-    .from('exams')
-    .select('id, answer_key_pdf_path')
-    .eq('id', exam_id)
-    .single()
-
-  if (examError || !exam) {
-    return NextResponse.json({ error: 'Exame não encontrado' }, { status: 404 })
-  }
-  if (!exam.answer_key_pdf_path) {
-    return NextResponse.json({ error: 'Exame não possui gabarito em PDF' }, { status: 422 })
-  }
-
-  // 2. Baixa PDF do bucket
-  const { data: fileData, error: dlError } = await supabase.storage
-    .from('exam-pdfs')
-    .download(exam.answer_key_pdf_path)
-
-  if (dlError || !fileData) {
     return NextResponse.json(
-      { error: `Falha ao baixar gabarito: ${dlError?.message}` },
-      { status: 500 }
+      { error: 'exam_id e booklet_color são obrigatórios' },
+      { status: 400 }
     )
   }
 
-  const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
+  const result = await parseGabaritoForExam(exam_id, booklet_color)
 
-  // 3. Extrai texto com pdf-parse
-  let text: string
-  try {
-    const parser = new PDFParse({ data: pdfBuffer })
-    const parsed = await parser.getText()
-    text = parsed.text
-  } catch (err) {
-    return NextResponse.json(
-      { error: `Falha ao extrair texto do PDF: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 500 }
-    )
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
   }
-
-  if (!text.trim()) {
-    return NextResponse.json(
-      { error: 'PDF sem camada de texto — gabarito precisa de texto extraível' },
-      { status: 422 }
-    )
-  }
-
-  // 4. Parse do gabarito
-  const result = parseGabarito(text)
-  const answers = result.byColor[color] ?? {}
-  const questionNumbers = Object.keys(answers).map(Number)
-
-  if (questionNumbers.length === 0) {
-    return NextResponse.json(
-      { error: `Nenhuma questão encontrada para a cor ${color}` },
-      { status: 422 }
-    )
-  }
-
-  // 5. Upsert em answer_keys
-  const rows = questionNumbers.map((qNum) => ({
-    exam_id,
-    question_number: qNum,
-    correct_answer: answers[qNum],
-    notes: result.alteracoes.some((a) => a.question === qNum && a.color === color) ? 'alterada' : null,
-  }))
-
-  const { error: upsertError } = await supabase
-    .from('answer_keys')
-    .upsert(rows, { onConflict: 'exam_id,question_number' })
-
-  if (upsertError) {
-    return NextResponse.json(
-      { error: `Falha ao salvar gabarito: ${upsertError.message}` },
-      { status: 500 }
-    )
-  }
-
-  // Sincroniza correct_answer para questões já extraídas (caso extract já tenha rodado)
-  let synced = 0
-  try {
-    const { data: syncCount } = await supabase.rpc('sync_correct_answers', {
-      p_exam_id: exam_id,
-    })
-    synced = syncCount ?? 0
-  } catch {
-    // Não bloqueia — pode ser que as questões ainda não existam
-  }
-
-  const alteracoesForColor = result.alteracoes.filter((a) => a.color === color)
 
   return NextResponse.json({
     ok: true,
-    questions_saved: rows.length,
-    correct_answers_synced: synced,
-    alteracoes_applied: alteracoesForColor.length,
+    questions_saved: result.questions_saved,
+    correct_answers_synced: result.correct_answers_synced,
+    alteracoes_applied: result.alteracoes_applied,
   })
 }

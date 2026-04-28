@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
+import { generateComment } from '@/lib/extraction/pipeline'
 
 export interface QuestionComment {
   id: string
@@ -33,23 +34,8 @@ export async function generateAiComment(
   } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Não autenticado' }
 
-  const workerSecret = process.env.WORKER_SECRET
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-
   try {
-    const res = await fetch(`${baseUrl}/api/comments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(workerSecret ? { authorization: `Bearer ${workerSecret}` } : {}),
-      },
-      body: JSON.stringify({ question_id: questionId }),
-    })
-
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      return { ok: false, error: json.error ?? `HTTP ${res.status}` }
-    }
+    await generateComment(questionId)
 
     await logAudit(user.id, 'question', questionId, 'comment_generated', null, {
       triggered_by: user.id,

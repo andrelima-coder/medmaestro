@@ -1,9 +1,11 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { uploadFile } from '@/lib/storage/signed-urls'
 import { logAudit } from '@/lib/audit'
+import { parseGabaritoForExam } from '@/lib/gabarito/run'
 
 export type CreateExamState = {
   error?: string
@@ -144,22 +146,12 @@ export async function createExamAction(
     auto_comments: autoComments,
   })
 
-  // Dispara parse do gabarito em background
-  if (gabaritoPath) {
-    const workerSecret = process.env.WORKER_SECRET ?? ''
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-      await fetch(`${baseUrl}/api/parse-gabarito`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${workerSecret}`,
-        },
-        body: JSON.stringify({ exam_id: exam.id, booklet_color: bookletColor }),
-      })
-    } catch {
-      // Não bloqueia o fluxo
-    }
+  // Dispara parse do gabarito em background (após resposta enviada)
+  if (gabaritoPath && bookletColor) {
+    const examIdForParse = exam.id as string
+    after(async () => {
+      await parseGabaritoForExam(examIdForParse, bookletColor).catch(() => null)
+    })
   }
 
   return { examId: exam.id }

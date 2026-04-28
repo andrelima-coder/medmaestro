@@ -124,7 +124,7 @@ E) ${alternatives['E'] ?? ''}`
   await supabase.from('question_tags').upsert(rows, { onConflict: 'question_id,tag_id' })
 }
 
-async function generateComment(questionId: string): Promise<void> {
+export async function generateComment(questionId: string): Promise<void> {
   const supabase = createServiceClient()
 
   const { data: question, error: qErr } = await supabase
