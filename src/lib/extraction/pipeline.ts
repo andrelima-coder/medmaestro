@@ -334,14 +334,16 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     const batchLabel = `páginas ${batch[0]?.pageNumber ?? '?'}–${batch[batch.length - 1]?.pageNumber ?? '?'}`
 
     let extracted: ExtractedQuestion[]
+    let rawClaude = ''
     try {
-      const raw = await extractFromImages({ imageBase64s, prompt: EXTRACTION_PROMPT })
-      extracted = parseJSON<ExtractedQuestion[]>(raw)
+      rawClaude = await extractFromImages({ imageBase64s, prompt: EXTRACTION_PROMPT })
+      extracted = parseJSON<ExtractedQuestion[]>(rawClaude)
     } catch (err) {
       hasErrors = true
       const msg = err instanceof Error ? err.message : String(err)
       lastErrorMessage = `Falha em ${batchLabel}: ${msg}`
-      console.error(`[extract ${exam_id}] ${lastErrorMessage}`)
+      const preview = rawClaude.slice(0, 300).replace(/\s+/g, ' ')
+      console.error(`[extract ${exam_id}] ${lastErrorMessage} | raw_preview="${preview}"`)
       await setProgress(
         exam_id,
         'extracting',
@@ -350,6 +352,15 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
         lastErrorMessage
       )
       continue
+    }
+
+    const completeCount = extracted.filter((q) => q.is_complete).length
+    console.log(
+      `[extract ${exam_id}] ${batchLabel}: ${extracted.length} questões retornadas, ${completeCount} completas`
+    )
+    if (extracted.length === 0) {
+      lastErrorMessage = `Claude retornou 0 questões em ${batchLabel}`
+      hasErrors = true
     }
 
     for (const q of extracted) {
@@ -376,6 +387,8 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
 
       if (insertError || !inserted) {
         hasErrors = true
+        lastErrorMessage = `Insert falhou Q${q.question_number}: ${insertError?.message ?? 'no row'}`
+        console.error(`[extract ${exam_id}] ${lastErrorMessage}`)
         continue
       }
 
