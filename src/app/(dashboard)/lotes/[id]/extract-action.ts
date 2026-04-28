@@ -1,7 +1,10 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
+import { runExtractionPipeline } from '@/lib/extraction/pipeline'
 
 export async function triggerExtractionAction(
   examId: string
@@ -12,21 +15,24 @@ export async function triggerExtractionAction(
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const workerSecret = process.env.WORKER_SECRET ?? ''
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const service = createServiceClient()
 
-  try {
-    const res = await fetch(`${baseUrl}/api/extract`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(workerSecret && { Authorization: `Bearer ${workerSecret}` }),
-      },
-      body: JSON.stringify({ exam_id: examId }),
+  const { data: exam, error: examError } = await service
+    .from('exams')
+    .select('id, source_pdf_path')
+    .eq('id', examId)
+    .single()
+
+  if (examError || !exam) return { ok: false, error: 'Exame não encontrado' }
+  if (!exam.source_pdf_path) return { ok: false, error: 'Exame não possui PDF da prova' }
+
+  await service.from('exams').update({ status: 'extracting' }).eq('id', examId)
+
+  after(async () => {
+    await runExtractionPipeline(examId).catch(async () => {
+      await createServiceClient().from('exams').update({ status: 'error' }).eq('id', examId)
     })
-    const data = (await res.json()) as { ok: boolean; queued?: boolean; error?: string }
-    return data
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
-  }
+  })
+
+  return { ok: true, queued: true }
 }
