@@ -26,7 +26,19 @@ export async function triggerExtractionAction(
   if (examError || !exam) return { ok: false, error: 'Exame não encontrado' }
   if (!exam.source_pdf_path) return { ok: false, error: 'Exame não possui PDF da prova' }
 
-  await service.from('exams').update({ status: 'extracting' }).eq('id', examId)
+  await service
+    .from('exams')
+    .update({
+      status: 'extracting',
+      extraction_progress: {
+        phase: 'idle',
+        current: 0,
+        total: 0,
+        message: 'Iniciando…',
+        updated_at: new Date().toISOString(),
+      },
+    })
+    .eq('id', examId)
 
   after(async () => {
     await runExtractionPipeline(examId).catch(async () => {

@@ -295,7 +295,9 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .download(exam.source_pdf_path as string)
 
   if (dlError || !fileData) {
-    await setProgress(exam_id, 'error', 0, 0, `Falha ao baixar PDF: ${dlError?.message ?? 'desconhecido'}`)
+    const msg = `Falha ao baixar PDF: ${dlError?.message ?? 'desconhecido'}`
+    console.error(`[extract ${exam_id}] ${msg}`)
+    await setProgress(exam_id, 'error', 0, 0, msg)
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
@@ -308,13 +310,9 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
   try {
     pages = await rasterizePdf(pdfBuffer)
   } catch (err) {
-    await setProgress(
-      exam_id,
-      'error',
-      0,
-      0,
-      `Falha ao rasterizar PDF: ${err instanceof Error ? err.message : String(err)}`
-    )
+    const msg = `Falha ao rasterizar PDF: ${err instanceof Error ? err.message : String(err)}`
+    console.error(`[extract ${exam_id}] ${msg}`)
+    await setProgress(exam_id, 'error', 0, 0, msg)
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
@@ -328,17 +326,29 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
   await setProgress(exam_id, 'extracting', 0, pages.length, `Extraindo questões (${pages.length} páginas)`)
 
   let hasErrors = false
+  let lastErrorMessage: string | null = null
 
   for (let batchStart = 0; batchStart < pages.length; batchStart += MAX_IMAGES_PER_CALL) {
     const batch = pages.slice(batchStart, batchStart + MAX_IMAGES_PER_CALL)
     const imageBase64s = batch.map((p) => p.jpegBase64)
+    const batchLabel = `páginas ${batch[0]?.pageNumber ?? '?'}–${batch[batch.length - 1]?.pageNumber ?? '?'}`
 
     let extracted: ExtractedQuestion[]
     try {
       const raw = await extractFromImages({ imageBase64s, prompt: EXTRACTION_PROMPT })
       extracted = parseJSON<ExtractedQuestion[]>(raw)
-    } catch {
+    } catch (err) {
       hasErrors = true
+      const msg = err instanceof Error ? err.message : String(err)
+      lastErrorMessage = `Falha em ${batchLabel}: ${msg}`
+      console.error(`[extract ${exam_id}] ${lastErrorMessage}`)
+      await setProgress(
+        exam_id,
+        'extracting',
+        Math.min(batchStart + batch.length, pages.length),
+        pages.length,
+        lastErrorMessage
+      )
       continue
     }
 
@@ -428,13 +438,18 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .single()
   await runComments(exam_id, (examPrefs?.auto_comments as string | null) ?? 'none')
 
-  await setProgress(
-    exam_id,
-    hasErrors ? 'error' : 'done',
-    1,
-    1,
-    hasErrors ? 'Concluído com erros parciais' : 'Pipeline concluído'
-  )
+  const { count: finalCount } = await supabase
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('exam_id', exam_id)
+
+  const errorMsg = hasErrors
+    ? lastErrorMessage
+      ? `Concluído com erros parciais — último: ${lastErrorMessage} (${finalCount ?? 0} questões salvas)`
+      : `Concluído com erros parciais (${finalCount ?? 0} questões salvas)`
+    : `Pipeline concluído — ${finalCount ?? 0} questões`
+
+  await setProgress(exam_id, hasErrors ? 'error' : 'done', 1, 1, errorMsg)
 
   await supabase
     .from('exams')
