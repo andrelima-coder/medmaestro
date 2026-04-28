@@ -7,12 +7,32 @@ import { triggerExtractionAction } from '@/app/(dashboard)/lotes/[id]/extract-ac
 
 type ExamStatus = 'pending' | 'extracting' | 'classifying' | 'done' | 'error'
 
+type ExtractionProgress = {
+  phase: string
+  current: number
+  total: number
+  message: string | null
+  updated_at: string | null
+} | null
+
 type Exam = {
   id: string
   status: ExamStatus
   year: number
   booklet_color: string | null
   specialties: { name: string } | null
+  extraction_progress?: ExtractionProgress
+}
+
+const PHASE_LABEL: Record<string, string> = {
+  idle: 'Aguardando início',
+  downloading_pdf: 'Baixando PDF',
+  rasterizing: 'Convertendo PDF em imagens',
+  extracting: 'Extraindo questões (Claude Vision)',
+  classifying: 'Classificando por IA',
+  commenting: 'Gerando comentários didáticos',
+  done: 'Concluído',
+  error: 'Erro',
 }
 
 const STATUS_LABELS: Record<ExamStatus, string> = {
@@ -68,6 +88,9 @@ export function ExamProgress({
   const [classifiedCount, setClassifiedCount] = useState(0)
   const [extractError, setExtractError] = useState<string | null>(null)
   const [triggering, setTriggering] = useState(false)
+  const [progress, setProgress] = useState<ExtractionProgress>(
+    exam.extraction_progress ?? null
+  )
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   async function triggerExtraction() {
@@ -86,7 +109,7 @@ export function ExamProgress({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Supabase Realtime — escuta mudanças de status no exame
+  // Supabase Realtime — escuta mudanças de status e progresso no exame
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -95,8 +118,12 @@ export function ExamProgress({
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'exams', filter: `id=eq.${exam.id}` },
         (payload) => {
-          const newStatus = (payload.new as { status: ExamStatus }).status
-          setStatus(newStatus)
+          const row = payload.new as {
+            status: ExamStatus
+            extraction_progress: ExtractionProgress
+          }
+          setStatus(row.status)
+          if (row.extraction_progress) setProgress(row.extraction_progress)
         }
       )
       .subscribe()
@@ -202,35 +229,59 @@ export function ExamProgress({
         </span>
       </div>
 
-      {/* Progress bar (só durante pipeline) */}
+      {/* Progress bar detalhada (durante pipeline) */}
       {(status === 'extracting' || status === 'classifying') && (
         <div>
-          <div
-            style={{
-              height: 4,
-              borderRadius: 2,
-              background: 'var(--mm-bg2)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                borderRadius: 2,
-                background: `linear-gradient(90deg, ${ss.color}, ${ss.color}80)`,
-                width: status === 'classifying' && count > 0
-                  ? `${Math.round((classifiedCount / count) * 100)}%`
-                  : '100%',
-                animation: status === 'extracting' ? 'indeterminate 2s ease-in-out infinite' : 'none',
-                transition: 'width 500ms ease',
-              }}
-            />
-          </div>
-          {phaseLabel && (
-            <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 8 }}>
-              {phaseLabel}
-            </p>
-          )}
+          {(() => {
+            const phase = progress?.phase ?? 'idle'
+            const total = progress?.total ?? 0
+            const current = progress?.current ?? 0
+            const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
+            const phaseLbl = PHASE_LABEL[phase] ?? phaseLabel ?? 'Processando…'
+            const indeterminate = total === 0
+            return (
+              <>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11,
+                    color: 'var(--mm-muted)',
+                    marginBottom: 6,
+                  }}
+                >
+                  <span style={{ color: 'var(--mm-text2)', fontWeight: 600 }}>{phaseLbl}</span>
+                  <span>
+                    {indeterminate ? '…' : `${current}/${total} · ${pct}%`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    height: 6,
+                    borderRadius: 3,
+                    background: 'var(--mm-bg2)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      borderRadius: 3,
+                      background: `linear-gradient(90deg, ${ss.color}, ${ss.color}80)`,
+                      width: indeterminate ? '100%' : `${pct}%`,
+                      animation: indeterminate ? 'indeterminate 2s ease-in-out infinite' : 'none',
+                      transition: 'width 500ms ease',
+                    }}
+                  />
+                </div>
+                {progress?.message && (
+                  <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 8 }}>
+                    {progress.message}
+                  </p>
+                )}
+              </>
+            )
+          })()}
         </div>
       )}
 

@@ -52,7 +52,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
   const [examRes, questionsRes, jobsRes] = await Promise.all([
     supabase
       .from('exams')
-      .select('id, year, booklet_color, status, exam_boards(name, short_name), specialties(name)')
+      .select('id, year, booklet_color, status, extraction_progress, exam_boards(name, short_name), specialties(name)')
       .eq('id', id)
       .single(),
     supabase
@@ -257,6 +257,13 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
             year: exam.year as number,
             booklet_color: exam.booklet_color as string | null,
             specialties: specialty,
+            extraction_progress: (exam.extraction_progress as {
+              phase: string
+              current: number
+              total: number
+              message: string | null
+              updated_at: string | null
+            } | null) ?? null,
           }}
           initialCount={totalQuestoes}
         />

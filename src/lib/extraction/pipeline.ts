@@ -48,6 +48,38 @@ const IMAGE_TYPE_MAP: Record<string, string> = {
 const CLASSIFY_BATCH_SIZE = 5
 const COMMENTS_BATCH_SIZE = 3
 
+type ProgressPhase =
+  | 'idle'
+  | 'downloading_pdf'
+  | 'rasterizing'
+  | 'extracting'
+  | 'classifying'
+  | 'commenting'
+  | 'done'
+  | 'error'
+
+async function setProgress(
+  exam_id: string,
+  phase: ProgressPhase,
+  current: number,
+  total: number,
+  message: string | null = null
+): Promise<void> {
+  const supabase = createServiceClient()
+  await supabase
+    .from('exams')
+    .update({
+      extraction_progress: {
+        phase,
+        current,
+        total,
+        message,
+        updated_at: new Date().toISOString(),
+      },
+    })
+    .eq('id', exam_id)
+}
+
 function buildTagsPrompt(tagsByDimension: Record<string, string[]>): string {
   return Object.entries(tagsByDimension)
     .map(([dim, labels]) => `${dim}: ${labels.join(' | ')}`)
@@ -192,11 +224,19 @@ async function runClassification(exam_id: string): Promise<void> {
     .eq('exam_id', exam_id)
     .in('status', ['pending_review', 'pending_extraction'])
 
-  if (!questions || questions.length === 0) return
+  if (!questions || questions.length === 0) {
+    await setProgress(exam_id, 'classifying', 0, 0, 'Nenhuma questão para classificar')
+    return
+  }
 
+  await setProgress(exam_id, 'classifying', 0, questions.length, 'Classificando questões por IA')
+
+  let done = 0
   for (let i = 0; i < questions.length; i += CLASSIFY_BATCH_SIZE) {
     const batch = questions.slice(i, i + CLASSIFY_BATCH_SIZE)
     await Promise.allSettled(batch.map((q) => classifyQuestion(q.id as string)))
+    done += batch.length
+    await setProgress(exam_id, 'classifying', done, questions.length, 'Classificando questões por IA')
   }
 }
 
@@ -217,14 +257,21 @@ async function runComments(exam_id: string, mode: string): Promise<void> {
   const { data: questions } = await qQuery
   if (!questions || questions.length === 0) return
 
+  await setProgress(exam_id, 'commenting', 0, questions.length, 'Gerando comentários didáticos')
+
+  let done = 0
   for (let i = 0; i < questions.length; i += COMMENTS_BATCH_SIZE) {
     const batch = questions.slice(i, i + COMMENTS_BATCH_SIZE)
     await Promise.allSettled(batch.map((q) => generateComment(q.id as string)))
+    done += batch.length
+    await setProgress(exam_id, 'commenting', done, questions.length, 'Gerando comentários didáticos')
   }
 }
 
 export async function runExtractionPipeline(exam_id: string): Promise<void> {
   const supabase = createServiceClient()
+
+  await setProgress(exam_id, 'downloading_pdf', 0, 0, 'Baixando PDF do storage')
 
   const { data: exam, error: examError } = await supabase
     .from('exams')
@@ -233,6 +280,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .single()
 
   if (examError || !exam || !exam.source_pdf_path) {
+    await setProgress(exam_id, 'error', 0, 0, 'Exame não encontrado ou sem PDF')
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
@@ -247,24 +295,37 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .download(exam.source_pdf_path as string)
 
   if (dlError || !fileData) {
+    await setProgress(exam_id, 'error', 0, 0, `Falha ao baixar PDF: ${dlError?.message ?? 'desconhecido'}`)
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
 
   const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
 
+  await setProgress(exam_id, 'rasterizing', 0, 1, 'Convertendo PDF em imagens')
+
   let pages: Awaited<ReturnType<typeof rasterizePdf>>
   try {
     pages = await rasterizePdf(pdfBuffer)
-  } catch {
+  } catch (err) {
+    await setProgress(
+      exam_id,
+      'error',
+      0,
+      0,
+      `Falha ao rasterizar PDF: ${err instanceof Error ? err.message : String(err)}`
+    )
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
 
   if (pages.length === 0) {
+    await setProgress(exam_id, 'error', 0, 0, 'PDF sem páginas extraíveis')
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
+
+  await setProgress(exam_id, 'extracting', 0, pages.length, `Extraindo questões (${pages.length} páginas)`)
 
   let hasErrors = false
 
@@ -334,6 +395,15 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
         }
       }
     }
+
+    const pagesProcessed = Math.min(batchStart + batch.length, pages.length)
+    await setProgress(
+      exam_id,
+      'extracting',
+      pagesProcessed,
+      pages.length,
+      `Extraindo questões (${pagesProcessed}/${pages.length} páginas)`
+    )
   }
 
   try {
@@ -357,6 +427,14 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .eq('id', exam_id)
     .single()
   await runComments(exam_id, (examPrefs?.auto_comments as string | null) ?? 'none')
+
+  await setProgress(
+    exam_id,
+    hasErrors ? 'error' : 'done',
+    1,
+    1,
+    hasErrors ? 'Concluído com erros parciais' : 'Pipeline concluído'
+  )
 
   await supabase
     .from('exams')
