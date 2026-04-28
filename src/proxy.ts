@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login']
+const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/api/auth/callback']
 
 const ADMIN_ROUTES = ['/auditoria', '/configuracoes/usuarios']
 const SUPERADMIN_ROUTES = ['/configuracoes/hierarquia', '/configuracoes/tags']
