@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { RetriggerButton } from '@/components/lotes/retrigger-button'
+import { MiniProgressBar } from '@/components/lotes/mini-progress-bar'
 
 export const metadata = { title: 'Lotes — MedMaestro' }
 
@@ -73,7 +74,7 @@ export default async function LotesPage() {
 
   const { data: exams } = await service
     .from('exams')
-    .select('id, year, booklet_color, status, created_at, exam_boards(name, short_name), specialties(name)')
+    .select('id, year, booklet_color, status, extraction_progress, created_at, exam_boards(name, short_name), specialties(name)')
     .order('created_at', { ascending: false })
 
   // Busca count de questões para cada exam
@@ -200,7 +201,7 @@ export default async function LotesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['LOTE', 'ANO', 'BANCA', 'COR', 'QUESTÕES', 'STATUS', 'AÇÃO'].map((col) => (
+                {['LOTE', 'ANO', 'BANCA', 'COR', 'QUESTÕES', 'STATUS', 'PROGRESSO', 'AÇÃO'].map((col) => (
                   <th
                     key={col}
                     style={{
@@ -261,6 +262,21 @@ export default async function LotesPage() {
                     </td>
                     <td style={{ padding: '11px 16px' }}>
                       <StatusBadge status={statusKey} />
+                    </td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <MiniProgressBar
+                        examId={eid}
+                        initialStatus={statusKey as 'pending' | 'extracting' | 'classifying' | 'done' | 'error'}
+                        initialProgress={
+                          (exam.extraction_progress as {
+                            phase: string
+                            current: number
+                            total: number
+                            message: string | null
+                            updated_at: string | null
+                          } | null) ?? null
+                        }
+                      />
                     </td>
                     <td style={{ padding: '11px 16px' }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
