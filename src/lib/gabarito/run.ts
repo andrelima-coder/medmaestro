@@ -1,5 +1,29 @@
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import { writeFile, readFile, unlink } from 'fs/promises'
 import { createServiceClient } from '@/lib/supabase/service'
 import { parseGabarito } from '@/lib/gabarito/parser'
+
+const execFileAsync = promisify(execFile)
+const PDFTOTEXT = process.env.PDFTOTEXT_PATH ?? 'pdftotext'
+
+async function extractTextWithPdftotext(pdfBuffer: Buffer): Promise<string> {
+  const id = crypto.randomUUID()
+  const pdfPath = `/tmp/mm-gab-${id}.pdf`
+  const txtPath = `/tmp/mm-gab-${id}.txt`
+
+  await writeFile(pdfPath, pdfBuffer)
+
+  try {
+    await execFileAsync(PDFTOTEXT, ['-layout', '-enc', 'UTF-8', pdfPath, txtPath])
+    return await readFile(txtPath, 'utf8')
+  } finally {
+    await Promise.all([
+      unlink(pdfPath).catch(() => {}),
+      unlink(txtPath).catch(() => {}),
+    ])
+  }
+}
 
 export type ParseGabaritoResult =
   | {
@@ -42,10 +66,7 @@ export async function parseGabaritoForExam(
 
   let text: string
   try {
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: pdfBuffer })
-    const parsed = await parser.getText()
-    text = parsed.text
+    text = await extractTextWithPdftotext(pdfBuffer)
   } catch (err) {
     return {
       ok: false,
