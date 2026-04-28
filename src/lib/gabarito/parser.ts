@@ -26,18 +26,31 @@ function parseTable(lines: string[]): Record<string, Record<number, string>> | n
   const byColor: Record<string, Record<number, string>> = {}
   for (const c of COLORS) byColor[c] = {}
 
+  // Detecta se o cabeçalho repete COLORS (tabela em 2 colunas lado a lado:
+  // "Questão AMARELO AZUL ROSA VERDE   Questão AMARELO AZUL ROSA VERDE")
+  const blocksInHeader = COLORS.reduce(
+    (n, c) => n + (headerLine.split(c).length - 1),
+    0
+  )
+  const blocks = blocksInHeader >= colorOrder.length * 2 ? 2 : 1
+  const blockSize = colorOrder.length + 1 // 1 coluna de qNum + N de cores
+
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const line = lines[i]
     if (/ALTERA/i.test(line)) break
 
     const tokens = line.split(/\s+/)
-    const qNum = parseInt(tokens[0], 10)
-    if (isNaN(qNum) || qNum <= 0) continue
 
-    colorOrder.forEach((color, ci) => {
-      const ans = normalizeAnswer(tokens[ci + 1] ?? '')
-      if (ans) byColor[color][qNum] = ans
-    })
+    for (let b = 0; b < blocks; b++) {
+      const offset = b * blockSize
+      const qNum = parseInt(tokens[offset] ?? '', 10)
+      if (isNaN(qNum) || qNum <= 0) continue
+
+      colorOrder.forEach((color, ci) => {
+        const ans = normalizeAnswer(tokens[offset + ci + 1] ?? '')
+        if (ans) byColor[color][qNum] = ans
+      })
+    }
   }
 
   const totalEntries = Object.values(byColor).reduce((s, m) => s + Object.keys(m).length, 0)
