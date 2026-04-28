@@ -1,4 +1,3 @@
-import { PDFParse } from 'pdf-parse'
 import { createServiceClient } from '@/lib/supabase/service'
 import { parseGabarito } from '@/lib/gabarito/parser'
 
@@ -43,6 +42,7 @@ export async function parseGabaritoForExam(
 
   let text: string
   try {
+    const { PDFParse } = await import('pdf-parse')
     const parser = new PDFParse({ data: pdfBuffer })
     const parsed = await parser.getText()
     text = parsed.text
