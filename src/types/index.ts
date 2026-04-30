@@ -12,10 +12,13 @@ export interface Profile {
 
 export type QuestionStatus =
   | 'pending_extraction'
+  | 'pending_review'
   | 'in_review'
+  | 'needs_attention'
   | 'approved'
   | 'rejected'
   | 'published'
+  | 'error'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   superadmin: 'Superadmin',
@@ -25,9 +28,12 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const STATUS_LABELS: Record<QuestionStatus, string> = {
-  pending_extraction: 'Aguardando revisão',
+  pending_extraction: 'Aguardando extração',
+  pending_review: 'Aguardando revisão',
   in_review: 'Em revisão',
+  needs_attention: 'Atenção',
   approved: 'Aprovada',
   rejected: 'Rejeitada',
   published: 'Publicada',
+  error: 'Erro',
 }

@@ -12,10 +12,13 @@ import type { QuestionStatus } from '@/types'
 
 const STATUS_CLASSES: Record<string, string> = {
   pending_extraction: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  pending_review: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   in_review: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  needs_attention: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
   approved: 'bg-green-500/15 text-green-400 border-green-500/30',
   rejected: 'bg-red-500/15 text-red-400 border-red-500/30',
   published: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  error: 'bg-red-500/15 text-red-400 border-red-500/30',
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
