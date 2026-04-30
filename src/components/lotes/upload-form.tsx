@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { createExamAction, type CreateExamState } from '@/app/(dashboard)/lotes/novo/actions'
+import { InlineProgress } from '@/components/lotes/inline-progress'
 
 type Board = {
   id: string
@@ -531,7 +531,6 @@ function RadioGroup({
 /* ── Main Form ─────────────────────────────────────────────────────────────── */
 
 export function UploadForm({ boards }: { boards: Board[] }) {
-  const router = useRouter()
   const [state, action, pending] = useActionState(createExamAction, initialState)
 
   const [boardId, setBoardId] = useState('')
@@ -557,10 +556,6 @@ export function UploadForm({ boards }: { boards: Board[] }) {
   const boardOptions = boards.map((b) => ({ value: b.id, label: `${b.short_name} — ${b.name}` }))
   const yearOptions = YEARS.map((y) => ({ value: String(y), label: String(y) }))
 
-  useEffect(() => {
-    if (state.examId) router.push(`/lotes/${state.examId}`)
-  }, [state.examId, router])
-
   // Reset cores quando troca para banca sem cadernos coloridos
   useEffect(() => {
     if (selectedBoard && !selectedBoard.supports_booklet_colors) {
@@ -568,6 +563,11 @@ export function UploadForm({ boards }: { boards: Board[] }) {
       setAnswerKeyColor('')
     }
   }, [selectedBoard])
+
+  // Após criar o exame, mantém o usuário aqui e mostra a barra inline
+  if (state.examId) {
+    return <InlineProgress examId={state.examId} />
+  }
 
   return (
     <form action={action}>
