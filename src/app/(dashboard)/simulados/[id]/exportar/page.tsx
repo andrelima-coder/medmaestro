@@ -84,7 +84,7 @@ export default async function ExportarSimuladoPage({
         <p className="text-sm text-muted-foreground">{summary}</p>
       </header>
 
-      <ExportForm simuladoId={id} filtersSummary={summary} />
+      <ExportForm simuladoId={id} filtersSummary={summary} totalQuestions={total} />
     </div>
   )
 }

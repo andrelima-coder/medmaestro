@@ -63,13 +63,14 @@ export function WorkflowStepper() {
         const color = isActive
           ? 'var(--mm-gold)'
           : isPast
-            ? 'var(--mm-text2)'
+            ? 'var(--mm-green)'
             : 'var(--mm-muted)'
 
         return (
           <Link
             key={step.num}
             href={step.href}
+            aria-current={isActive ? 'step' : undefined}
             style={{
               position: 'relative',
               display: 'inline-flex',
@@ -88,6 +89,7 @@ export function WorkflowStepper() {
             }}
           >
             <span
+              aria-hidden
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -99,12 +101,33 @@ export function WorkflowStepper() {
                 fontWeight: 700,
                 background: isActive
                   ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
-                  : 'var(--mm-bg2)',
+                  : isPast
+                    ? 'rgba(102, 187, 106, 0.15)'
+                    : 'var(--mm-bg2)',
                 color: isActive ? '#0a0a0a' : color,
-                border: isActive ? 'none' : '1px solid var(--mm-line2)',
+                border: isActive
+                  ? 'none'
+                  : isPast
+                    ? '1px solid rgba(102, 187, 106, 0.45)'
+                    : '1px solid var(--mm-line2)',
               }}
             >
-              {step.num}
+              {isPast ? (
+                <svg
+                  viewBox="0 0 12 12"
+                  width={11}
+                  height={11}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2.5 6.2L5 8.8 9.5 3.6" />
+                </svg>
+              ) : (
+                step.num
+              )}
             </span>
             <span style={{ letterSpacing: '0.3px' }}>{step.label}</span>
           </Link>

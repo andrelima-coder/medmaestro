@@ -36,9 +36,10 @@ const CONTENT_FIELDS: Array<{ key: keyof ContentFlags; label: string }> = [
 type Props = {
   simuladoId: string
   filtersSummary?: string | null
+  totalQuestions?: number
 }
 
-export function ExportForm({ simuladoId, filtersSummary }: Props) {
+export function ExportForm({ simuladoId, filtersSummary, totalQuestions = 0 }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -54,12 +55,25 @@ export function ExportForm({ simuladoId, filtersSummary }: Props) {
     referencias: false,
   })
 
+  const noQuestions = totalQuestions === 0
+  const noContentSelected = !Object.values(content).some(Boolean)
+  const blocked = pending || noQuestions || noContentSelected
+
   function toggle(key: keyof ContentFlags) {
     setContent((c) => ({ ...c, [key]: !c[key] }))
   }
 
   async function handleExport() {
     setError(null)
+    if (noQuestions) {
+      setError('Nenhuma questão para exportar.')
+      return
+    }
+    if (noContentSelected) {
+      setError('Selecione pelo menos um campo em "Conteúdo a incluir".')
+      return
+    }
+
     const params = new URLSearchParams({ format })
     for (const [k, v] of Object.entries(content)) {
       params.set(k, v ? '1' : '0')
@@ -72,7 +86,14 @@ export function ExportForm({ simuladoId, filtersSummary }: Props) {
         })
         if (!res.ok) {
           const text = await res.text().catch(() => '')
-          throw new Error(text || `Falha na exportação (${res.status})`)
+          let message = text || `Falha na exportação (${res.status})`
+          try {
+            const parsed = JSON.parse(text)
+            if (parsed?.error) message = parsed.error
+          } catch {
+            // texto livre
+          }
+          throw new Error(message)
         }
 
         const cd = res.headers.get('content-disposition') ?? ''
@@ -87,7 +108,7 @@ export function ExportForm({ simuladoId, filtersSummary }: Props) {
         document.body.appendChild(a)
         a.click()
         a.remove()
-        URL.revokeObjectURL(url)
+        setTimeout(() => URL.revokeObjectURL(url), 0)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao exportar')
       }
@@ -273,23 +294,54 @@ export function ExportForm({ simuladoId, filtersSummary }: Props) {
       )}
 
       {/* Ações */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
           onClick={handleExport}
-          disabled={pending}
+          disabled={blocked}
+          aria-disabled={blocked}
           className="inline-flex items-center gap-1.5 h-10 px-5 rounded-lg bg-gradient-to-br from-[var(--mm-gold)] to-[var(--mm-gold2)] text-[#0a0a0a] text-sm font-semibold shadow-[0_8px_24px_-8px_rgba(212,168,67,0.45)] hover:brightness-105 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed transition-all"
         >
-          {pending ? 'Gerando…' : 'Exportar agora'}
-          {!pending && <span aria-hidden>→</span>}
+          {pending ? (
+            <>
+              <svg
+                viewBox="0 0 16 16"
+                width={14}
+                height={14}
+                className="animate-spin"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+              >
+                <path d="M8 1.5a6.5 6.5 0 1 1-6.5 6.5" />
+              </svg>
+              Gerando {format.toUpperCase()}…
+            </>
+          ) : (
+            <>
+              Exportar agora
+              <span aria-hidden>→</span>
+            </>
+          )}
         </button>
         <button
           type="button"
-          onClick={() => router.push('/questoes')}
+          onClick={() => router.push(`/simulados/${simuladoId}`)}
           className="inline-flex items-center h-10 px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-foreground transition-colors"
         >
           Voltar aos filtros
         </button>
+        {noQuestions && (
+          <p className="text-xs text-[var(--mm-muted)]">
+            Adicione questões ao simulado antes de exportar.
+          </p>
+        )}
+        {!noQuestions && noContentSelected && (
+          <p className="text-xs text-[var(--mm-muted)]">
+            Selecione ao menos um campo em &quot;Conteúdo a incluir&quot;.
+          </p>
+        )}
       </div>
     </div>
   )
