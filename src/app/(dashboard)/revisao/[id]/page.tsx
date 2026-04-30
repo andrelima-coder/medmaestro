@@ -5,6 +5,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { AssignmentBar } from '@/components/revisao/assignment-bar'
 import { ActionsPanel } from '@/components/revisao/actions-panel'
 import { TagPanel, type TagItem } from '@/components/questoes/tag-panel'
+import { CommentList } from '@/components/revisao/comment-list'
+import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
 
 export const metadata = { title: 'Revisão — MedMaestro' }
 
@@ -49,8 +51,8 @@ export default async function RevisaoItemPage({
 
   const service = createServiceClient()
 
-  // Busca questão + dados de tags + revisões em paralelo
-  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes] = await Promise.all([
+  // Busca questão + dados de tags + revisões + comentários em paralelo
+  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments] = await Promise.all([
     service
       .from('questions')
       .select(
@@ -73,6 +75,7 @@ export default async function RevisaoItemPage({
       .eq('change_reason', 'tag_update')
       .limit(1)
       .single(),
+    getQuestionComments(id),
   ])
 
   const question = questionRes.data
@@ -286,6 +289,8 @@ export default async function RevisaoItemPage({
               </p>
             )}
           </div>
+
+          <CommentList comments={comments} />
         </div>
 
         {/* ── Direito: ações + tags ── */}
