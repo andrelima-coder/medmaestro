@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   generateFlashcardsBatchAction,
@@ -279,8 +280,19 @@ export function FlashcardsClient({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} style={{ borderBottom: '1px solid var(--mm-line)' }}>
-                  <td style={td()}>
+                <tr
+                  key={r.id}
+                  style={{
+                    borderBottom: '1px solid var(--mm-line)',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('input,a')) return
+                    window.location.href = `/questoes/${r.id}`
+                  }}
+                  className="hover:bg-white/[0.02]"
+                >
+                  <td style={td()} onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selected.has(r.id)}
@@ -288,8 +300,19 @@ export function FlashcardsClient({
                     />
                   </td>
                   <td style={td('var(--mm-muted)')}>{r.exam_label}</td>
-                  <td style={{ ...td('var(--mm-gold)'), fontWeight: 700 }}>
-                    Q{r.question_number}
+                  <td style={{ ...td(), padding: 0 }}>
+                    <Link
+                      href={`/questoes/${r.id}`}
+                      style={{
+                        display: 'block',
+                        padding: '11px 16px',
+                        color: 'var(--mm-gold)',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Q{r.question_number}
+                    </Link>
                   </td>
                   <td
                     style={{
