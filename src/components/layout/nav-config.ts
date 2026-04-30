@@ -38,6 +38,14 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
       : []),
   ]
 
+  const gerar: NavItemDef[] = can(role, 'admin')
+    ? [
+        { label: 'Comentários', href: '/comentarios', iconKey: 'MessageSquare' },
+        { label: 'Variações', href: '/variacoes', iconKey: 'Copy' },
+        { label: 'Flashcards', href: '/flashcards', iconKey: 'Layers' },
+      ]
+    : []
+
   const analise: NavItemDef[] = [
     { label: 'Análise', href: '/analise', iconKey: 'BarChart2' },
   ]
@@ -60,8 +68,13 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
   const sections: NavSectionDef[] = [
     { title: 'Geral', items: geral },
     { title: 'Banco', items: banco },
-    { title: 'Análise', items: analise },
   ]
+
+  if (gerar.length > 0) {
+    sections.push({ title: 'Gerar', items: gerar })
+  }
+
+  sections.push({ title: 'Análise', items: analise })
 
   if (admin.length > 0) {
     sections.push({ title: 'Admin', items: admin })

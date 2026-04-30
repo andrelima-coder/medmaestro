@@ -16,6 +16,9 @@ import {
   Tags,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
+  Copy,
+  Layers,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,6 +35,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Users,
   GitBranch,
   Tags,
+  MessageSquare,
+  Copy,
+  Layers,
 }
 
 interface SidebarClientProps {
