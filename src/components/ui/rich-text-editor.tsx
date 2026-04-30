@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 
 type RichTextEditorProps = {
   value: string
@@ -8,6 +8,7 @@ type RichTextEditorProps = {
   placeholder?: string
   minHeight?: number
   ariaLabel?: string
+  onUploadImage?: (file: File) => Promise<{ url: string } | { error: string }>
 }
 
 const TOOLBAR_BUTTONS: Array<{
@@ -33,9 +34,13 @@ export function RichTextEditor({
   placeholder = '',
   minHeight = 80,
   ariaLabel,
+  onUploadImage,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null)
   const lastValueRef = useRef<string>(value)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!editorRef.current) return
@@ -58,6 +63,36 @@ export function RichTextEditor({
     emit()
   }
 
+  function insertImage(url: string) {
+    editorRef.current?.focus()
+    const ok = document.execCommand('insertImage', false, url)
+    if (!ok && editorRef.current) {
+      const img = document.createElement('img')
+      img.src = url
+      img.alt = ''
+      editorRef.current.appendChild(img)
+    }
+    emit()
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !onUploadImage) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const res = await onUploadImage(file)
+      if ('url' in res) {
+        insertImage(res.url)
+      } else {
+        setUploadError(res.error || 'Falha no upload')
+      }
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="rounded-lg border border-white/8 bg-white/4 focus-within:border-[var(--mm-gold)]/40 transition-colors">
       <div className="flex flex-wrap items-center gap-1 border-b border-white/8 px-2 py-1.5">
@@ -73,6 +108,33 @@ export function RichTextEditor({
             {b.label}
           </button>
         ))}
+        {onUploadImage && (
+          <>
+            <span className="mx-1 h-4 w-px bg-white/10" aria-hidden />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              title="Inserir imagem"
+              className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/8 rounded transition-colors min-w-[28px] disabled:opacity-40"
+            >
+              {uploading ? '…' : '🖼'}
+            </button>
+            {uploadError && (
+              <span className="text-[10px] text-red-400 ml-1" title={uploadError}>
+                erro
+              </span>
+            )}
+          </>
+        )}
       </div>
       <div
         ref={editorRef}
@@ -115,6 +177,13 @@ export function RichTextEditor({
         .rich-editor-content :global(sub),
         .rich-editor-content :global(sup) {
           font-size: 0.75em;
+        }
+        .rich-editor-content :global(img) {
+          max-width: 100%;
+          height: auto;
+          border-radius: 6px;
+          margin: 6px 0;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
       `}</style>
     </div>

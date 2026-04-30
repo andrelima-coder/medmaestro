@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition, useEffect, useRef } from 'react'
+import { useState, useTransition, useEffect, useRef, useCallback } from 'react'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { saveQuestionContent } from '@/app/(dashboard)/revisao/[id]/content-actions'
+import { uploadInlineImage } from '@/app/(dashboard)/revisao/[id]/inline-image-actions'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
@@ -64,6 +65,17 @@ export function QuestionEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stem, alts])
 
+  const handleUploadImage = useCallback(
+    async (file: File): Promise<{ url: string } | { error: string }> => {
+      const fd = new FormData()
+      fd.set('file', file)
+      const res = await uploadInlineImage(questionId, fd)
+      if (res.ok && res.url) return { url: res.url }
+      return { error: res.error ?? 'Falha no upload' }
+    },
+    [questionId]
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -85,6 +97,7 @@ export function QuestionEditor({
             placeholder="Enunciado da questão…"
             ariaLabel="Editor do enunciado"
             minHeight={120}
+            onUploadImage={handleUploadImage}
           />
         )}
       </div>
@@ -129,6 +142,7 @@ export function QuestionEditor({
                       placeholder={`Alternativa ${letter}`}
                       ariaLabel={`Editor da alternativa ${letter}`}
                       minHeight={48}
+                      onUploadImage={handleUploadImage}
                     />
                   )}
                 </div>

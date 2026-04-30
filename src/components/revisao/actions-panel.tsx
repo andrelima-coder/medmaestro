@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition, useState } from 'react'
-import { submitReviewAction } from '@/app/(dashboard)/revisao/[id]/actions'
+import { submitReviewAction, saveAsDraft } from '@/app/(dashboard)/revisao/[id]/actions'
 
 type Action = 'approve' | 'reject' | 'flag'
 
@@ -56,6 +56,12 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
     })
   }
 
+  function handleSaveDraft() {
+    startTransition(async () => {
+      await saveAsDraft(questionId)
+    })
+  }
+
   if (isDone) {
     return (
       <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-3">
@@ -82,6 +88,14 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
             {a.label}
           </button>
         ))}
+        <button
+          onClick={handleSaveDraft}
+          disabled={pending}
+          title="Salva o estado atual e libera a questão para retomar depois."
+          className="w-full rounded-lg border border-white/8 bg-white/4 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/8 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {pending ? 'Salvando…' : 'Salvar como rascunho'}
+        </button>
       </div>
 
       {selected && (

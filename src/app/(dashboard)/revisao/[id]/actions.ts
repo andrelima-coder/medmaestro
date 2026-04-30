@@ -122,3 +122,34 @@ export async function submitReviewAction(
 
   redirect('/revisao')
 }
+
+export async function saveAsDraft(questionId: string): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+
+  const service = createServiceClient()
+
+  await service
+    .from('questions')
+    .update({ status: 'pending_review', updated_at: new Date().toISOString() })
+    .eq('id', questionId)
+
+  await service
+    .from('review_assignments')
+    .update({ status: 'released', completed_at: new Date().toISOString() })
+    .eq('question_id', questionId)
+    .eq('assigned_to', user.id)
+
+  await service.from('audit_logs').insert({
+    user_id: user.id,
+    entity_type: 'question',
+    entity_id: questionId,
+    action: 'save_draft',
+    after_data: { status: 'pending_review' },
+  })
+
+  redirect('/revisao')
+}

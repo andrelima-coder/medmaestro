@@ -144,12 +144,15 @@ export function TagPanel({
                   key={tag.id}
                   onClick={() => toggleTag(tag.id)}
                   disabled={isPending && saveState === 'saving'}
+                  title={isActive ? 'Clique para remover' : 'Clique para adicionar'}
+                  aria-pressed={isActive}
                   className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
                     isActive
                       ? 'bg-[var(--mm-gold)]/15 border-[var(--mm-gold)]/40 text-[var(--mm-gold)]'
                       : 'border-white/8 text-muted-foreground hover:border-white/20 hover:text-foreground'
                   }`}
                 >
+                  {isActive && <span className="mr-1">✓</span>}
                   {tag.label}
                 </button>
               )
