@@ -100,13 +100,12 @@ export default async function SimuladoDetailPage({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {questions.length > 0 && (
-            <a
-              href={`/api/simulados/${id}/export`}
-              download
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-xs text-foreground"
+            <Link
+              href={`/simulados/${id}/exportar`}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[var(--mm-gold)]/30 bg-[var(--mm-gold)]/10 hover:bg-[var(--mm-gold)]/20 transition-colors text-xs font-medium text-[var(--mm-gold)]"
             >
-              ↓ Exportar Word
-            </a>
+              Exportar →
+            </Link>
           )}
           {isOwner && <SimuladoDelete simuladoId={id} />}
         </div>

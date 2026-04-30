@@ -31,7 +31,10 @@ const STEPS: Step[] = [
     num: 7,
     label: 'Exportação',
     href: '/simulados',
-    matches: (p) => p.startsWith('/simulados'),
+    matches: (p) =>
+      p.startsWith('/simulados') ||
+      p.startsWith('/exportar') ||
+      /\/exportar(\/|$)/.test(p),
   },
   { num: 8, label: 'Auditoria', href: '/auditoria', matches: (p) => p.startsWith('/auditoria') },
 ]
