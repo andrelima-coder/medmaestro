@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { WorkflowStepper } from '@/components/layout/workflow-stepper'
 import type { UserRole } from '@/types'
 
 export default async function DashboardLayout({
@@ -34,6 +35,7 @@ export default async function DashboardLayout({
           fullName={profile?.full_name ?? null}
           email={profile?.email ?? user.email ?? null}
         />
+        <WorkflowStepper />
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>

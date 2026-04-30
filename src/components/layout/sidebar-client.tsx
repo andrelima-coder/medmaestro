@@ -58,11 +58,20 @@ export function SidebarClient({ sections }: SidebarClientProps) {
       {/* Logo */}
       <div className="flex h-14 items-center px-4 border-b border-border shrink-0 overflow-hidden">
         {collapsed ? (
-          <span className="text-lg font-bold text-[var(--mm-gold)]">M</span>
-        ) : (
-          <span className="text-base font-semibold text-foreground whitespace-nowrap">
-            Med<span className="text-[var(--mm-gold)]">Maestro</span>
+          <span
+            className="text-lg font-bold text-[var(--mm-gold)] font-[family-name:var(--font-syne)]"
+          >
+            M
           </span>
+        ) : (
+          <div className="flex flex-col leading-tight">
+            <span className="text-base font-semibold text-foreground whitespace-nowrap font-[family-name:var(--font-syne)]">
+              Med<span className="text-[var(--mm-gold)]">Maestro</span>
+            </span>
+            <span className="text-[9px] text-muted-foreground/70 whitespace-nowrap tracking-wider uppercase">
+              by André Lima
+            </span>
+          </div>
         )}
       </div>
 
