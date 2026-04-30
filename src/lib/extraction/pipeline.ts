@@ -2,6 +2,9 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { extractFromImages, parseJSON, MAX_IMAGES_PER_CALL, complete, MODELS } from '@/lib/ai/claude'
 import { uploadFile } from '@/lib/storage/signed-urls'
 import { rasterizePdf } from '@/lib/pdf/rasterize'
+import { extractTextFirst } from '@/lib/extraction/text-first'
+
+const TEXT_FIRST_MIN_CONFIDENCE = 0.7
 
 const EXTRACTION_PROMPT = `Você é um extrator de questões de provas médicas brasileiras (TEMI/AMIB).
 Analise estas páginas e extraia TODAS as questões visíveis.
@@ -337,6 +340,7 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
             has_images: q.has_images,
             extraction_confidence: conf,
             status: 'pending_extraction',
+            extraction_method: 'recovery',
           },
           { onConflict: 'exam_id,question_number' }
         )
@@ -482,13 +486,73 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     return
   }
 
-  await setProgress(exam_id, 'extracting', 0, pages.length, `Extraindo questões (${pages.length} páginas)`)
+  // ── Fase text-first: tenta extrair direto do PDF nativo (custo zero) ───
+  await setProgress(exam_id, 'extracting', 0, pages.length, 'Tentando extração textual (sem IA)…')
+
+  const textResult = await extractTextFirst(pdfBuffer).catch(() => null)
+
+  // Páginas que precisam ir para o Claude Vision
+  const pagesNeedingVision = new Set<number>(pages.map((p) => p.pageNumber))
+
+  if (textResult && textResult.hasNativeText && textResult.questions.length >= 5) {
+    let savedFromText = 0
+    for (const q of textResult.questions) {
+      const altCount = Object.keys(q.alternatives).length
+      const confidenceGood = q.confidence >= TEXT_FIRST_MIN_CONFIDENCE
+      const noImageHint = !q.has_medical_image_hint
+
+      if (confidenceGood && noImageHint && altCount >= 4 && q.stem.length >= 30) {
+        const conf5 = Math.max(1, Math.min(5, Math.round(q.confidence * 5)))
+        const { error } = await supabase
+          .from('questions')
+          .upsert(
+            {
+              exam_id,
+              question_number: q.question_number,
+              stem: q.stem,
+              alternatives: q.alternatives,
+              has_images: false,
+              extraction_confidence: conf5,
+              status: 'pending_extraction',
+              extraction_method: 'text',
+            },
+            { onConflict: 'exam_id,question_number' }
+          )
+        if (!error) {
+          savedFromText++
+          // remove a página estimada da lista que precisa de Vision
+          if (q.page_hint) pagesNeedingVision.delete(q.page_hint)
+        }
+      }
+    }
+    console.log(
+      `[extract ${exam_id}] Text-first: ${textResult.questions.length} detectadas, ${savedFromText} salvas direto (sem IA)`
+    )
+    await setProgress(
+      exam_id,
+      'extracting',
+      0,
+      pages.length,
+      `Text-first: ${savedFromText} questões sem IA. Vision para o resto…`
+    )
+  }
+
+  // Páginas que ainda precisam de Vision (com imagens médicas ou onde texto falhou)
+  const visionPages = pages.filter((p) => pagesNeedingVision.has(p.pageNumber))
+
+  await setProgress(
+    exam_id,
+    'extracting',
+    0,
+    visionPages.length || 1,
+    `Extraindo com Vision (${visionPages.length}/${pages.length} páginas com imagens médicas)`
+  )
 
   let hasErrors = false
   let lastErrorMessage: string | null = null
 
-  for (let batchStart = 0; batchStart < pages.length; batchStart += MAX_IMAGES_PER_CALL) {
-    const batch = pages.slice(batchStart, batchStart + MAX_IMAGES_PER_CALL)
+  for (let batchStart = 0; batchStart < visionPages.length; batchStart += MAX_IMAGES_PER_CALL) {
+    const batch = visionPages.slice(batchStart, batchStart + MAX_IMAGES_PER_CALL)
     const imageBase64s = batch.map((p) => p.jpegBase64)
     const batchLabel = `páginas ${batch[0]?.pageNumber ?? '?'}–${batch[batch.length - 1]?.pageNumber ?? '?'}`
 
@@ -506,8 +570,8 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
       await setProgress(
         exam_id,
         'extracting',
-        Math.min(batchStart + batch.length, pages.length),
-        pages.length,
+        Math.min(batchStart + batch.length, visionPages.length),
+        visionPages.length || 1,
         lastErrorMessage
       )
       continue
@@ -538,6 +602,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
             has_images: q.has_images,
             extraction_confidence: extractionConfidence,
             status: 'pending_extraction',
+            extraction_method: 'vision',
           },
           { onConflict: 'exam_id,question_number' }
         )
@@ -578,13 +643,13 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
       }
     }
 
-    const pagesProcessed = Math.min(batchStart + batch.length, pages.length)
+    const pagesProcessed = Math.min(batchStart + batch.length, visionPages.length)
     await setProgress(
       exam_id,
       'extracting',
       pagesProcessed,
-      pages.length,
-      `Extraindo questões (${pagesProcessed}/${pages.length} páginas)`
+      visionPages.length || 1,
+      `Vision: ${pagesProcessed}/${visionPages.length} páginas (${pages.length - visionPages.length} já extraídas via texto)`
     )
   }
 

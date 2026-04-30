@@ -31,7 +31,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN apk add --no-cache poppler-utils
+RUN apk add --no-cache poppler-utils tesseract-ocr tesseract-ocr-data-por
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
