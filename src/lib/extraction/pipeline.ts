@@ -193,25 +193,47 @@ export async function generateComment(questionId: string): Promise<void> {
 
   const gabaritoText = correctAnswer ? `Gabarito: ${correctAnswer}` : 'Gabarito: não informado'
 
-  const prompt = `Escreva um comentário didático (200–350 palavras) para esta questão TEMI/AMIB.
+  const presentLetters = (['A', 'B', 'C', 'D', 'E'] as const).filter(
+    (l) => (alternatives[l] ?? '').trim().length > 0
+  )
+  const altsBlock = presentLetters.map((l) => `${l}) ${alternatives[l]}`).join('\n')
+  const altsList = presentLetters.join(', ')
+
+  const prompt = `Você é um professor de Medicina Intensiva escrevendo um comentário didático completo para uma questão de prova (TEMI/AMIB). Este comentário é o material de estudo principal do aluno — precisa ser denso, claro e cobrir TODAS as alternativas individualmente.
 
 Questão ${question.question_number as number}: ${question.stem as string}
-A) ${alternatives['A'] ?? ''}
-B) ${alternatives['B'] ?? ''}
-C) ${alternatives['C'] ?? ''}
-D) ${alternatives['D'] ?? ''}
-E) ${alternatives['E'] ?? ''}
+${altsBlock}
 ${gabaritoText}
 
-Explique por que o gabarito está correto, justifique por que as demais alternativas estão erradas e contextualize com a prática clínica em UTI. Tom didático, direto, em português.
-Retorne APENAS o texto do comentário, sem título, sem markdown.`
+ESTRUTURA OBRIGATÓRIA do comentário (use estes cabeçalhos exatamente, em linhas separadas, sem markdown/asterisco):
+
+Contexto clínico
+Um parágrafo (3–5 frases) situando o caso: o que o examinador está testando, qual o quadro clínico, qual o raciocínio-chave para responder. Sem rodeios.
+
+Gabarito: ${correctAnswer || '?'}
+Um parágrafo justificando por que esta é a resposta correta — fisiopatologia, achados típicos, evidência/diretriz quando aplicável.
+
+Análise das alternativas
+Para CADA UMA das alternativas presentes (${altsList}), escreva um parágrafo próprio começando com a letra e o enunciado resumido. Diga explicitamente se está CORRETA ou INCORRETA e explique o porquê com base clínica/fisiopatológica. Não pule nenhuma alternativa. Se for a correta, reforce o motivo; se for incorreta, aponte exatamente o que a torna errada (e qual seria o achado/conduta esperado naquele cenário alternativo).
+
+Pontos-chave para a prova
+3 a 5 bullets curtos (use "- " no início) com os take-aways: pegadinhas, mnemônicos, números/cutoffs, atualizações de diretriz relevantes.
+
+Regras de estilo:
+- Português técnico e direto, sem floreio.
+- Use os nomes próprios das condutas/diretrizes (ex.: protocolo RUSH, sinal de McConnell, Surviving Sepsis 2021).
+- NÃO use markdown (sem **, sem ##, sem listas numeradas além dos bullets dos pontos-chave).
+- NÃO inclua título do comentário nem encerramento ("espero ter ajudado" etc.).
+- Tamanho-alvo: 500–900 palavras.
+
+Retorne APENAS o texto do comentário seguindo a estrutura acima.`
 
   let commentText: string
   try {
     commentText = await complete({
       model: MODELS.opus,
       messages: [{ role: 'user', content: prompt }],
-      maxTokens: 1024,
+      maxTokens: 4096,
     })
   } catch {
     return
