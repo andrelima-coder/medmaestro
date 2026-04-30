@@ -517,34 +517,52 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
   const pagesNeedingVision = new Set<number>(pages.map((p) => p.pageNumber))
 
   if (textResult && textResult.hasNativeText && textResult.questions.length >= 5) {
+    const isAcceptedByTextFirst = (q: typeof textResult.questions[number]): boolean => {
+      const altCount = Object.keys(q.alternatives).length
+      return (
+        q.confidence >= TEXT_FIRST_MIN_CONFIDENCE &&
+        !q.has_medical_image_hint &&
+        altCount >= 4 &&
+        q.stem.length >= 30
+      )
+    }
+
+    // Páginas que CONTÊM ao menos uma questão rejeitada pelo text-first (com hint de imagem,
+    // baixa confiança, ou alts incompletas). Vision precisa rodar nelas para não perder
+    // questões órfãs que dividem página com questões "simples".
+    const pagesWithRejectedQuestion = new Set<number>()
+    for (const q of textResult.questions) {
+      if (!isAcceptedByTextFirst(q) && q.page_hint) {
+        pagesWithRejectedQuestion.add(q.page_hint)
+      }
+    }
+
     let savedFromText = 0
     for (const q of textResult.questions) {
-      const altCount = Object.keys(q.alternatives).length
-      const confidenceGood = q.confidence >= TEXT_FIRST_MIN_CONFIDENCE
-      const noImageHint = !q.has_medical_image_hint
+      if (!isAcceptedByTextFirst(q)) continue
+      // Não salva via text-first se outra questão da mesma página precisa de Vision —
+      // o Vision irá processar a página inteira e fará upsert com os dados corretos.
+      if (q.page_hint && pagesWithRejectedQuestion.has(q.page_hint)) continue
 
-      if (confidenceGood && noImageHint && altCount >= 4 && q.stem.length >= 30) {
-        const conf5 = Math.max(1, Math.min(5, Math.round(q.confidence * 5)))
-        const { error } = await supabase
-          .from('questions')
-          .upsert(
-            {
-              exam_id,
-              question_number: q.question_number,
-              stem: q.stem,
-              alternatives: q.alternatives,
-              has_images: false,
-              extraction_confidence: conf5,
-              status: 'pending_extraction',
-              extraction_method: 'text',
-            },
-            { onConflict: 'exam_id,question_number' }
-          )
-        if (!error) {
-          savedFromText++
-          // remove a página estimada da lista que precisa de Vision
-          if (q.page_hint) pagesNeedingVision.delete(q.page_hint)
-        }
+      const conf5 = Math.max(1, Math.min(5, Math.round(q.confidence * 5)))
+      const { error } = await supabase
+        .from('questions')
+        .upsert(
+          {
+            exam_id,
+            question_number: q.question_number,
+            stem: q.stem,
+            alternatives: q.alternatives,
+            has_images: false,
+            extraction_confidence: conf5,
+            status: 'pending_extraction',
+            extraction_method: 'text',
+          },
+          { onConflict: 'exam_id,question_number' }
+        )
+      if (!error) {
+        savedFromText++
+        if (q.page_hint) pagesNeedingVision.delete(q.page_hint)
       }
     }
     console.log(
