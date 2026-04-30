@@ -5,8 +5,10 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { AssignmentBar } from '@/components/revisao/assignment-bar'
 import { ActionsPanel } from '@/components/revisao/actions-panel'
 import { TagPanel, type TagItem } from '@/components/questoes/tag-panel'
-import { CommentList } from '@/components/revisao/comment-list'
+import { CommentSection } from '@/components/questoes/comment-section'
+import { ExamPanel } from '@/components/revisao/exam-panel'
 import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
+import { listExamsForReassignment } from '@/app/(dashboard)/revisao/[id]/exam-actions'
 
 export const metadata = { title: 'Revisão — MedMaestro' }
 
@@ -51,32 +53,34 @@ export default async function RevisaoItemPage({
 
   const service = createServiceClient()
 
-  // Busca questão + dados de tags + revisões + comentários em paralelo
-  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments] = await Promise.all([
-    service
-      .from('questions')
-      .select(
-        'id, question_number, stem, alternatives, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
-      )
-      .eq('id', id)
-      .single(),
-    service.from('question_tags').select('tag_id').eq('question_id', id),
-    service
-      .from('tags')
-      .select('id, label, color, dimension, display_order')
-      .eq('is_active', true)
-      .order('dimension')
-      .order('display_order')
-      .order('label'),
-    service
-      .from('question_revisions')
-      .select('id')
-      .eq('question_id', id)
-      .eq('change_reason', 'tag_update')
-      .limit(1)
-      .single(),
-    getQuestionComments(id),
-  ])
+  // Busca questão + dados de tags + revisões + comentários + exames em paralelo
+  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments, examOptions] =
+    await Promise.all([
+      service
+        .from('questions')
+        .select(
+          'id, question_number, stem, alternatives, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
+        )
+        .eq('id', id)
+        .single(),
+      service.from('question_tags').select('tag_id').eq('question_id', id),
+      service
+        .from('tags')
+        .select('id, label, color, dimension, display_order')
+        .eq('is_active', true)
+        .order('dimension')
+        .order('display_order')
+        .order('label'),
+      service
+        .from('question_revisions')
+        .select('id')
+        .eq('question_id', id)
+        .eq('change_reason', 'tag_update')
+        .limit(1)
+        .single(),
+      getQuestionComments(id),
+      listExamsForReassignment(),
+    ])
 
   const question = questionRes.data
   if (!question) notFound()
@@ -290,7 +294,7 @@ export default async function RevisaoItemPage({
             )}
           </div>
 
-          <CommentList comments={comments} />
+          <CommentSection questionId={id} initialComments={comments} />
         </div>
 
         {/* ── Direito: ações + tags ── */}
@@ -307,6 +311,12 @@ export default async function RevisaoItemPage({
             questionId={id}
             currentStatus={statusKey}
             userId={user.id}
+          />
+
+          <ExamPanel
+            questionId={id}
+            currentExamId={question.exam_id as string}
+            exams={examOptions}
           />
 
           {/* TagPanel inline — classifica enquanto revisa */}

@@ -10,6 +10,7 @@ export type AuditAction =
   | 'question_approved'
   | 'question_rejected'
   | 'question_flagged'
+  | 'question_exam_reassigned'
   // Comentários
   | 'comment_generated'
   | 'comment_edited'
