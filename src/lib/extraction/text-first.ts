@@ -5,8 +5,16 @@ import { writeFile, readFile, unlink } from 'fs/promises'
 const execFileAsync = promisify(execFile)
 const PDFTOTEXT = process.env.PDFTOTEXT_PATH ?? 'pdftotext'
 
+// Detecta menções a recursos visuais. Sem `\b` no fim para casar plural/derivados
+// (ex.: "imagens", "ultrassonográfico", "figuras", "radiografias").
+// IMPORTANTE: falsos negativos aqui = imagens perdidas para sempre. Prefira amplo a estrito.
 const MEDICAL_IMAGE_PATTERNS =
-  /\b(ecg|eletrocardiograma|radiografia|raio[\s-]?x|\brx\b|tomografia|\btc\b|\bress?on[âa]ncia|\brm\b|capnografi|gr[áa]fico|curva\s+(?:p-?v|de\s+(?:fluxo|press[ãa]o|volume))|guyton|rotem|tromboelastograma|eeg|ultrassom|\bus\b|ecocardiograma|cintilografia|esquema|tabela|figura|imagem)\b/i
+  /\b(ecg|eletrocardiogram|radiograf|raio[\s-]?x|\brx\b|tomograf|\btc\b|ress?on[âa]nci|\brm\b|capnograf|gr[áa]fic|curva\s+(?:p-?v|de\s+(?:fluxo|press[ãa]o|volume))|guyton|rotem|tromboelastogram|eeg|ultrassom|ultrassonogr|ultrassonográfic|\bus\b|ecocardiogr|cintilograf|esquema|tabel|figura|imagem|imagens|ilustrad|abaixo|a\s+seguir|exame\s+de\s+imagem|achados?\s+(?:radiol[óo]gicos?|tomogr[áa]ficos?|ecogr[áa]ficos?|de\s+imagem))/i
+
+// Gatilhos fortes que, mesmo isolados, indicam que a questão depende de figura/tabela.
+// Usados como defesa em profundidade contra falsos negativos da regex acima.
+const STRONG_VISUAL_HINTS =
+  /(imagens?\s+a\s+seguir|figuras?\s+a\s+seguir|figura\s+abaixo|imagem\s+abaixo|tabela\s+abaixo|ilustrad[ao]s?\s+(?:abaixo|a\s+seguir|nas?\s+(?:imagens?|figuras?))|conforme\s+(?:imagem|figura|tabela)|observe\s+(?:a|as)\s+(?:imagem|imagens|figura|figuras)|achados?\s+(?:mais\s+relevantes?\s+)?(?:est[ãa]o\s+)?ilustrad)/i
 
 export type TextExtractedQuestion = {
   question_number: number
@@ -157,7 +165,8 @@ export async function extractTextFirst(
 
     const confidence = scoreQuestion(stem, alternatives)
     const fullText = `${stem} ${Object.values(alternatives).join(' ')}`
-    const has_medical_image_hint = MEDICAL_IMAGE_PATTERNS.test(fullText)
+    const has_medical_image_hint =
+      MEDICAL_IMAGE_PATTERNS.test(fullText) || STRONG_VISUAL_HINTS.test(fullText)
     const page_hint = pageFromOffset(start, offsets)
 
     questions.push({
