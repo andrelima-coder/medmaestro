@@ -81,7 +81,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
     (q) => (q.extraction_confidence as number | null) !== null && (q.extraction_confidence as number) <= 2
   ).length
   const comErro = questions.filter(
-    (q) => q.status === 'needs_attention' || q.status === 'error'
+    (q) => q.status === 'needs_attention'
   ).length
   const progresso =
     totalQuestoes > 0 ? Math.round((extraidasOk / totalQuestoes) * 100) : 0

@@ -103,7 +103,7 @@ Retorne APENAS JSON (sem markdown):
       correct_answer: correctAnswer,
       has_images: false,
       extraction_confidence: 80,
-      status: 'pending_extraction',
+      status: 'pending_review',
     })
     .select('id')
     .single()
