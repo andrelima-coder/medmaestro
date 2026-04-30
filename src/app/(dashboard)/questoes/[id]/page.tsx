@@ -5,8 +5,10 @@ import { TagPanel } from '@/components/questoes/tag-panel'
 import type { TagItem } from '@/components/questoes/tag-panel'
 import { CommentSection } from '@/components/questoes/comment-section'
 import { ImageModal } from '@/components/questoes/image-modal'
+import { AttachmentsPanel } from '@/components/revisao/attachments-panel'
 import { getQuestionComments } from './comment-actions'
 import { getQuestionImages } from './image-actions'
+import { getQuestionAttachments } from '@/app/(dashboard)/revisao/[id]/attachment-actions'
 import { STATUS_LABELS } from '@/types'
 import type { QuestionStatus } from '@/types'
 
@@ -46,7 +48,7 @@ export default async function QuestaoDetailPage({
   const { data: question } = await service
     .from('questions')
     .select(
-      'id, question_number, stem, alternatives, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
+      'id, question_number, stem, stem_html, alternatives, alternatives_html, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
     )
     .eq('id', id)
     .single()
@@ -61,6 +63,9 @@ export default async function QuestaoDetailPage({
   } | null
 
   const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+  const alternativesHtml =
+    (question.alternatives_html as Record<string, string> | null) ?? {}
+  const stemHtml = (question.stem_html as string | null) ?? null
 
   // Tags da questão (atribuídas)
   const { data: assignedTags } = await service
@@ -86,10 +91,11 @@ export default async function QuestaoDetailPage({
     dimension: t.dimension,
   }))
 
-  // Comentários, imagens e revisão de tags em paralelo
-  const [comments, images, lastTagRevResult] = await Promise.all([
+  // Comentários, imagens, anexos e revisão de tags em paralelo
+  const [comments, images, attachments, lastTagRevResult] = await Promise.all([
     getQuestionComments(id),
     getQuestionImages(id),
+    getQuestionAttachments(id),
     service
       .from('question_revisions')
       .select('id')
@@ -163,16 +169,24 @@ export default async function QuestaoDetailPage({
             </div>
 
             {/* Enunciado */}
-            <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-              {question.stem ?? '(sem enunciado)'}
-            </p>
+            {stemHtml ? (
+              <div
+                className="text-sm leading-relaxed text-foreground rich-text"
+                dangerouslySetInnerHTML={{ __html: stemHtml }}
+              />
+            ) : (
+              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                {question.stem ?? '(sem enunciado)'}
+              </p>
+            )}
 
             {/* Alternativas */}
             {Object.keys(alternatives).length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 {LETTERS.map((letter) => {
                   const text = alternatives[letter]
-                  if (!text) return null
+                  const html = alternativesHtml[letter]
+                  if (!text && !html) return null
                   const isCorrect = question.correct_answer === letter
                   return (
                     <div
@@ -190,9 +204,16 @@ export default async function QuestaoDetailPage({
                       >
                         {letter})
                       </span>
-                      <span className={isCorrect ? 'text-green-300' : 'text-foreground'}>
-                        {text}
-                      </span>
+                      {html ? (
+                        <div
+                          className={`flex-1 ${isCorrect ? 'text-green-300' : 'text-foreground'} rich-text`}
+                          dangerouslySetInnerHTML={{ __html: html }}
+                        />
+                      ) : (
+                        <span className={isCorrect ? 'text-green-300' : 'text-foreground'}>
+                          {text}
+                        </span>
+                      )}
                     </div>
                   )
                 })}
@@ -201,6 +222,9 @@ export default async function QuestaoDetailPage({
 
             {/* Imagens da questão */}
             {images.length > 0 && <ImageModal images={images} />}
+
+            {/* Anexos do revisor */}
+            <AttachmentsPanel questionId={id} initial={attachments} readOnly />
           </div>
 
           {/* Comentários */}

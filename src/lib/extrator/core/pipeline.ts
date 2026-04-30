@@ -21,8 +21,20 @@ type ExtractedQuestion = {
   has_images: boolean
   image_type: string | null
   image_scope: string | null
+  image_page_index: number | null
   confidence: number
   is_complete: boolean
+}
+
+function pickImagePage<T extends { pageNumber: number }>(
+  batch: T[],
+  imagePageIndex: number | null | undefined
+): T | null {
+  if (batch.length === 0) return null
+  if (typeof imagePageIndex === 'number' && imagePageIndex >= 0 && imagePageIndex < batch.length) {
+    return batch[imagePageIndex]
+  }
+  return null
 }
 
 const CLASSIFY_BATCH_SIZE = 5
@@ -341,20 +353,25 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
           ? (q.image_type as string)
           : 'outro'
         const imageScope = q.image_scope.toLowerCase()
-        for (const page of targetPages) {
-          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
-          try {
-            await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
-            await supabase.from('question_images').insert({
-              question_id: inserted.id,
-              image_scope: imageScope,
-              image_type: imageType,
-              full_page_path: imagePath,
-              page_number: page.pageNumber,
-            })
-          } catch {
-            // não bloqueia recovery por falha de imagem
-          }
+        const page = pickImagePage(targetPages, q.image_page_index)
+        if (!page) {
+          console.warn(
+            `[extract ${exam_id}] Recovery Q${q.question_number}: image_page_index inválido (${q.image_page_index}), pulando upload`
+          )
+          continue
+        }
+        const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
+        try {
+          await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
+          await supabase.from('question_images').insert({
+            question_id: inserted.id,
+            image_scope: imageScope,
+            image_type: imageType,
+            full_page_path: imagePath,
+            page_number: page.pageNumber,
+          })
+        } catch {
+          // não bloqueia recovery por falha de imagem
         }
       }
     }
@@ -656,25 +673,28 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
           : 'outro'
         const imageScope = q.image_scope.toLowerCase()
 
-        for (const page of batch) {
+        const page = pickImagePage(batch, q.image_page_index)
+        if (!page) {
+          console.warn(
+            `[extract ${exam_id}] Q${q.question_number}: image_page_index inválido (${q.image_page_index}) — has_images=true mas página não identificada. Pulando upload.`
+          )
+          hasErrors = true
+        } else {
           const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
 
           try {
             await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
+            const { error: imgInsertError } = await supabase.from('question_images').insert({
+              question_id: inserted.id,
+              image_scope: imageScope,
+              image_type: imageType,
+              full_page_path: imagePath,
+              page_number: page.pageNumber,
+            })
+            if (imgInsertError) hasErrors = true
           } catch {
             hasErrors = true
-            continue
           }
-
-          const { error: imgInsertError } = await supabase.from('question_images').insert({
-            question_id: inserted.id,
-            image_scope: imageScope,
-            image_type: imageType,
-            full_page_path: imagePath,
-            page_number: page.pageNumber,
-          })
-
-          if (imgInsertError) hasErrors = true
         }
       }
     }

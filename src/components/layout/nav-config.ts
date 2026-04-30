@@ -57,6 +57,9 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
     ...(can(role, 'admin')
       ? [{ label: 'Usuários', href: '/configuracoes/usuarios', iconKey: 'Users' }]
       : []),
+    ...(can(role, 'admin')
+      ? [{ label: 'Anexos', href: '/configuracoes/anexos', iconKey: 'Paperclip' }]
+      : []),
     ...(can(role, 'superadmin')
       ? [{ label: 'Hierarquia', href: '/configuracoes/hierarquia', iconKey: 'GitBranch' }]
       : []),

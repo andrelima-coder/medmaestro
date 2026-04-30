@@ -10,17 +10,23 @@ const REGEX_ALTERNATIVA = /(^|\n)\s*([A-E])[\s.\)\-:]+/g
 const PROMPT = `Você é um extrator de questões de provas médicas brasileiras (AMIB / TEMI - Medicina Intensiva).
 Analise estas páginas e extraia TODAS as questões visíveis.
 
+As páginas estão numeradas a partir de 0 (primeira imagem = índice 0, segunda = 1, etc.).
+
 Para cada questão, retorne um objeto JSON com:
 - question_number: número da questão (inteiro)
 - stem: enunciado completo
 - alternatives: { "A": "...", "B": "...", "C": "...", "D": "...", "E": "" }
-- has_images: boolean (true se a questão contém imagens, figuras ou tabelas)
+- has_images: boolean (true se a questão contém imagens médicas, figuras, gráficos, ECGs, ultrassom etc.)
 - image_type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico_pv"|"grafico_guyton"|"grafico_ventilacao"|"capnografia"|"rotem"|"eeg"|"tabela"|"esquema"|"outro" (null se has_images=false)
 - image_scope: "statement"|"alternative_a"|"alternative_b"|"alternative_c"|"alternative_d"|"alternative_e" (null se sem imagem)
+- image_page_index: ÍNDICE (0-based) da imagem dentro deste batch que CONTÉM a figura/gráfico/ECG da questão. Se a questão não tem imagem, retorne null. Se a imagem aparece em mais de uma página (raríssimo), use o índice da página mais relevante (a que mostra a figura principal).
 - confidence: 1 a 5 (confiança na extração — 5 = perfeito, 1 = muito incerto)
 - is_complete: boolean (true se todas as alternativas estão visíveis nestas páginas)
 
-IMPORTANTE: provas TEMI possuem 4 alternativas (A-D) na maioria das questões; preencha "E" como "" se não existir.
+IMPORTANTE:
+- provas TEMI possuem 4 alternativas (A-D) na maioria das questões; preencha "E" como "" se não existir.
+- NUNCA marque has_images=true para a página de capa/instruções da prova (ex.: "PROVA ROSA", "CADERNO DE QUESTÕES"). Ela não pertence a nenhuma questão.
+- image_page_index é OBRIGATÓRIO quando has_images=true — não envie a primeira página por default.
 
 Retorne APENAS um JSON array. Sem markdown, sem explicação.`
 

@@ -7,8 +7,11 @@ import { ActionsPanel } from '@/components/revisao/actions-panel'
 import { TagPanel, type TagItem } from '@/components/questoes/tag-panel'
 import { CommentSection } from '@/components/questoes/comment-section'
 import { ExamPanel } from '@/components/revisao/exam-panel'
+import { QuestionEditor } from '@/components/revisao/question-editor'
+import { AttachmentsPanel } from '@/components/revisao/attachments-panel'
 import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
 import { listExamsForReassignment } from '@/app/(dashboard)/revisao/[id]/exam-actions'
+import { getQuestionAttachments } from '@/app/(dashboard)/revisao/[id]/attachment-actions'
 
 export const metadata = { title: 'Revisão — MedMaestro' }
 
@@ -38,6 +41,18 @@ const STATUS_CLASSES: Record<string, string> = {
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
+function escapePlainToHtml(text: string): string {
+  if (!text) return ''
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return escaped
+    .split(/\n{2,}/)
+    .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
 export default async function RevisaoItemPage({
   params,
 }: {
@@ -54,12 +69,19 @@ export default async function RevisaoItemPage({
   const service = createServiceClient()
 
   // Busca questão + dados de tags + revisões + comentários + exames em paralelo
-  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments, examOptions] =
-    await Promise.all([
+  const [
+    questionRes,
+    assignedTagsRes,
+    allTagsRawRes,
+    lastTagRevRes,
+    comments,
+    examOptions,
+    attachments,
+  ] = await Promise.all([
       service
         .from('questions')
         .select(
-          'id, question_number, stem, alternatives, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
+          'id, question_number, stem, stem_html, alternatives, alternatives_html, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
         )
         .eq('id', id)
         .single(),
@@ -80,6 +102,7 @@ export default async function RevisaoItemPage({
         .single(),
       getQuestionComments(id),
       listExamsForReassignment(),
+      getQuestionAttachments(id),
     ])
 
   const question = questionRes.data
@@ -101,6 +124,15 @@ export default async function RevisaoItemPage({
   } | null
 
   const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+  const alternativesHtml =
+    (question.alternatives_html as Record<string, string> | null) ?? {}
+  const stemHtmlInitial =
+    (question.stem_html as string | null) ?? escapePlainToHtml((question.stem as string | null) ?? '')
+  const alternativesHtmlInitial: Record<string, string> = {}
+  for (const letter of LETTERS) {
+    alternativesHtmlInitial[letter] =
+      alternativesHtml[letter] ?? escapePlainToHtml(alternatives[letter] ?? '')
+  }
 
   const now = new Date()
 
@@ -238,46 +270,16 @@ export default async function RevisaoItemPage({
               </div>
             </div>
 
-            {/* Enunciado */}
-            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--mm-text)' }}>
-              {(question.stem as string | null) ?? '(sem enunciado)'}
-            </p>
+            {/* Editor rich-text — enunciado + alternativas */}
+            <QuestionEditor
+              questionId={id}
+              initialStemHtml={stemHtmlInitial}
+              initialAlternativesHtml={alternativesHtmlInitial}
+              correctAnswer={(question.correct_answer as string | null) ?? null}
+            />
 
-            {/* Alternativas */}
-            <div className="flex flex-col gap-2 mt-2">
-              {LETTERS.map((letter) => {
-                const text = alternatives[letter]
-                if (!text) return null
-                const isCorrect = question.correct_answer === letter
-                return (
-                  <div
-                    key={letter}
-                    style={{
-                      display: 'flex',
-                      gap: 12,
-                      borderRadius: 8,
-                      border: isCorrect
-                        ? '1px solid rgba(102,187,106,0.3)'
-                        : '1px solid rgba(255,255,255,0.05)',
-                      background: isCorrect ? 'rgba(102,187,106,0.08)' : 'rgba(255,255,255,0.02)',
-                      padding: '10px 14px',
-                      fontSize: 13,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        flexShrink: 0,
-                        color: isCorrect ? '#66BB6A' : 'var(--mm-muted)',
-                      }}
-                    >
-                      {letter})
-                    </span>
-                    <span style={{ color: isCorrect ? '#66BB6A' : 'var(--mm-text)' }}>{text}</span>
-                  </div>
-                )
-              })}
-            </div>
+            {/* Anexos do revisor */}
+            <AttachmentsPanel questionId={id} initial={attachments} />
 
             {/* Aviso quando gabarito não disponível */}
             {!(question.correct_answer as string | null) && (

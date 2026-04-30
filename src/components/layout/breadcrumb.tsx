@@ -15,6 +15,7 @@ const ROUTE_LABELS: Record<string, string> = {
   usuarios: 'Usuários',
   hierarquia: 'Hierarquia',
   tags: 'Tags',
+  anexos: 'Anexos',
   novo: 'Novo',
 }
 

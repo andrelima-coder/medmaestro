@@ -10,17 +10,22 @@ const REGEX_ALTERNATIVA = /(^|\n)\s*\(?([A-E])\)?[\s.\)\-:]+/g
 const PROMPT = `Você é um extrator de questões de provas médicas brasileiras.
 Analise estas páginas e extraia TODAS as questões visíveis.
 
+As páginas estão numeradas a partir de 0 (primeira imagem = índice 0, segunda = 1, etc.).
+
 Para cada questão, retorne um objeto JSON com:
 - question_number: número da questão (inteiro)
 - stem: enunciado completo
 - alternatives: { "A": "...", "B": "...", "C": "...", "D": "...", "E": "..." }
-- has_images: boolean (true se a questão contém imagens, figuras, gráficos ou tabelas)
+- has_images: boolean (true se a questão contém imagens médicas, figuras, gráficos ou tabelas)
 - image_type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico"|"tabela"|"esquema"|"foto_clinica"|"outro" (null se has_images=false)
 - image_scope: "statement"|"alternative_a"|"alternative_b"|"alternative_c"|"alternative_d"|"alternative_e" (null se sem imagem)
+- image_page_index: ÍNDICE (0-based) da imagem dentro deste batch que CONTÉM a figura/gráfico da questão. Null se has_images=false.
 - confidence: 1 a 5
 - is_complete: boolean (true se todas as alternativas estão visíveis)
 
 Algumas alternativas podem ser imagens (gráficos, ECGs, etc) — quando isso ocorrer, descreva brevemente em texto.
+
+IMPORTANTE: NUNCA marque has_images=true para páginas de capa, instruções ou cabeçalhos de prova. image_page_index é OBRIGATÓRIO quando has_images=true.
 
 Retorne APENAS um JSON array. Sem markdown, sem explicação.`
 

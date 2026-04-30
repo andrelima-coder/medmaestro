@@ -5,7 +5,12 @@ const TTL = {
   exports: 86_400,   // 24 horas — D13
 } as const
 
-type Bucket = 'question-images' | 'comment-images' | 'exam-pdfs' | 'exports'
+type Bucket =
+  | 'question-images'
+  | 'comment-images'
+  | 'exam-pdfs'
+  | 'exports'
+  | 'question-attachments'
 
 async function createSignedUrl(bucket: Bucket, path: string, expiresIn: number): Promise<string> {
   const supabase = createServiceClient()
@@ -34,6 +39,10 @@ export function getExamPdfUrl(path: string) {
 
 export function getExportUrl(path: string) {
   return createSignedUrl('exports', path, TTL.exports)
+}
+
+export function getQuestionAttachmentUrl(path: string) {
+  return createSignedUrl('question-attachments', path, TTL.images)
 }
 
 /**
