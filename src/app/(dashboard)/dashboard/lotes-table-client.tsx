@@ -109,7 +109,7 @@ export function LotesTableClient({ exams }: { exams: LoteRow[] }) {
         </span>
       )
     }
-    if (status === 'pending_review' || status === 'in_review') {
+    if (status === 'extracted' || status === 'reviewing') {
       return (
         <Link href={`/revisao?exam_id=${examId}`} style={btnGold}>
           Revisar →

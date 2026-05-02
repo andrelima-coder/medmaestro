@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { createServiceClient } from '@/lib/supabase/service'
 
 export const MODELS = {
   sonnet: 'claude-sonnet-4-6',
@@ -34,6 +35,77 @@ export type TextMessage = {
   content: string
 }
 
+export type ClaudeUsage = {
+  input_tokens: number
+  output_tokens: number
+  cache_creation_input_tokens: number
+  cache_read_input_tokens: number
+}
+
+export type ClaudeResult = {
+  text: string
+  usage: ClaudeUsage
+  model: ClaudeModel
+}
+
+// Preços em USD por 1M tokens (Anthropic pricing — atualizar quando mudar).
+// Cache write: 1.25x do input. Cache read: 0.1x do input.
+const PRICING_PER_MTOK: Record<ClaudeModel, { input: number; output: number }> = {
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-opus-4-7': { input: 15, output: 75 },
+}
+
+export function calcCostUsd(model: ClaudeModel, usage: ClaudeUsage): number {
+  const p = PRICING_PER_MTOK[model]
+  if (!p) return 0
+  const cacheWriteRate = p.input * 1.25
+  const cacheReadRate = p.input * 0.1
+  const cost =
+    (usage.input_tokens * p.input +
+      usage.output_tokens * p.output +
+      usage.cache_creation_input_tokens * cacheWriteRate +
+      usage.cache_read_input_tokens * cacheReadRate) /
+    1_000_000
+  return Number(cost.toFixed(6))
+}
+
+function extractUsage(raw: Anthropic.Message): ClaudeUsage {
+  return {
+    input_tokens: raw.usage.input_tokens ?? 0,
+    output_tokens: raw.usage.output_tokens ?? 0,
+    cache_creation_input_tokens: raw.usage.cache_creation_input_tokens ?? 0,
+    cache_read_input_tokens: raw.usage.cache_read_input_tokens ?? 0,
+  }
+}
+
+export type RecordUsageContext = {
+  operation: string
+  exam_id?: string | null
+  question_id?: string | null
+}
+
+export async function recordUsage(
+  model: ClaudeModel,
+  usage: ClaudeUsage,
+  ctx: RecordUsageContext
+): Promise<void> {
+  const cost_usd = calcCostUsd(model, usage)
+  try {
+    const supabase = createServiceClient()
+    await supabase.from('api_usage').insert({
+      provider: 'anthropic',
+      model,
+      operation: ctx.operation,
+      exam_id: ctx.exam_id ?? null,
+      question_id: ctx.question_id ?? null,
+      ...usage,
+      cost_usd,
+    })
+  } catch (err) {
+    console.error('[api_usage] insert falhou:', err instanceof Error ? err.message : err)
+  }
+}
+
 /**
  * Text completion with optional prompt caching on the system prompt.
  * Use `cacheSystem = true` for large, reusable system prompts (e.g., curricular matrix).
@@ -50,7 +122,7 @@ export async function complete({
   messages: TextMessage[]
   maxTokens?: number
   cacheSystem?: boolean
-}): Promise<string> {
+}): Promise<ClaudeResult> {
   const response = await withRetry(() =>
     client.messages.create({
       model,
@@ -66,7 +138,7 @@ export async function complete({
 
   const block = response.content[0]
   if (block.type !== 'text') throw new Error('Unexpected response type from Claude')
-  return block.text
+  return { text: block.text, usage: extractUsage(response), model }
 }
 
 /**
@@ -86,7 +158,7 @@ export async function extractFromImages({
   mediaType?: 'image/jpeg' | 'image/png'
   prompt: string
   system?: string
-}): Promise<string> {
+}): Promise<ClaudeResult> {
   if (imageBase64s.length > MAX_IMAGES_PER_CALL) {
     throw new Error(`Máximo ${MAX_IMAGES_PER_CALL} imagens por chamada (recebido ${imageBase64s.length})`)
   }
@@ -113,7 +185,7 @@ export async function extractFromImages({
 
   const block = response.content[0]
   if (block.type !== 'text') throw new Error('Unexpected response type from Claude Vision')
-  return block.text
+  return { text: block.text, usage: extractUsage(response), model: MODELS.sonnet }
 }
 
 /**

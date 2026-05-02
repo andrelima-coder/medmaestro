@@ -56,7 +56,7 @@ type ReviewAction = 'approve' | 'reject' | 'flag'
 const ACTION_STATUS: Record<ReviewAction, string> = {
   approve: 'approved',
   reject: 'rejected',
-  flag: 'pending_extraction',
+  flag: 'flagged',
 }
 
 export async function submitReviewAction(
@@ -134,22 +134,12 @@ export async function saveAsDraft(questionId: string): Promise<void> {
 
   await service
     .from('questions')
-    .update({ status: 'pending_review', updated_at: new Date().toISOString() })
+    .update({ status: 'draft', updated_at: new Date().toISOString() })
     .eq('id', questionId)
 
   await service
     .from('review_assignments')
-    .update({ status: 'released', completed_at: new Date().toISOString() })
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('question_id', questionId)
     .eq('assigned_to', user.id)
-
-  await service.from('audit_logs').insert({
-    user_id: user.id,
-    entity_type: 'question',
-    entity_id: questionId,
-    action: 'save_draft',
-    after_data: { status: 'pending_review' },
-  })
-
-  redirect('/revisao')
 }

@@ -31,13 +31,10 @@ export default async function ComentariosPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1
-          className="font-[family-name:var(--font-syne)]"
-          style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
-        >
+        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
           Comentários
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
+        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
           Gere comentários didáticos por IA em lote para questões selecionadas
         </p>
       </div>

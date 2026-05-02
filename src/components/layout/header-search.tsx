@@ -27,10 +27,24 @@ export function HeaderSearch() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="relative hidden lg:flex items-center">
-      <Search className="absolute left-2.5 size-3.5 text-muted-foreground/40 pointer-events-none" />
+    <form
+      onSubmit={handleSubmit}
+      role="search"
+      aria-label="Buscar no banco de questões"
+      className="relative hidden lg:flex items-center"
+    >
+      <label htmlFor="header-search-input" className="sr-only">
+        Buscar questão
+      </label>
+      <Search
+        aria-hidden
+        className="absolute left-2.5 size-3.5 text-muted-foreground/40 pointer-events-none"
+      />
       <input
+        id="header-search-input"
         ref={inputRef}
+        type="search"
+        name="q"
         placeholder="Buscar questão…"
         defaultValue={searchParams.get('q') ?? ''}
         className="h-8 w-48 rounded-lg border border-white/[0.08] bg-white/[0.04] pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"

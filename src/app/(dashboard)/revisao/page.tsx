@@ -13,19 +13,13 @@ const STATUS_CONFIG: Record<
   string,
   { label: string; bg: string; color: string; border: string }
 > = {
-  pending_extraction: {
-    label: 'Aguardando extração',
+  extracted: {
+    label: 'Extraída',
     bg: 'rgba(79,195,247,0.1)',
     color: '#4FC3F7',
     border: 'rgba(79,195,247,0.25)',
   },
-  pending_review: {
-    label: 'Revisão pendente',
-    bg: 'rgba(255,152,0,0.1)',
-    color: '#FF9800',
-    border: 'rgba(255,152,0,0.25)',
-  },
-  in_review: {
+  reviewing: {
     label: 'Em revisão',
     bg: 'var(--mm-gold-bg)',
     color: 'var(--mm-gold)',
@@ -43,11 +37,17 @@ const STATUS_CONFIG: Record<
     color: '#EF5350',
     border: 'rgba(239,83,80,0.25)',
   },
-  needs_attention: {
-    label: 'Atenção',
+  flagged: {
+    label: 'Sinalizada',
     bg: 'rgba(239,83,80,0.1)',
     color: '#EF5350',
     border: 'rgba(239,83,80,0.25)',
+  },
+  commented: {
+    label: 'Comentada',
+    bg: 'rgba(167,139,250,0.1)',
+    color: '#A78BFA',
+    border: 'rgba(167,139,250,0.25)',
   },
   published: {
     label: 'Publicada',
@@ -55,23 +55,30 @@ const STATUS_CONFIG: Record<
     color: '#66BB6A',
     border: 'rgba(102,187,106,0.3)',
   },
+  draft: {
+    label: 'Rascunho',
+    bg: 'rgba(148,163,184,0.1)',
+    color: '#94A3B8',
+    border: 'rgba(148,163,184,0.25)',
+  },
 }
 
 const STATUS_DOT: Record<string, string> = {
-  pending_extraction: '#4FC3F7',
-  pending_review: '#FF9800',
-  in_review: '#D4A843',
+  extracted: '#4FC3F7',
+  reviewing: '#D4A843',
   approved: '#66BB6A',
   rejected: '#EF5350',
-  needs_attention: '#EF5350',
+  flagged: '#EF5350',
+  commented: '#A78BFA',
   published: '#66BB6A',
+  draft: '#94A3B8',
 }
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
   { key: 'approved', label: 'Validadas' },
-  { key: 'pending_review,in_review', label: 'Pendentes' },
-  { key: 'needs_attention', label: 'Com erro' },
+  { key: 'extracted,reviewing', label: 'Pendentes' },
+  { key: 'flagged', label: 'Com erro' },
 ]
 
 function buildUrl(current: SearchParams, newStatus: string): string {
@@ -127,8 +134,8 @@ export default async function RevisaoPage({
     allQ.filter((q) => keys.includes(q.status as string)).length
   const totalAll = allQ.length
   const totalApproved = countByStatus(['approved'])
-  const totalPending = countByStatus(['pending_review', 'in_review'])
-  const totalError = countByStatus(['needs_attention'])
+  const totalPending = countByStatus(['extracted', 'reviewing'])
+  const totalError = countByStatus(['flagged'])
 
   const { data: questions } = await query.limit(100)
 
@@ -149,7 +156,7 @@ export default async function RevisaoPage({
   const profileMap: Record<string, string> = {}
   if (reviewerIds.length > 0) {
     const { data: profiles } = await service
-      .from('profiles')
+      .from('user_profiles')
       .select('id, full_name, email')
       .in('id', reviewerIds)
     for (const p of profiles ?? []) {
@@ -190,8 +197,8 @@ export default async function RevisaoPage({
           {[
             { key: '', label: 'Todas', count: totalAll },
             { key: 'approved', label: 'Validadas', count: totalApproved },
-            { key: 'pending_review,in_review', label: 'Pendentes', count: totalPending },
-            { key: 'needs_attention', label: 'Com erro', count: totalError },
+            { key: 'extracted,reviewing', label: 'Pendentes', count: totalPending },
+            { key: 'flagged', label: 'Com erro', count: totalError },
           ].map((tab) => {
             const isActive = statusFilter === tab.key
             return (
@@ -255,7 +262,7 @@ export default async function RevisaoPage({
           }}
         >
           {(questions ?? []).slice(0, 40).map((q) => {
-            const statusKey = (q.status as string) ?? 'pending_extraction'
+            const statusKey = (q.status as string) ?? 'extracted'
             const dotColor = STATUS_DOT[statusKey] ?? '#5A6880'
             return (
               <Link
@@ -411,8 +418,8 @@ export default async function RevisaoPage({
                     ? (profileMap[assignment.assigned_to] ?? 'Revisor')
                     : null
 
-                  const statusKey = (q.status as string) ?? 'pending_extraction'
-                  const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.pending_extraction
+                  const statusKey = (q.status as string) ?? 'extracted'
+                  const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.extracted
                   const conf = q.extraction_confidence as number | null
                   const confPct = conf != null ? `${conf * 20}%` : '—'
                   const stem = ((q.stem as string | null) ?? '').slice(0, 70)

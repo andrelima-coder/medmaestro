@@ -75,13 +75,13 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
 
   // Stats
   const extraidasOk = questions.filter(
-    (q) => q.status !== 'pending_extraction' && (q.extraction_confidence as number | null) !== null
+    (q) => q.status !== null && (q.extraction_confidence as number | null) !== null
   ).length
   const baixaConfianca = questions.filter(
     (q) => (q.extraction_confidence as number | null) !== null && (q.extraction_confidence as number) <= 2
   ).length
   const comErro = questions.filter(
-    (q) => q.status === 'needs_attention'
+    (q) => q.status === 'flagged' || q.status === 'error'
   ).length
   const progresso =
     totalQuestoes > 0 ? Math.round((extraidasOk / totalQuestoes) * 100) : 0
@@ -89,7 +89,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
   // Questões com alerta
   const alertQuestions = questions.filter(
     (q) =>
-      q.status === 'needs_attention' ||
+      q.status === 'flagged' ||
       ((q.extraction_confidence as number | null) !== null &&
         (q.extraction_confidence as number) <= 2)
   )
@@ -371,7 +371,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
                           borderRadius: 20,
                         }}
                       >
-                        {q.status === 'needs_attention' ? 'Atenção' : 'Baixa confiança'}
+                        {q.status === 'flagged' ? 'Atenção' : 'Baixa confiança'}
                       </span>
                     </td>
                     <td style={{ fontSize: 12, padding: '10px 12px', color: 'var(--mm-text2)' }}>

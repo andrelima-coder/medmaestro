@@ -23,7 +23,7 @@ export async function updateProfileAction(
 
   const service = createServiceClient()
   const { error } = await service
-    .from('profiles')
+    .from('user_profiles')
     .update({ full_name: trimmed, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 

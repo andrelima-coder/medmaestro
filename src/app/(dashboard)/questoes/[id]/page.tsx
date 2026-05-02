@@ -5,22 +5,23 @@ import { TagPanel } from '@/components/questoes/tag-panel'
 import type { TagItem } from '@/components/questoes/tag-panel'
 import { CommentSection } from '@/components/questoes/comment-section'
 import { ImageModal } from '@/components/questoes/image-modal'
-import { AttachmentsPanel } from '@/components/revisao/attachments-panel'
 import { getQuestionComments } from './comment-actions'
 import { getQuestionImages } from './image-actions'
-import { getQuestionAttachments } from '@/app/(dashboard)/revisao/[id]/attachment-actions'
 import { STATUS_LABELS } from '@/types'
 import type { QuestionStatus } from '@/types'
+import { Card, CardBody, CardHeader, CardTitle, Badge, AltCard } from '@/components/ui'
 
-const STATUS_CLASSES: Record<string, string> = {
-  pending_extraction: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  pending_review: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  in_review: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  needs_attention: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  approved: 'bg-green-500/15 text-green-400 border-green-500/30',
-  rejected: 'bg-red-500/15 text-red-400 border-red-500/30',
-  published: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  error: 'bg-red-500/15 text-red-400 border-red-500/30',
+type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  extracted: 'blue',
+  reviewing: 'purple',
+  flagged: 'orange',
+  approved: 'green',
+  rejected: 'red',
+  commented: 'purple',
+  published: 'green',
+  draft: 'muted',
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
@@ -44,11 +45,10 @@ export default async function QuestaoDetailPage({
   const { id } = await params
   const service = createServiceClient()
 
-  // Busca questão com exame
   const { data: question } = await service
     .from('questions')
     .select(
-      'id, question_number, stem, stem_html, alternatives, alternatives_html, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
+      'id, question_number, stem, alternatives, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
     )
     .eq('id', id)
     .single()
@@ -63,11 +63,7 @@ export default async function QuestaoDetailPage({
   } | null
 
   const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
-  const alternativesHtml =
-    (question.alternatives_html as Record<string, string> | null) ?? {}
-  const stemHtml = (question.stem_html as string | null) ?? null
 
-  // Tags da questão (atribuídas)
   const { data: assignedTags } = await service
     .from('question_tags')
     .select('tag_id')
@@ -75,7 +71,6 @@ export default async function QuestaoDetailPage({
 
   const currentTagIds = (assignedTags ?? []).map((t) => t.tag_id as string)
 
-  // Todas as tags ativas para o painel
   const { data: allTagsRaw } = await service
     .from('tags')
     .select('id, label, color, dimension, display_order')
@@ -91,11 +86,9 @@ export default async function QuestaoDetailPage({
     dimension: t.dimension,
   }))
 
-  // Comentários, imagens, anexos e revisão de tags em paralelo
-  const [comments, images, attachments, lastTagRevResult] = await Promise.all([
+  const [comments, images, lastTagRevResult] = await Promise.all([
     getQuestionComments(id),
     getQuestionImages(id),
-    getQuestionAttachments(id),
     service
       .from('question_revisions')
       .select('id')
@@ -107,7 +100,6 @@ export default async function QuestaoDetailPage({
 
   const hasUndoableRevision = !!lastTagRevResult.data
 
-  // Monta label do exame
   const examParts = [
     exam?.exam_boards?.short_name,
     exam?.specialties?.name,
@@ -117,170 +109,138 @@ export default async function QuestaoDetailPage({
       : null,
   ].filter(Boolean)
 
-  const statusKey = (question.status ?? 'pending_extraction') as QuestionStatus
+  const statusKey = (question.status ?? 'extracted') as QuestionStatus
+  const statusTone = STATUS_TONE[statusKey] ?? 'blue'
 
   return (
     <div className="flex flex-col gap-4">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <Link
           href="/questoes"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="text-[var(--mm-muted)] no-underline transition-colors hover:text-foreground"
         >
-          ← Questões
+          Questões
         </Link>
-        <span className="text-white/20">/</span>
-        <span className="text-sm font-medium text-foreground">Q{question.question_number}</span>
+        <span className="text-[var(--mm-muted)]">/</span>
+        <span className="font-medium text-foreground">
+          Q{question.question_number as number}
+        </span>
         {examParts.length > 0 && (
           <>
-            <span className="text-white/20">·</span>
-            <span className="text-sm text-muted-foreground">{examParts.join(' · ')}</span>
+            <span className="text-[var(--mm-muted)]">·</span>
+            <span className="text-[var(--mm-muted)]">{examParts.join(' · ')}</span>
           </>
         )}
       </div>
 
       {/* Layout side-by-side */}
-      <div className="flex gap-4 items-start">
+      <div className="flex flex-col items-start gap-4 lg:flex-row">
         {/* Coluna esquerda — conteúdo */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-          <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
-            {/* Header da questão */}
-            <div className="flex items-start justify-between gap-4">
-              <h2 className="text-base font-semibold text-foreground">
-                Questão {question.question_number}
-              </h2>
-              <div className="flex items-center gap-2 shrink-0">
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Q{question.question_number as number}
+                {exam?.year ? ` / ${exam.year}` : ''}
+              </CardTitle>
+              <div className="flex shrink-0 items-center gap-2">
                 {(question.has_images as boolean | null) && (
-                  <span className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-400">
-                    Imagem
-                  </span>
+                  <Badge tone="purple">Imagem</Badge>
                 )}
-                <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.pending_extraction}`}
-                >
+                <Badge tone={statusTone}>
                   {STATUS_LABELS[statusKey] ?? statusKey}
-                </span>
+                </Badge>
                 {(question.extraction_confidence as number | null) != null && (
-                  <span className="text-xs text-muted-foreground tabular-nums">
+                  <span className="text-xs tabular-nums text-[var(--mm-muted)]">
                     {question.extraction_confidence}% conf.
                   </span>
                 )}
               </div>
-            </div>
-
-            {/* Enunciado */}
-            {stemHtml ? (
-              <div
-                className="text-sm leading-relaxed text-foreground rich-text"
-                dangerouslySetInnerHTML={{ __html: stemHtml }}
-              />
-            ) : (
-              <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+            </CardHeader>
+            <CardBody className="flex flex-col gap-4">
+              {/* Enunciado */}
+              <p className="whitespace-pre-wrap text-[14px] leading-[1.8] text-foreground">
                 {question.stem ?? '(sem enunciado)'}
               </p>
-            )}
 
-            {/* Alternativas */}
-            {Object.keys(alternatives).length > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                {LETTERS.map((letter) => {
-                  const text = alternatives[letter]
-                  const html = alternativesHtml[letter]
-                  if (!text && !html) return null
-                  const isCorrect = question.correct_answer === letter
-                  return (
-                    <div
-                      key={letter}
-                      className={`flex gap-3 rounded-lg border px-3 py-2.5 text-sm ${
-                        isCorrect
-                          ? 'border-green-500/30 bg-green-500/10'
-                          : 'border-white/5 bg-white/2'
-                      }`}
-                    >
-                      <span
-                        className={`font-semibold shrink-0 ${
-                          isCorrect ? 'text-green-400' : 'text-muted-foreground'
-                        }`}
-                      >
-                        {letter})
-                      </span>
-                      {html ? (
-                        <div
-                          className={`flex-1 ${isCorrect ? 'text-green-300' : 'text-foreground'} rich-text`}
-                          dangerouslySetInnerHTML={{ __html: html }}
-                        />
-                      ) : (
-                        <span className={isCorrect ? 'text-green-300' : 'text-foreground'}>
-                          {text}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+              {/* Alternativas */}
+              {Object.keys(alternatives).length > 0 && (
+                <div className="flex flex-col gap-0">
+                  {LETTERS.map((letter) => {
+                    const text = alternatives[letter]
+                    if (!text) return null
+                    const isCorrect = question.correct_answer === letter
+                    return (
+                      <AltCard key={letter} letter={letter} correct={isCorrect}>
+                        {text}
+                      </AltCard>
+                    )
+                  })}
+                </div>
+              )}
 
-            {/* Imagens da questão */}
-            {images.length > 0 && <ImageModal images={images} />}
-
-            {/* Anexos do revisor */}
-            <AttachmentsPanel questionId={id} initial={attachments} readOnly />
-          </div>
+              {/* Imagens da questão */}
+              {images.length > 0 && <ImageModal images={images} />}
+            </CardBody>
+          </Card>
 
           {/* Comentários */}
           <CommentSection questionId={id} initialComments={comments} />
 
           {/* Ações rápidas */}
-          <div className="flex gap-3">
-            {statusKey !== 'approved' && statusKey !== 'published' && (
+          {statusKey !== 'approved' && statusKey !== 'published' && (
+            <div className="flex gap-2">
               <Link
                 href={`/revisao/${question.id}`}
-                className="rounded-lg border border-white/8 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors"
+                className="rounded-lg border border-[var(--mm-border-default)] bg-transparent px-3.5 py-2 text-xs text-[var(--mm-text2)] no-underline transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground"
               >
                 Abrir na revisão →
               </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Coluna direita — tags + metadata */}
-        <div className="w-72 shrink-0 flex flex-col gap-4">
+        {/* Coluna direita — exame + tags */}
+        <div className="flex w-full shrink-0 flex-col gap-4 lg:w-72">
           {/* Metadata card */}
-          <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-4 flex flex-col gap-2.5">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Exame
-            </h3>
-            {exam ? (
-              <dl className="flex flex-col gap-1.5 text-xs">
-                {exam.exam_boards && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Exame</CardTitle>
+            </CardHeader>
+            <CardBody>
+              {exam ? (
+                <dl className="flex flex-col gap-2 text-xs">
+                  {exam.exam_boards && (
+                    <div className="flex justify-between">
+                      <dt className="text-[var(--mm-muted)]">Banca</dt>
+                      <dd className="text-foreground">{exam.exam_boards.short_name}</dd>
+                    </div>
+                  )}
+                  {exam.specialties && (
+                    <div className="flex justify-between">
+                      <dt className="text-[var(--mm-muted)]">Especialidade</dt>
+                      <dd className="text-right text-foreground">{exam.specialties.name}</dd>
+                    </div>
+                  )}
                   <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Banca</dt>
-                    <dd className="text-foreground">{exam.exam_boards.short_name}</dd>
+                    <dt className="text-[var(--mm-muted)]">Ano</dt>
+                    <dd className="text-foreground">{exam.year}</dd>
                   </div>
-                )}
-                {exam.specialties && (
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Especialidade</dt>
-                    <dd className="text-foreground text-right">{exam.specialties.name}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Ano</dt>
-                  <dd className="text-foreground">{exam.year}</dd>
-                </div>
-                {exam.booklet_color && (
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Cor</dt>
-                    <dd className="text-foreground capitalize">{exam.booklet_color}</dd>
-                  </div>
-                )}
-              </dl>
-            ) : (
-              <p className="text-xs text-muted-foreground">Sem exame vinculado</p>
-            )}
-          </div>
+                  {exam.booklet_color && (
+                    <div className="flex justify-between">
+                      <dt className="text-[var(--mm-muted)]">Cor</dt>
+                      <dd className="capitalize text-foreground">{exam.booklet_color}</dd>
+                    </div>
+                  )}
+                </dl>
+              ) : (
+                <p className="text-xs text-[var(--mm-muted)]">Sem exame vinculado</p>
+              )}
+            </CardBody>
+          </Card>
 
-          {/* Tag panel com autosave */}
+          {/* Tag panel com autosave (client) */}
           <TagPanel
             key={currentTagIds.sort().join(',')}
             questionId={id}

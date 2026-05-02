@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { Card, CardBody, Badge, TagChip } from '@/components/ui'
+import { cn } from '@/lib/utils'
 
 export const metadata = { title: 'Questões — MedMaestro' }
 
@@ -14,52 +16,17 @@ type SearchParams = {
   q?: string
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; color: string; border: string }
-> = {
-  pending_extraction: {
-    label: 'Aguardando',
-    bg: 'rgba(79,195,247,0.1)',
-    color: '#4FC3F7',
-    border: 'rgba(79,195,247,0.25)',
-  },
-  pending_review: {
-    label: 'Revisão pendente',
-    bg: 'rgba(255,152,0,0.1)',
-    color: '#FF9800',
-    border: 'rgba(255,152,0,0.25)',
-  },
-  in_review: {
-    label: 'Em revisão',
-    bg: 'var(--mm-gold-bg)',
-    color: 'var(--mm-gold)',
-    border: 'var(--mm-gold-border)',
-  },
-  approved: {
-    label: 'Aprovada',
-    bg: 'rgba(102,187,106,0.1)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.25)',
-  },
-  rejected: {
-    label: 'Rejeitada',
-    bg: 'rgba(239,83,80,0.1)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.25)',
-  },
-  published: {
-    label: 'Publicada',
-    bg: 'rgba(102,187,106,0.15)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.3)',
-  },
-  needs_attention: {
-    label: 'Atenção',
-    bg: 'rgba(239,83,80,0.1)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.25)',
-  },
+type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
+
+const STATUS_CONFIG: Record<string, { label: string; tone: BadgeTone }> = {
+  extracted: { label: 'Extraída', tone: 'blue' },
+  reviewing: { label: 'Em revisão', tone: 'gold' },
+  approved: { label: 'Aprovada', tone: 'green' },
+  rejected: { label: 'Rejeitada', tone: 'red' },
+  published: { label: 'Publicada', tone: 'green' },
+  flagged: { label: 'Sinalizada', tone: 'red' },
+  commented: { label: 'Comentada', tone: 'purple' },
+  draft: { label: 'Rascunho', tone: 'muted' },
 }
 
 function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): string {
@@ -73,6 +40,15 @@ function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): strin
   if (merged.page) p.set('page', merged.page)
   return `/questoes${p.toString() ? '?' + p.toString() : ''}`
 }
+
+const filterChipBase =
+  'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] no-underline transition-colors'
+const filterChipIdle =
+  'border-[var(--mm-border-default)] text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)]'
+const filterChipMuted =
+  'border-[var(--mm-border-default)] text-[var(--mm-muted)] hover:border-[var(--mm-border-hover)]'
+const filterChipActive =
+  'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] text-[var(--mm-gold)]'
 
 export default async function QuestoesPage({
   searchParams,
@@ -90,7 +66,6 @@ export default async function QuestoesPage({
 
   const service = createServiceClient()
 
-  // Carrega opções de filtro em paralelo
   const [modulosRes, temasRes, dificuldadesRes, yearsRes] = await Promise.all([
     service
       .from('tags')
@@ -107,10 +82,7 @@ export default async function QuestoesPage({
       .select('id, label')
       .eq('dimension', 'dificuldade')
       .order('display_order'),
-    service
-      .from('exams')
-      .select('year')
-      .order('year', { ascending: false }),
+    service.from('exams').select('year').order('year', { ascending: false }),
   ])
 
   const modulos = modulosRes.data ?? []
@@ -118,16 +90,15 @@ export default async function QuestoesPage({
   const dificuldades = dificuldadesRes.data ?? []
   const years = [...new Set((yearsRes.data ?? []).map((e) => e.year as number))]
 
-  // Filtra por tags se necessário (busca IDs de questões)
   let questionIdFilter: string[] | null = null
 
   const tagFilters: { dimension: string; label: string }[] = []
   if (moduloFilter) tagFilters.push({ dimension: 'modulo', label: moduloFilter })
   if (temaFilter) tagFilters.push({ dimension: 'topico_edital', label: temaFilter })
-  if (dificuldadeFilter) tagFilters.push({ dimension: 'dificuldade', label: dificuldadeFilter })
+  if (dificuldadeFilter)
+    tagFilters.push({ dimension: 'dificuldade', label: dificuldadeFilter })
 
   if (tagFilters.length > 0) {
-    // Para cada filtro de tag, busca IDs de questões
     const sets: Set<string>[] = []
     for (const tf of tagFilters) {
       const { data: tagRow } = await service
@@ -144,11 +115,9 @@ export default async function QuestoesPage({
           .eq('tag_id', tagRow.id)
         sets.push(new Set((qtRows ?? []).map((r) => r.question_id as string)))
       } else {
-        // Tag não encontrada → nenhuma questão
         sets.push(new Set())
       }
     }
-    // Interseção de todos os sets
     let intersection = sets[0] ?? new Set<string>()
     for (let i = 1; i < sets.length; i++) {
       intersection = new Set([...intersection].filter((id) => sets[i].has(id)))
@@ -156,7 +125,6 @@ export default async function QuestoesPage({
     questionIdFilter = [...intersection]
   }
 
-  // Query principal
   let query = service
     .from('questions')
     .select(
@@ -167,26 +135,12 @@ export default async function QuestoesPage({
     )
     .order('question_number', { ascending: true })
 
-  if (yearFilter) {
-    query = query.eq('exams.year', yearFilter)
-  }
-
-  if (qFilter) {
-    query = query.ilike('stem', `%${qFilter}%`)
-  }
+  if (yearFilter) query = query.eq('exams.year', yearFilter)
+  if (qFilter) query = query.ilike('stem', `%${qFilter}%`)
 
   if (questionIdFilter !== null) {
     if (questionIdFilter.length === 0) {
-      return (
-        <EmptyState
-          params={params}
-          modulos={modulos}
-          temas={temas}
-          dificuldades={dificuldades}
-          years={years}
-          total={0}
-        />
-      )
+      return <EmptyState total={0} />
     }
     query = query.in('id', questionIdFilter)
   }
@@ -196,141 +150,65 @@ export default async function QuestoesPage({
   const total = count ?? 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  // Chips ativos
   const activeFilters: { label: string; removeKey: string }[] = []
   if (qFilter) activeFilters.push({ label: `"${qFilter}"`, removeKey: 'q' })
-  if (moduloFilter) activeFilters.push({ label: `Módulo: ${moduloFilter}`, removeKey: 'modulo' })
+  if (moduloFilter)
+    activeFilters.push({ label: `Módulo: ${moduloFilter}`, removeKey: 'modulo' })
   if (temaFilter) activeFilters.push({ label: `Tema: ${temaFilter}`, removeKey: 'tema' })
-  if (dificuldadeFilter) activeFilters.push({ label: `Dificuldade: ${dificuldadeFilter}`, removeKey: 'dificuldade' })
+  if (dificuldadeFilter)
+    activeFilters.push({ label: `Dificuldade: ${dificuldadeFilter}`, removeKey: 'dificuldade' })
   if (yearFilter) activeFilters.push({ label: `Ano: ${yearFilter}`, removeKey: 'year' })
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1
-          className="font-[family-name:var(--font-syne)]"
-          style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
-        >
-          Questões
+        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
+          Banco de Questões
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
-          Exploração e busca no banco de questões
+        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
+          {total.toLocaleString('pt-BR')} questões no banco
+          {qFilter || moduloFilter || temaFilter || dificuldadeFilter || yearFilter
+            ? ' · resultados filtrados'
+            : ''}
         </p>
       </div>
 
       {/* Card de filtros */}
-      <div
-        style={{
-          background: 'var(--mm-surface)',
-          border: '1px solid var(--mm-line)',
-          borderRadius: 12,
-          padding: 20,
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 12,
-            marginBottom: 14,
-          }}
-        >
-          {/* Módulo */}
-          <div>
-            <label
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--mm-muted)',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Módulo
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Card>
+        <CardBody>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {/* Módulo */}
+            <FilterColumn label="Módulo">
               <Link
                 href={buildUrl(params, { modulo: '', page: '1' })}
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  textDecoration: 'none',
-                  border:
-                    !moduloFilter
-                      ? '1px solid var(--mm-gold-border)'
-                      : '1px solid var(--mm-line)',
-                  background: !moduloFilter ? 'var(--mm-gold-bg)' : 'transparent',
-                  color: !moduloFilter ? 'var(--mm-gold)' : 'var(--mm-muted)',
-                }}
+                className={cn(filterChipBase, !moduloFilter ? filterChipActive : filterChipMuted)}
               >
                 Todos
               </Link>
-              {modulos.slice(0, 5).map((m) => (
-                <Link
-                  key={m.id as string}
-                  href={buildUrl(params, { modulo: m.label as string, page: '1' })}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    textDecoration: 'none',
-                    border:
-                      moduloFilter === m.label
-                        ? '1px solid var(--mm-gold-border)'
-                        : '1px solid var(--mm-line)',
-                    background: moduloFilter === m.label ? 'var(--mm-gold-bg)' : 'transparent',
-                    color: moduloFilter === m.label ? 'var(--mm-gold)' : 'var(--mm-text2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 2,
-                      background: (m.color as string | null) ?? '#5A6880',
-                      flexShrink: 0,
-                    }}
-                  />
-                  {m.label as string}
-                </Link>
-              ))}
-            </div>
-          </div>
+              {modulos.slice(0, 5).map((m) => {
+                const active = moduloFilter === m.label
+                return (
+                  <Link
+                    key={m.id as string}
+                    href={buildUrl(params, { modulo: m.label as string, page: '1' })}
+                    className={cn(filterChipBase, active ? filterChipActive : filterChipIdle)}
+                  >
+                    <span
+                      className="inline-block size-2 rounded-sm flex-shrink-0"
+                      style={{ background: (m.color as string | null) ?? '#5A6880' }}
+                    />
+                    <span className="truncate">{m.label as string}</span>
+                  </Link>
+                )
+              })}
+            </FilterColumn>
 
-          {/* Tema */}
-          <div>
-            <label
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--mm-muted)',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Tema
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Tema */}
+            <FilterColumn label="Tema">
               <Link
                 href={buildUrl(params, { tema: '', page: '1' })}
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  textDecoration: 'none',
-                  border: !temaFilter ? '1px solid var(--mm-gold-border)' : '1px solid var(--mm-line)',
-                  background: !temaFilter ? 'var(--mm-gold-bg)' : 'transparent',
-                  color: !temaFilter ? 'var(--mm-gold)' : 'var(--mm-muted)',
-                }}
+                className={cn(filterChipBase, !temaFilter ? filterChipActive : filterChipMuted)}
               >
                 Todos
               </Link>
@@ -338,56 +216,22 @@ export default async function QuestoesPage({
                 <Link
                   key={t.id as string}
                   href={buildUrl(params, { tema: t.label as string, page: '1' })}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    textDecoration: 'none',
-                    border:
-                      temaFilter === t.label
-                        ? '1px solid var(--mm-gold-border)'
-                        : '1px solid var(--mm-line)',
-                    background: temaFilter === t.label ? 'var(--mm-gold-bg)' : 'transparent',
-                    color: temaFilter === t.label ? 'var(--mm-gold)' : 'var(--mm-text2)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={cn(
+                    filterChipBase,
+                    'truncate',
+                    temaFilter === t.label ? filterChipActive : filterChipIdle
+                  )}
                 >
                   {t.label as string}
                 </Link>
               ))}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Dificuldade */}
-          <div>
-            <label
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--mm-muted)',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Dificuldade
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Dificuldade */}
+            <FilterColumn label="Dificuldade">
               <Link
                 href={buildUrl(params, { dificuldade: '', page: '1' })}
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  textDecoration: 'none',
-                  border:
-                    !dificuldadeFilter ? '1px solid var(--mm-gold-border)' : '1px solid var(--mm-line)',
-                  background: !dificuldadeFilter ? 'var(--mm-gold-bg)' : 'transparent',
-                  color: !dificuldadeFilter ? 'var(--mm-gold)' : 'var(--mm-muted)',
-                }}
+                className={cn(filterChipBase, !dificuldadeFilter ? filterChipActive : filterChipMuted)}
               >
                 Todas
               </Link>
@@ -395,52 +239,21 @@ export default async function QuestoesPage({
                 <Link
                   key={d.id as string}
                   href={buildUrl(params, { dificuldade: d.label as string, page: '1' })}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    textDecoration: 'none',
-                    border:
-                      dificuldadeFilter === d.label
-                        ? '1px solid var(--mm-gold-border)'
-                        : '1px solid var(--mm-line)',
-                    background: dificuldadeFilter === d.label ? 'var(--mm-gold-bg)' : 'transparent',
-                    color: dificuldadeFilter === d.label ? 'var(--mm-gold)' : 'var(--mm-text2)',
-                  }}
+                  className={cn(
+                    filterChipBase,
+                    dificuldadeFilter === d.label ? filterChipActive : filterChipIdle
+                  )}
                 >
                   {d.label as string}
                 </Link>
               ))}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Ano */}
-          <div>
-            <label
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--mm-muted)',
-                letterSpacing: '0.5px',
-                textTransform: 'uppercase',
-                display: 'block',
-                marginBottom: 6,
-              }}
-            >
-              Ano
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {/* Ano */}
+            <FilterColumn label="Ano">
               <Link
                 href={buildUrl(params, { year: '', page: '1' })}
-                style={{
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  fontSize: 11,
-                  textDecoration: 'none',
-                  border: !yearFilter ? '1px solid var(--mm-gold-border)' : '1px solid var(--mm-line)',
-                  background: !yearFilter ? 'var(--mm-gold-bg)' : 'transparent',
-                  color: !yearFilter ? 'var(--mm-gold)' : 'var(--mm-muted)',
-                }}
+                className={cn(filterChipBase, !yearFilter ? filterChipActive : filterChipMuted)}
               >
                 Todos
               </Link>
@@ -448,94 +261,53 @@ export default async function QuestoesPage({
                 <Link
                   key={y}
                   href={buildUrl(params, { year: String(y), page: '1' })}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
-                    fontSize: 11,
-                    textDecoration: 'none',
-                    border:
-                      yearFilter === y
-                        ? '1px solid var(--mm-gold-border)'
-                        : '1px solid var(--mm-line)',
-                    background: yearFilter === y ? 'var(--mm-gold-bg)' : 'transparent',
-                    color: yearFilter === y ? 'var(--mm-gold)' : 'var(--mm-text2)',
-                  }}
+                  className={cn(
+                    filterChipBase,
+                    yearFilter === y ? filterChipActive : filterChipIdle
+                  )}
                 >
                   {y}
                 </Link>
               ))}
-            </div>
+            </FilterColumn>
           </div>
-        </div>
-      </div>
+        </CardBody>
+      </Card>
 
-      {/* Chips de filtros ativos + contador + ações */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span
-            className="font-[family-name:var(--font-syne)]"
-            style={{ fontSize: 13, fontWeight: 700, color: 'var(--mm-text)' }}
-          >
+      {/* Filtros ativos + ações */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-[family-name:var(--font-syne)] text-sm font-bold text-foreground">
             {total.toLocaleString('pt-BR')} questões encontradas
           </span>
           {activeFilters.map((f) => (
             <Link
               key={f.removeKey}
               href={buildUrl(params, { [f.removeKey]: '', page: '1' })}
-              style={{
-                padding: '4px 10px',
-                borderRadius: 20,
-                fontSize: 11,
-                textDecoration: 'none',
-                border: '1px solid var(--mm-gold-border)',
-                background: 'var(--mm-gold-bg)',
-                color: 'var(--mm-gold)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] px-2.5 py-0.5 text-[11px] text-[var(--mm-gold)] no-underline transition-opacity hover:opacity-80"
             >
               {f.label}
-              <span style={{ opacity: 0.7 }}>×</span>
+              <span aria-hidden className="opacity-70">
+                ×
+              </span>
             </Link>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex gap-2">
           <button
             disabled
-            style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 600,
-              border: '1px solid var(--mm-line2)',
-              background: 'transparent',
-              color: 'var(--mm-muted)',
-              cursor: 'not-allowed',
-            }}
+            className="cursor-not-allowed rounded-lg border border-[var(--mm-border-default)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--mm-muted)]"
           >
             Exportar seleção →
           </button>
           <button
             disabled
+            className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] opacity-60"
             style={{
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-              color: '#0a0a0a',
-              cursor: 'not-allowed',
-              opacity: 0.6,
+              background:
+                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+              boxShadow:
+                '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}
           >
             Gerar simulado
@@ -545,21 +317,13 @@ export default async function QuestoesPage({
 
       {/* Cards de questão */}
       {total === 0 ? (
-        <div
-          style={{
-            background: 'var(--mm-surface)',
-            border: '1px solid var(--mm-line)',
-            borderRadius: 12,
-            padding: '40px 20px',
-            textAlign: 'center',
-            color: 'var(--mm-muted)',
-            fontSize: 13,
-          }}
-        >
-          Nenhuma questão encontrada com os filtros aplicados.
-        </div>
+        <Card>
+          <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
+            Nenhuma questão encontrada com os filtros aplicados.
+          </CardBody>
+        </Card>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {(questions ?? []).map((q) => {
             const exam = q.exams as unknown as {
               id: string
@@ -569,142 +333,89 @@ export default async function QuestoesPage({
               specialties: { name: string } | null
             } | null
 
-            const tags = (
-              q.question_tags as unknown as
+            const tags =
+              (q.question_tags as unknown as
                 | { tags: { label: string; dimension: string; color: string | null } }[]
-                | null
-            ) ?? []
+                | null) ?? []
 
-            const moduloTag = tags.find((qt) => qt.tags?.dimension === 'modulo')?.tags
             const dificuldadeTag = tags.find((qt) => qt.tags?.dimension === 'dificuldade')?.tags
             const tipoTag = tags.find((qt) => qt.tags?.dimension === 'tipo_questao')?.tags
+            const allVisibleTags = tags.filter((qt) => qt.tags).slice(0, 5)
 
-            const allVisibleTags = tags
-              .filter((qt) => qt.tags)
-              .slice(0, 5)
-
-            const statusKey = (q.status as string) ?? 'pending_extraction'
-            const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.pending_extraction
-            const stem = ((q.stem as string | null) ?? '').slice(0, 120)
+            const statusKey = (q.status as string) ?? 'extracted'
+            const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.extracted
+            const stemFull = (q.stem as string | null) ?? ''
+            const stem = stemFull.slice(0, 120)
 
             return (
-              <div
-                key={q.id as string}
-                style={{
-                  background: 'var(--mm-bg2)',
-                  border: '1px solid var(--mm-line)',
-                  borderRadius: 12,
-                  padding: 16,
-                }}
-              >
-                {/* Topo */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                  }}
-                >
-                  <span
-                    className="font-[family-name:var(--font-syne)]"
-                    style={{ fontSize: 11, fontWeight: 700, color: 'var(--mm-gold)' }}
-                  >
-                    QUESTÃO {q.question_number as number}
-                    {exam ? ` · ${exam.exam_boards?.short_name ?? 'TEMI'} ${exam.year}` : ''}
-                  </span>
-                  <span
-                    style={{
-                      background: sc.bg,
-                      color: sc.color,
-                      border: `1px solid ${sc.border}`,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      padding: '2px 8px',
-                      borderRadius: 20,
-                    }}
-                  >
-                    {sc.label}
-                  </span>
-                </div>
-
-                {/* Tags chips */}
-                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
-                  {allVisibleTags.map((qt, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 20,
-                        fontSize: 10,
-                        border: '1px solid var(--mm-line2)',
-                        color: 'var(--mm-text2)',
-                        background: qt.tags.color
-                          ? `${qt.tags.color}15`
-                          : 'transparent',
-                      }}
-                    >
-                      {qt.tags.label}
+              <Card key={q.id as string}>
+                <CardBody className="p-4">
+                  {/* Topo */}
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">
+                      QUESTÃO {q.question_number as number}
+                      {exam ? ` · ${exam.exam_boards?.short_name ?? 'TEMI'} ${exam.year}` : ''}
                     </span>
-                  ))}
-                </div>
-
-                {/* Enunciado */}
-                <p
-                  style={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    color: 'var(--mm-text2)',
-                    marginBottom: 10,
-                  }}
-                >
-                  {stem || '(sem enunciado)'}
-                  {((q.stem as string | null) ?? '').length > 120 ? '…' : ''}
-                </p>
-
-                {/* Rodapé */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    {q.correct_answer && (
-                      <span style={{ fontSize: 11, color: 'var(--mm-muted)' }}>
-                        Gabarito:{' '}
-                        <strong style={{ color: 'var(--mm-green)' }}>
-                          {q.correct_answer as string}
-                        </strong>
-                      </span>
-                    )}
-                    {dificuldadeTag && (
-                      <span style={{ fontSize: 11, color: 'var(--mm-muted)' }}>
-                        Dif.:{' '}
-                        <span style={{ color: 'var(--mm-text2)' }}>{dificuldadeTag.label}</span>
-                      </span>
-                    )}
-                    {tipoTag && (
-                      <span style={{ fontSize: 11, color: 'var(--mm-muted)' }}>
-                        Tipo:{' '}
-                        <span style={{ color: 'var(--mm-text2)' }}>{tipoTag.label}</span>
-                      </span>
-                    )}
+                    <Badge tone={sc.tone}>{sc.label}</Badge>
                   </div>
-                  <Link
-                    href={`/questoes/${q.id}`}
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--mm-gold)',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Ver questão →
-                  </Link>
-                </div>
-              </div>
+
+                  {/* Tags chips */}
+                  {allVisibleTags.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {allVisibleTags.map((qt, i) => (
+                        <TagChip
+                          key={i}
+                          style={
+                            qt.tags.color
+                              ? { background: `${qt.tags.color}15` }
+                              : undefined
+                          }
+                        >
+                          {qt.tags.label}
+                        </TagChip>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Enunciado */}
+                  <p className="mb-2.5 text-[13px] leading-[1.6] text-[var(--mm-text2)]">
+                    {stem || '(sem enunciado)'}
+                    {stemFull.length > 120 ? '…' : ''}
+                  </p>
+
+                  {/* Rodapé */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap gap-3 text-[11px] text-[var(--mm-muted)]">
+                      {q.correct_answer && (
+                        <span>
+                          Gabarito:{' '}
+                          <strong className="text-[var(--mm-green)]">
+                            {q.correct_answer as string}
+                          </strong>
+                        </span>
+                      )}
+                      {dificuldadeTag && (
+                        <span>
+                          Dif.:{' '}
+                          <span className="text-[var(--mm-text2)]">{dificuldadeTag.label}</span>
+                        </span>
+                      )}
+                      {tipoTag && (
+                        <span>
+                          Tipo:{' '}
+                          <span className="text-[var(--mm-text2)]">{tipoTag.label}</span>
+                        </span>
+                      )}
+                    </div>
+                    <Link
+                      href={`/questoes/${q.id}`}
+                      className="text-[11px] font-semibold text-[var(--mm-gold)] no-underline hover:underline"
+                    >
+                      Ver questão →
+                    </Link>
+                  </div>
+                </CardBody>
+              </Card>
             )
           })}
         </div>
@@ -712,29 +423,15 @@ export default async function QuestoesPage({
 
       {/* Paginação */}
       {totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--mm-muted)' }}>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--mm-muted)]">
             Página {page} de {totalPages} · {total} questões
           </span>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             {page > 1 && (
               <Link
                 href={buildUrl(params, { page: String(page - 1) })}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: '1px solid var(--mm-line2)',
-                  color: 'var(--mm-text2)',
-                  textDecoration: 'none',
-                }}
+                className="rounded-lg border border-[var(--mm-border-default)] px-3.5 py-1.5 text-xs font-semibold text-[var(--mm-text2)] no-underline transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground"
               >
                 ← Anterior
               </Link>
@@ -742,15 +439,7 @@ export default async function QuestoesPage({
             {page < totalPages && (
               <Link
                 href={buildUrl(params, { page: String(page + 1) })}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: '1px solid var(--mm-line2)',
-                  color: 'var(--mm-text2)',
-                  textDecoration: 'none',
-                }}
+                className="rounded-lg border border-[var(--mm-border-default)] px-3.5 py-1.5 text-xs font-semibold text-[var(--mm-text2)] no-underline transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground"
               >
                 Próxima →
               </Link>
@@ -762,53 +451,45 @@ export default async function QuestoesPage({
   )
 }
 
-function EmptyState({
-  params,
-  modulos,
-  temas,
-  dificuldades,
-  years,
-  total,
+function FilterColumn({
+  label,
+  children,
 }: {
-  params: SearchParams
-  modulos: { id: unknown; label: unknown; color: unknown }[]
-  temas: { id: unknown; label: unknown }[]
-  dificuldades: { id: unknown; label: unknown }[]
-  years: number[]
-  total: number
+  label: string
+  children: React.ReactNode
 }) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
+        {label}
+      </div>
+      <div className="flex flex-col gap-1">{children}</div>
+    </div>
+  )
+}
+
+function EmptyState({ total }: { total: number }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1
-          className="font-[family-name:var(--font-syne)]"
-          style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
-        >
-          Questões
+        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
+          Banco de Questões
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
+        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
           {total} questões encontradas
         </p>
       </div>
-      <div
-        style={{
-          background: 'var(--mm-surface)',
-          border: '1px solid var(--mm-line)',
-          borderRadius: 12,
-          padding: '40px 20px',
-          textAlign: 'center',
-          color: 'var(--mm-muted)',
-          fontSize: 13,
-        }}
-      >
-        Nenhuma questão encontrada com os filtros aplicados.{' '}
-        <Link
-          href="/questoes"
-          style={{ color: 'var(--mm-gold)', textDecoration: 'none' }}
-        >
-          Limpar filtros →
-        </Link>
-      </div>
+      <Card>
+        <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
+          Nenhuma questão encontrada com os filtros aplicados.{' '}
+          <Link
+            href="/questoes"
+            className="text-[var(--mm-gold)] no-underline hover:underline"
+          >
+            Limpar filtros →
+          </Link>
+        </CardBody>
+      </Card>
     </div>
   )
 }

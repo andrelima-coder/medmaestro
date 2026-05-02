@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateTag, toggleTagActive, reorderTag } from '@/app/(dashboard)/configuracoes/tags/actions'
+import { ChevronUp, ChevronDown } from 'lucide-react'
+import {
+  updateTag,
+  toggleTagActive,
+  reorderTag,
+} from '@/app/(dashboard)/configuracoes/tags/actions'
+import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
+import { cn } from '@/lib/utils'
 
 export interface TagRow {
   id: string
@@ -23,6 +30,31 @@ const DIMENSION_LABELS: Record<string, string> = {
   tipo_questao: 'Tipo de Questão',
   recurso_visual: 'Recurso Visual',
 }
+
+const DIMENSION_GLOW: Record<
+  string,
+  'gold' | 'purple' | 'orange' | 'none'
+> = {
+  modulo: 'gold',
+  dificuldade: 'gold',
+  tipo_questao: 'purple',
+  recurso_visual: 'orange',
+}
+
+const inputClass =
+  'h-8 flex-1 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-2.5 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-white/[0.07]'
+
+const btnGhostClass =
+  'inline-flex h-7 items-center rounded-md border border-[var(--mm-border-default)] bg-transparent px-2.5 text-[11px] text-[var(--mm-text2)] transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground disabled:pointer-events-none disabled:opacity-40'
+
+const btnDangerInlineClass =
+  'inline-flex h-7 items-center rounded-md border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] px-2.5 text-[11px] text-[var(--mm-red)] transition-colors hover:bg-[rgba(239,83,80,0.18)] disabled:opacity-50'
+
+const btnSuccessInlineClass =
+  'inline-flex h-7 items-center rounded-md border border-[rgba(102,187,106,0.30)] bg-[rgba(102,187,106,0.08)] px-2.5 text-[11px] text-[var(--mm-green)] transition-colors hover:bg-[rgba(102,187,106,0.18)] disabled:opacity-50'
+
+const iconBtnClass =
+  'flex size-6 items-center justify-center rounded text-[var(--mm-muted)] transition-colors hover:bg-white/[0.04] hover:text-foreground disabled:opacity-20 disabled:pointer-events-none'
 
 export function TagManager({ tags }: TagManagerProps) {
   const router = useRouter()
@@ -69,39 +101,52 @@ export function TagManager({ tags }: TagManagerProps) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {dimensions.map((dim) => {
         const dimTags = tags.filter((t) => t.dimension === dim)
-        return (
-          <div key={dim} className="flex flex-col gap-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {DIMENSION_LABELS[dim] ?? dim}
-              <span className="ml-2 text-white/30 font-normal normal-case">
-                {dimTags.filter((t) => t.is_active).length}/{dimTags.length} ativas
-              </span>
-            </h3>
+        const activeCount = dimTags.filter((t) => t.is_active).length
+        const glow = DIMENSION_GLOW[dim] ?? 'none'
 
-            <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
+        return (
+          <Card key={dim} glow={glow}>
+            <CardHeader>
+              <div className="flex min-w-0 items-center gap-2.5">
+                {/* Color seal — toma a cor da primeira tag ativa da dimensão */}
+                <div
+                  className="size-2.5 flex-shrink-0 rounded-sm"
+                  style={{
+                    background:
+                      dimTags.find((t) => t.color)?.color ?? 'var(--mm-muted)',
+                  }}
+                />
+                <CardTitle>{DIMENSION_LABELS[dim] ?? dim}</CardTitle>
+              </div>
+              <Badge tone={glow === 'none' ? 'muted' : (glow as 'gold' | 'purple' | 'orange')}>
+                {activeCount}/{dimTags.length}
+              </Badge>
+            </CardHeader>
+            <CardBody className="flex flex-col gap-1.5">
               {dimTags.map((tag, i) => (
                 <div
                   key={tag.id}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-0 ${
-                    !tag.is_active ? 'opacity-40' : ''
-                  }`}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.02] px-3 py-2 transition-colors',
+                    !tag.is_active && 'opacity-40',
+                    tag.is_active && 'hover:border-[var(--mm-border-hover)]'
+                  )}
                 >
                   {/* Color swatch */}
                   <div
-                    className="w-3 h-3 rounded-full shrink-0 border border-white/20"
-                    style={{ backgroundColor: tag.color ?? '#888' }}
+                    className="size-3 flex-shrink-0 rounded-full border border-white/20"
+                    style={{ backgroundColor: tag.color ?? '#525E76' }}
                   />
 
                   {editingId === tag.id ? (
-                    /* Modo edição */
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
                       <input
                         value={editLabel}
                         onChange={(e) => setEditLabel(e.target.value)}
-                        className="h-7 flex-1 rounded-md border border-white/15 bg-white/5 px-2 text-xs text-foreground outline-none focus:border-[var(--mm-gold)]/40"
+                        className={inputClass}
                         autoFocus
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') saveEdit(tag.id)
@@ -110,64 +155,61 @@ export function TagManager({ tags }: TagManagerProps) {
                       />
                       <input
                         type="color"
-                        value={editColor || '#888888'}
+                        value={editColor || '#525E76'}
                         onChange={(e) => setEditColor(e.target.value)}
-                        className="w-7 h-7 rounded-md border border-white/15 bg-transparent cursor-pointer"
+                        className="size-7 cursor-pointer rounded-md border border-[var(--mm-border-default)] bg-transparent transition-colors hover:border-[var(--mm-border-hover)]"
                         title="Cor da tag"
                       />
                       <button
                         onClick={() => saveEdit(tag.id)}
                         disabled={isPending}
-                        className="text-xs text-green-400 hover:text-green-300 transition-colors disabled:opacity-40"
+                        className={btnSuccessInlineClass}
                       >
                         Salvar
                       </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
+                      <button onClick={cancelEdit} className={btnGhostClass}>
                         Cancelar
                       </button>
                     </div>
                   ) : (
-                    /* Modo visualização */
                     <>
-                      <span className="text-sm text-foreground flex-1 truncate">{tag.label}</span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {/* Reordenar */}
+                      <span className="flex-1 truncate text-sm text-foreground">
+                        {tag.label}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           onClick={() => handleReorder(tag.id, 'up')}
                           disabled={isPending || i === 0}
-                          className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-20"
+                          className={iconBtnClass}
                           title="Mover para cima"
+                          aria-label="Mover para cima"
                         >
-                          ↑
+                          <ChevronUp className="size-3.5" />
                         </button>
                         <button
                           onClick={() => handleReorder(tag.id, 'down')}
                           disabled={isPending || i === dimTags.length - 1}
-                          className="w-6 h-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground transition-colors disabled:opacity-20"
+                          className={iconBtnClass}
                           title="Mover para baixo"
+                          aria-label="Mover para baixo"
                         >
-                          ↓
+                          <ChevronDown className="size-3.5" />
                         </button>
-                        {/* Editar */}
                         <button
                           onClick={() => startEdit(tag)}
                           disabled={isPending}
-                          className="px-2 h-6 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                          className={btnGhostClass}
                         >
                           Editar
                         </button>
-                        {/* Toggle ativo */}
                         <button
                           onClick={() => handleToggle(tag.id, tag.is_active)}
                           disabled={isPending}
-                          className={`px-2 h-6 text-xs transition-colors disabled:opacity-40 ${
+                          className={
                             tag.is_active
-                              ? 'text-muted-foreground hover:text-red-400'
-                              : 'text-muted-foreground hover:text-green-400'
-                          }`}
+                              ? btnDangerInlineClass
+                              : btnSuccessInlineClass
+                          }
                         >
                           {tag.is_active ? 'Desativar' : 'Ativar'}
                         </button>
@@ -176,8 +218,13 @@ export function TagManager({ tags }: TagManagerProps) {
                   )}
                 </div>
               ))}
-            </div>
-          </div>
+              {dimTags.length === 0 && (
+                <p className="py-3 text-center text-[11px] text-[var(--mm-muted)]">
+                  Nenhuma tag nesta dimensão.
+                </p>
+              )}
+            </CardBody>
+          </Card>
         )
       })}
     </div>

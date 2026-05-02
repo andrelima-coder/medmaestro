@@ -5,7 +5,7 @@ import { useCallback, useTransition } from 'react'
 import { STATUS_LABELS } from '@/types'
 import type { QuestionStatus } from '@/types'
 
-const STATUSES: QuestionStatus[] = ['pending_extraction', 'in_review', 'approved', 'rejected', 'published']
+const STATUSES: QuestionStatus[] = ['extracted', 'reviewing', 'approved', 'flagged', 'rejected', 'commented', 'published']
 
 interface QuestoesFiltersProps {
   boards: { slug: string; short_name: string }[]

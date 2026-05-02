@@ -26,7 +26,10 @@ export default async function DashboardLayout({
   const role = (profile?.role ?? 'analista') as UserRole
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="app-shell flex h-screen overflow-hidden bg-background">
+      <a href="#main-content" className="skip-to-content">
+        Ir para o conteúdo
+      </a>
       <Sidebar role={role} />
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -36,7 +39,9 @@ export default async function DashboardLayout({
           email={profile?.email ?? user.email ?? null}
         />
         <WorkflowStepper />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main id="main-content" className="flex-1 overflow-auto p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

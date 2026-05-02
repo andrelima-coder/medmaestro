@@ -5,53 +5,47 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { AssignmentBar } from '@/components/revisao/assignment-bar'
 import { ActionsPanel } from '@/components/revisao/actions-panel'
 import { TagPanel, type TagItem } from '@/components/questoes/tag-panel'
-import { CommentSection } from '@/components/questoes/comment-section'
-import { ExamPanel } from '@/components/revisao/exam-panel'
-import { QuestionEditor } from '@/components/revisao/question-editor'
-import { AttachmentsPanel } from '@/components/revisao/attachments-panel'
+import { CommentList } from '@/components/revisao/comment-list'
 import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
-import { listExamsForReassignment } from '@/app/(dashboard)/revisao/[id]/exam-actions'
-import { getQuestionAttachments } from '@/app/(dashboard)/revisao/[id]/attachment-actions'
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  Badge,
+  AltCard,
+  LockBanner,
+} from '@/components/ui'
 
 export const metadata = { title: 'Revisão — MedMaestro' }
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_extraction: 'Aguardando extração',
-  pending_review: 'Aguardando revisão',
-  in_review: 'Em revisão',
-  needs_attention: 'Atenção',
+  extracted: 'Extraída',
+  reviewing: 'Em revisão',
+  flagged: 'Sinalizada',
   approved: 'Aprovada',
   rejected: 'Rejeitada',
+  commented: 'Comentada',
   published: 'Publicada',
-  error: 'Erro',
+  draft: 'Rascunho',
 }
 
-const STATUS_CLASSES: Record<string, string> = {
-  pending_extraction: 'border-blue-500/30 bg-blue-500/15 text-blue-400',
-  pending_review: 'border-yellow-500/30 bg-yellow-500/15 text-yellow-400',
-  in_review: 'border-purple-500/30 bg-purple-500/15 text-purple-400',
-  needs_attention: 'border-orange-500/30 bg-orange-500/15 text-orange-400',
-  approved: 'border-green-500/30 bg-green-500/15 text-green-400',
-  rejected: 'border-red-500/30 bg-red-500/15 text-red-400',
-  published: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400',
-  error: 'border-red-500/30 bg-red-500/15 text-red-400',
+type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  extracted: 'blue',
+  reviewing: 'purple',
+  flagged: 'orange',
+  approved: 'green',
+  rejected: 'red',
+  commented: 'purple',
+  published: 'green',
+  draft: 'muted',
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
-
-function escapePlainToHtml(text: string): string {
-  if (!text) return ''
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-  return escaped
-    .split(/\n{2,}/)
-    .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-    .join('')
-}
 
 export default async function RevisaoItemPage({
   params,
@@ -68,20 +62,12 @@ export default async function RevisaoItemPage({
 
   const service = createServiceClient()
 
-  // Busca questão + dados de tags + revisões + comentários + exames em paralelo
-  const [
-    questionRes,
-    assignedTagsRes,
-    allTagsRawRes,
-    lastTagRevRes,
-    comments,
-    examOptions,
-    attachments,
-  ] = await Promise.all([
+  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments] =
+    await Promise.all([
       service
         .from('questions')
         .select(
-          'id, question_number, stem, stem_html, alternatives, alternatives_html, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
+          'id, question_number, stem, alternatives, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
         )
         .eq('id', id)
         .single(),
@@ -101,8 +87,6 @@ export default async function RevisaoItemPage({
         .limit(1)
         .single(),
       getQuestionComments(id),
-      listExamsForReassignment(),
-      getQuestionAttachments(id),
     ])
 
   const question = questionRes.data
@@ -124,15 +108,6 @@ export default async function RevisaoItemPage({
   } | null
 
   const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
-  const alternativesHtml =
-    (question.alternatives_html as Record<string, string> | null) ?? {}
-  const stemHtmlInitial =
-    (question.stem_html as string | null) ?? escapePlainToHtml((question.stem as string | null) ?? '')
-  const alternativesHtmlInitial: Record<string, string> = {}
-  for (const letter of LETTERS) {
-    alternativesHtmlInitial[letter] =
-      alternativesHtml[letter] ?? escapePlainToHtml(alternatives[letter] ?? '')
-  }
 
   const now = new Date()
 
@@ -151,7 +126,7 @@ export default async function RevisaoItemPage({
   let lockedByName = ''
   if (lockedByOther) {
     const { data: lockerProfile } = await service
-      .from('profiles')
+      .from('user_profiles')
       .select('full_name')
       .eq('id', assignment.assigned_to)
       .single()
@@ -173,13 +148,13 @@ export default async function RevisaoItemPage({
     )
     await service
       .from('questions')
-      .update({ status: 'in_review', updated_at: now.toISOString() })
+      .update({ status: 'reviewing', updated_at: now.toISOString() })
       .eq('id', id)
     expiresAt = newExpiresAt
   }
 
   const { data: myProfile } = await service
-    .from('profiles')
+    .from('user_profiles')
     .select('full_name')
     .eq('id', user.id)
     .single()
@@ -198,130 +173,123 @@ export default async function RevisaoItemPage({
     .filter(Boolean)
     .join(' · ')
 
+  const Breadcrumb = (
+    <div className="flex flex-wrap items-center gap-2 text-[13px]">
+      <Link
+        href="/revisao"
+        className="text-[var(--mm-muted)] no-underline transition-colors hover:text-foreground"
+      >
+        ← Fila
+      </Link>
+      <span className="text-[var(--mm-muted)]">/</span>
+      <span className="font-medium text-foreground">
+        Q{question.question_number as number}
+      </span>
+      {examLabel && (
+        <>
+          <span className="text-[var(--mm-muted)]">·</span>
+          <span className="text-[var(--mm-muted)]">{examLabel}</span>
+        </>
+      )}
+    </div>
+  )
+
   if (lockedByOther) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/revisao"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Fila
-          </Link>
-          <span className="text-white/20">/</span>
-          <span className="text-sm font-medium text-foreground">Q{question.question_number}</span>
-        </div>
-        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-6 text-sm text-yellow-400">
-          Esta questão está sendo revisada por <strong>{lockedByName}</strong>. Aguarde ou escolha
-          outra.
-        </div>
+        {Breadcrumb}
+        <Card>
+          <CardBody className="flex items-center gap-3 text-sm text-[var(--mm-warning)]">
+            <span
+              aria-hidden
+              className="inline-block size-2 rounded-full bg-[var(--mm-warning)]"
+            />
+            <span>
+              Esta questão está sendo revisada por <strong>{lockedByName}</strong>. Aguarde
+              ou escolha outra.
+            </span>
+          </CardBody>
+        </Card>
       </div>
     )
   }
 
-  const statusKey = (question.status as string) ?? 'pending_review'
+  const statusKey = (question.status as string) ?? 'extracted'
+  const statusTone = STATUS_TONE[statusKey] ?? 'blue'
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <Link
-          href="/revisao"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Fila
-        </Link>
-        <span className="text-white/20">/</span>
-        <span className="text-sm font-medium text-foreground">Q{question.question_number}</span>
-        <span className="text-white/20">·</span>
-        <span className="text-sm text-muted-foreground">{examLabel}</span>
-      </div>
+      {Breadcrumb}
+
+      <LockBanner>
+        Em revisão por <strong className="font-semibold">{reviewerName}</strong> · Bloqueado
+        por 10 minutos
+      </LockBanner>
 
       <AssignmentBar questionId={id} reviewerName={reviewerName} expiresAt={expiresAt} />
 
-      <div className="flex gap-4" style={{ minHeight: 'calc(100vh - 200px)', alignItems: 'flex-start' }}>
-        {/* ── Esquerdo: conteúdo da questão ── */}
-        <div className="flex-1 flex flex-col gap-4 min-w-0">
-          <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)] p-6 flex flex-col gap-4">
-            {/* Header da questão */}
-            <div className="flex items-start justify-between gap-4">
-              <h2
-                className="font-[family-name:var(--font-syne)]"
-                style={{ fontSize: 15, fontWeight: 700, color: 'var(--mm-text)' }}
-              >
-                Questão {question.question_number as number}
-              </h2>
-              <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-col items-start gap-4 lg:flex-row">
+        {/* Esquerdo: conteúdo da questão */}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Q{question.question_number as number}
+                {exam?.year ? ` / ${exam.year}` : ''}
+              </CardTitle>
+              <div className="flex shrink-0 items-center gap-2">
                 {(question.has_images as boolean | null) && (
-                  <span className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-400">
-                    Imagem
-                  </span>
+                  <Badge tone="purple">Imagem</Badge>
                 )}
-                <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[statusKey] ?? STATUS_CLASSES.pending_review}`}
-                >
+                <Badge tone={statusTone}>
                   {STATUS_LABELS[statusKey] ?? statusKey}
-                </span>
+                </Badge>
                 {(question.extraction_confidence as number | null) !== null && (
-                  <span className="text-xs tabular-nums" style={{ color: 'var(--mm-muted)' }}>
+                  <span className="text-xs tabular-nums text-[var(--mm-muted)]">
                     {(question.extraction_confidence as number) * 20}% confiança
                   </span>
                 )}
               </div>
-            </div>
-
-            {/* Editor rich-text — enunciado + alternativas */}
-            <QuestionEditor
-              questionId={id}
-              initialStemHtml={stemHtmlInitial}
-              initialAlternativesHtml={alternativesHtmlInitial}
-              correctAnswer={(question.correct_answer as string | null) ?? null}
-            />
-
-            {/* Anexos do revisor */}
-            <AttachmentsPanel questionId={id} initial={attachments} />
-
-            {/* Aviso quando gabarito não disponível */}
-            {!(question.correct_answer as string | null) && (
-              <p
-                style={{
-                  fontSize: 11,
-                  color: 'var(--mm-muted)',
-                  marginTop: 4,
-                  fontStyle: 'italic',
-                }}
-              >
-                Gabarito ainda não sincronizado — faça o upload do PDF do gabarito no lote.
+            </CardHeader>
+            <CardBody className="flex flex-col gap-4">
+              {/* Enunciado */}
+              <p className="whitespace-pre-wrap text-[14px] leading-[1.8] text-foreground">
+                {(question.stem as string | null) ?? '(sem enunciado)'}
               </p>
-            )}
-          </div>
 
-          <CommentSection questionId={id} initialComments={comments} />
+              {/* Alternativas */}
+              {Object.keys(alternatives).length > 0 && (
+                <div className="flex flex-col gap-0">
+                  {LETTERS.map((letter) => {
+                    const text = alternatives[letter]
+                    if (!text) return null
+                    const isCorrect = question.correct_answer === letter
+                    return (
+                      <AltCard key={letter} letter={letter} correct={isCorrect}>
+                        {text}
+                      </AltCard>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Aviso quando gabarito não disponível */}
+              {!(question.correct_answer as string | null) && (
+                <p className="text-[11px] italic text-[var(--mm-muted)]">
+                  Gabarito ainda não sincronizado — faça o upload do PDF do gabarito no
+                  lote.
+                </p>
+              )}
+            </CardBody>
+          </Card>
+
+          <CommentList comments={comments} />
         </div>
 
-        {/* ── Direito: ações + tags ── */}
-        <div
-          style={{
-            width: 300,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          <ActionsPanel
-            questionId={id}
-            currentStatus={statusKey}
-            userId={user.id}
-          />
+        {/* Direito: ações + tags */}
+        <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[300px]">
+          <ActionsPanel questionId={id} currentStatus={statusKey} userId={user.id} />
 
-          <ExamPanel
-            questionId={id}
-            currentExamId={question.exam_id as string}
-            exams={examOptions}
-          />
-
-          {/* TagPanel inline — classifica enquanto revisa */}
           <TagPanel
             key={currentTagIds.sort().join(',')}
             questionId={id}

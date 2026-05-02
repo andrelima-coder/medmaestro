@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
+import { cn } from '@/lib/utils'
 
 export const metadata = { title: 'Análise — MedMaestro' }
 
@@ -50,30 +52,14 @@ function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): strin
   return `/analise${p.toString() ? '?' + p.toString() : ''}`
 }
 
-const FILTER_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 600,
-  color: 'var(--mm-muted)',
-  letterSpacing: '0.5px',
-  textTransform: 'uppercase',
-  display: 'block',
-  marginBottom: 6,
-}
-
-function chipStyle(active: boolean): React.CSSProperties {
-  return {
-    padding: '5px 10px',
-    borderRadius: 6,
-    fontSize: 11,
-    textDecoration: 'none',
-    border: active ? '1px solid var(--mm-gold-border)' : '1px solid var(--mm-line)',
-    background: active ? 'var(--mm-gold-bg)' : 'transparent',
-    color: active ? 'var(--mm-gold)' : 'var(--mm-text2)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-  }
-}
+const filterChipBase =
+  'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] no-underline transition-colors'
+const filterChipIdle =
+  'border-[var(--mm-border-default)] text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)]'
+const filterChipMuted =
+  'border-[var(--mm-border-default)] text-[var(--mm-muted)] hover:border-[var(--mm-border-hover)]'
+const filterChipActive =
+  'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] text-[var(--mm-gold)]'
 
 export default async function AnalisePage({
   searchParams,
@@ -94,10 +80,9 @@ export default async function AnalisePage({
   if (!user) redirect('/login')
 
   const service = createServiceClient()
-  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await service.from('user_profiles').select('role').eq('id', user.id).single()
   if ((ROLE_RANK[profile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) redirect('/dashboard')
 
-  // Carrega opções de filtros + dados base em paralelo
   const [
     boardsRes,
     specialtiesRes,
@@ -131,12 +116,10 @@ export default async function AnalisePage({
   const boardSlugById = new Map(boards.map((b) => [b.id as string, b.slug as string]))
   const specialtySlugById = new Map(allSpecialties.map((s) => [s.id as string, s.slug as string]))
 
-  // Especialidades filtradas pela banca selecionada
   const specialties = bancaFilter
     ? allSpecialties.filter((s) => boardSlugById.get(s.exam_board_id as string) === bancaFilter)
     : allSpecialties
 
-  // Filtra exames por banca / especialidade / ano / cor
   const filteredExams = allExams.filter((e) => {
     if (bancaFilter && boardSlugById.get(e.board_id as string) !== bancaFilter) return false
     if (
@@ -153,7 +136,6 @@ export default async function AnalisePage({
   const examYearMap: Record<string, number> = {}
   for (const e of filteredExams) examYearMap[e.id as string] = e.year as number
 
-  // Anos disponíveis (sem filtro de ano aplicado, mas respeitando demais filtros para UX)
   const yearsForFilter = [
     ...new Set(
       allExams
@@ -173,13 +155,10 @@ export default async function AnalisePage({
 
   const coresForFilter = [
     ...new Set(
-      allExams
-        .map((e) => e.booklet_color as string | null)
-        .filter((c): c is string => !!c)
+      allExams.map((e) => e.booklet_color as string | null).filter((c): c is string => !!c)
     ),
   ].sort()
 
-  // Conjunto de question_ids permitidas pelos filtros de exame
   let allowedQuestionIds: Set<string> | null = null
   const hasExamFilter = !!(bancaFilter || especialidadeFilter || yearFilter || corFilter)
   if (hasExamFilter) {
@@ -194,7 +173,6 @@ export default async function AnalisePage({
     }
   }
 
-  // Filtro de dificuldade → interseca com question_ids
   if (dificuldadeFilter) {
     const { data: tagRow } = await service
       .from('tags')
@@ -217,7 +195,6 @@ export default async function AnalisePage({
     }
   }
 
-  // Aplica o filtro de questão sobre as tags
   let modTags = modTagsRes.data ?? []
   let temasTags = temasTagsRes.data ?? []
   if (allowedQuestionIds !== null) {
@@ -228,7 +205,6 @@ export default async function AnalisePage({
 
   const totalTagged = modTags.length
 
-  // Agrupa por módulo
   const moduloCount: Record<string, { color: string; count: number }> = {}
   for (const row of modTags) {
     const tag = row.tags as unknown as { label: string; color: string | null } | null
@@ -245,7 +221,6 @@ export default async function AnalisePage({
 
   const maxCount = Math.max(...modulosData.map((m) => m.count), 1)
 
-  // Curva acumulada Pareto
   const cumulativePoints: number[] = []
   let cumSum = 0
   for (const m of modulosData) {
@@ -260,11 +235,9 @@ export default async function AnalisePage({
     })
     .join(' ')
 
-  // Top 3 para insight Pareto
   const top3Count = modulosData.slice(0, 3).reduce((s, m) => s + m.count, 0)
   const paretoAlert = totalTagged > 0 && top3Count / totalTagged > 0.5
 
-  // Agrupa por tema (topico_edital)
   const temaCount: Record<string, { count: number }> = {}
   for (const row of temasTags) {
     const tag = row.tags as unknown as { label: string; dimension: string } | null
@@ -278,7 +251,6 @@ export default async function AnalisePage({
     .sort((a, b) => b.count - a.count)
     .slice(0, 20)
 
-  // Evolução temporal: módulos por ano (se não há filtro de ano)
   type ModuloYearRow = {
     modulo: string
     color: string
@@ -323,7 +295,6 @@ export default async function AnalisePage({
       maxYearCount: Math.max(...yearsForChart.map((y) => m.countByYear[y] ?? 0), 1),
     }))
 
-  // Chips de filtros ativos
   const activeFilters: { label: string; removeKey: keyof SearchParams }[] = []
   if (bancaFilter) {
     const b = boards.find((x) => x.slug === bancaFilter)
@@ -354,40 +325,22 @@ export default async function AnalisePage({
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1
-          className="font-[family-name:var(--font-syne)]"
-          style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
-        >
+        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
           Análise 80/20
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
+        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
           Distribuição e incidência por módulo — Regra de Pareto
         </p>
       </div>
 
       {/* Card de filtros */}
-      <div
-        style={{
-          background: 'var(--mm-surface)',
-          border: '1px solid var(--mm-line)',
-          borderRadius: 12,
-          padding: 20,
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 12,
-          }}
-        >
-          {/* Banca */}
-          <div>
-            <label style={FILTER_LABEL_STYLE}>Banca</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <Card>
+        <CardBody>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+            <FilterColumn label="Banca">
               <Link
                 href={buildUrl(params, { banca: '', especialidade: '' })}
-                style={chipStyle(!bancaFilter)}
+                className={cn(filterChipBase, !bancaFilter ? filterChipActive : filterChipMuted)}
               >
                 Todas
               </Link>
@@ -395,109 +348,87 @@ export default async function AnalisePage({
                 <Link
                   key={b.id as string}
                   href={buildUrl(params, { banca: b.slug as string, especialidade: '' })}
-                  style={chipStyle(bancaFilter === b.slug)}
+                  className={cn(
+                    filterChipBase,
+                    bancaFilter === b.slug ? filterChipActive : filterChipIdle
+                  )}
                 >
                   {(b.short_name as string) ?? (b.name as string)}
                 </Link>
               ))}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Especialidade */}
-          <div>
-            <label style={FILTER_LABEL_STYLE}>Especialidade</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <FilterColumn label="Especialidade">
               <Link
                 href={buildUrl(params, { especialidade: '' })}
-                style={chipStyle(!especialidadeFilter)}
+                className={cn(filterChipBase, !especialidadeFilter ? filterChipActive : filterChipMuted)}
               >
                 Todas
               </Link>
               {specialties.length === 0 ? (
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--mm-muted)',
-                    padding: '5px 10px',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  —
-                </span>
+                <span className="px-2.5 py-1 text-[11px] italic text-[var(--mm-muted)]">—</span>
               ) : (
                 specialties.map((s) => (
                   <Link
                     key={s.id as string}
                     href={buildUrl(params, { especialidade: s.slug as string })}
-                    style={{
-                      ...chipStyle(especialidadeFilter === s.slug),
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
+                    className={cn(
+                      filterChipBase,
+                      'truncate',
+                      especialidadeFilter === s.slug ? filterChipActive : filterChipIdle
+                    )}
                   >
                     {s.name as string}
                   </Link>
                 ))
               )}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Ano */}
-          <div>
-            <label style={FILTER_LABEL_STYLE}>Ano</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Link href={buildUrl(params, { year: '' })} style={chipStyle(!yearFilter)}>
+            <FilterColumn label="Ano">
+              <Link
+                href={buildUrl(params, { year: '' })}
+                className={cn(filterChipBase, !yearFilter ? filterChipActive : filterChipMuted)}
+              >
                 Todos
               </Link>
               {yearsForFilter.map((y) => (
                 <Link
                   key={y}
                   href={buildUrl(params, { year: String(y) })}
-                  style={chipStyle(yearFilter === y)}
+                  className={cn(filterChipBase, yearFilter === y ? filterChipActive : filterChipIdle)}
                 >
                   {y}
                 </Link>
               ))}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Cor da prova */}
-          <div>
-            <label style={FILTER_LABEL_STYLE}>Cor da prova</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Link href={buildUrl(params, { cor: '' })} style={chipStyle(!corFilter)}>
+            <FilterColumn label="Cor da prova">
+              <Link
+                href={buildUrl(params, { cor: '' })}
+                className={cn(filterChipBase, !corFilter ? filterChipActive : filterChipMuted)}
+              >
                 Todas
               </Link>
               {coresForFilter.map((c) => (
                 <Link
                   key={c}
                   href={buildUrl(params, { cor: c })}
-                  style={chipStyle(corFilter === c)}
+                  className={cn(filterChipBase, corFilter === c ? filterChipActive : filterChipIdle)}
                 >
                   <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: COR_DOT[c.toLowerCase()] ?? '#5A6880',
-                      flexShrink: 0,
-                      border: '1px solid rgba(255,255,255,0.15)',
-                    }}
+                    aria-hidden
+                    className="inline-block size-2 flex-shrink-0 rounded-full border border-white/15"
+                    style={{ background: COR_DOT[c.toLowerCase()] ?? '#5A6880' }}
                   />
-                  <span style={{ textTransform: 'capitalize' }}>{c}</span>
+                  <span className="capitalize">{c}</span>
                 </Link>
               ))}
-            </div>
-          </div>
+            </FilterColumn>
 
-          {/* Dificuldade */}
-          <div>
-            <label style={FILTER_LABEL_STYLE}>Dificuldade</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <FilterColumn label="Dificuldade">
               <Link
                 href={buildUrl(params, { dificuldade: '' })}
-                style={chipStyle(!dificuldadeFilter)}
+                className={cn(filterChipBase, !dificuldadeFilter ? filterChipActive : filterChipMuted)}
               >
                 Todas
               </Link>
@@ -505,609 +436,353 @@ export default async function AnalisePage({
                 <Link
                   key={d.id as string}
                   href={buildUrl(params, { dificuldade: d.label as string })}
-                  style={chipStyle(dificuldadeFilter === d.label)}
+                  className={cn(
+                    filterChipBase,
+                    dificuldadeFilter === d.label ? filterChipActive : filterChipIdle
+                  )}
                 >
                   {d.label as string}
                 </Link>
               ))}
-            </div>
+            </FilterColumn>
           </div>
-        </div>
 
-        {/* Chips ativos + limpar */}
-        {hasAnyFilter && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              flexWrap: 'wrap',
-              marginTop: 14,
-              paddingTop: 14,
-              borderTop: '1px solid var(--mm-line)',
-            }}
-          >
-            <span style={{ fontSize: 11, color: 'var(--mm-muted)', marginRight: 4 }}>
-              Filtros ativos:
-            </span>
-            {activeFilters.map((f) => (
+          {hasAnyFilter && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--mm-border-default)] pt-4">
+              <span className="text-[11px] text-[var(--mm-muted)]">Filtros ativos:</span>
+              {activeFilters.map((f) => (
+                <Link
+                  key={f.removeKey}
+                  href={buildUrl(params, { [f.removeKey]: '' })}
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] px-2.5 py-0.5 text-[11px] text-[var(--mm-gold)] no-underline transition-opacity hover:opacity-80"
+                >
+                  {f.label}
+                  <span aria-hidden className="opacity-70">
+                    ×
+                  </span>
+                </Link>
+              ))}
               <Link
-                key={f.removeKey}
-                href={buildUrl(params, { [f.removeKey]: '' })}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  fontSize: 11,
-                  textDecoration: 'none',
-                  border: '1px solid var(--mm-gold-border)',
-                  background: 'var(--mm-gold-bg)',
-                  color: 'var(--mm-gold)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
+                href="/analise"
+                className="ml-auto text-[11px] text-[var(--mm-muted)] no-underline hover:text-foreground"
               >
-                {f.label}
-                <span style={{ opacity: 0.7 }}>×</span>
+                Limpar tudo
               </Link>
-            ))}
-            <Link
-              href="/analise"
-              style={{
-                marginLeft: 'auto',
-                fontSize: 11,
-                color: 'var(--mm-muted)',
-                textDecoration: 'none',
-              }}
-            >
-              Limpar tudo
-            </Link>
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
 
       {totalTagged === 0 ? (
-        <div
-          style={{
-            background: 'var(--mm-surface)',
-            border: '1px solid var(--mm-line)',
-            borderRadius: 12,
-            padding: '40px 20px',
-            textAlign: 'center',
-            color: 'var(--mm-muted)',
-            fontSize: 13,
-          }}
-        >
-          {hasAnyFilter
-            ? 'Nenhuma questão encontrada com os filtros aplicados.'
-            : 'Aguardando questões — importe lotes e classifique para ver a análise.'}
-        </div>
+        <Card>
+          <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
+            {hasAnyFilter
+              ? 'Nenhuma questão encontrada com os filtros aplicados.'
+              : 'Aguardando questões — importe lotes e classifique para ver a análise.'}
+          </CardBody>
+        </Card>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Pareto por módulo */}
-            <div
-              style={{
-                background: 'var(--mm-surface)',
-                border: '1px solid var(--mm-line)',
-                borderRadius: 12,
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 16,
-                }}
-              >
-                <span
-                  className="font-[family-name:var(--font-syne)]"
-                  style={{ fontSize: 14, fontWeight: 700 }}
-                >
-                  Regra de Pareto — por módulo
-                </span>
-                <span
-                  style={{
-                    background: 'var(--mm-gold-bg)',
-                    color: 'var(--mm-gold)',
-                    border: '1px solid var(--mm-gold-border)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                  }}
-                >
-                  {totalTagged} tags
-                </span>
-              </div>
+            <Card glow="purple" accent="purple">
+              <CardHeader>
+                <CardTitle>Regra de Pareto — por módulo</CardTitle>
+                <Badge tone="gold">{totalTagged} tags</Badge>
+              </CardHeader>
+              <CardBody>
+                {/* Barras verticais + curva acumulada */}
+                <div className="relative mb-3 h-[100px]">
+                  <div className="flex h-full items-end gap-1.5">
+                    {modulosData.map((m, i) => {
+                      const pct = (m.count / maxCount) * 100
+                      const totalPct =
+                        totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
+                      const isVital = cumulativePoints[i] <= 80
+                      return (
+                        <div
+                          key={m.label}
+                          className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+                          title={`${m.label}: ${m.count} (${totalPct}%) — acum. ${Math.round(cumulativePoints[i])}%`}
+                        >
+                          <span className="text-[9px] leading-none text-[var(--mm-muted)]">
+                            {totalPct}%
+                          </span>
+                          <div
+                            className="w-full rounded-t-[3px]"
+                            style={{
+                              height: `${Math.max(pct, 4)}%`,
+                              minHeight: 4,
+                              background: m.color,
+                              opacity: isVital ? 0.9 : 0.45,
+                            }}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
 
-              {/* Barras verticais + curva acumulada */}
-              <div style={{ position: 'relative', height: 100, marginBottom: 12 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: 6,
-                    height: '100%',
-                  }}
-                >
+                  {/* SVG: linha acumulada + marcador 80% */}
+                  {modulosData.length > 0 && (
+                    <svg
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      className="pointer-events-none absolute inset-0 size-full overflow-visible"
+                    >
+                      <line
+                        x1="0"
+                        y1="20"
+                        x2="100"
+                        y2="20"
+                        stroke="var(--mm-gold)"
+                        strokeWidth="0.6"
+                        strokeDasharray="3,2"
+                        opacity="0.5"
+                      />
+                      <text
+                        x="99"
+                        y="18"
+                        fontSize="5"
+                        fill="var(--mm-gold)"
+                        opacity="0.6"
+                        textAnchor="end"
+                      >
+                        80%
+                      </text>
+                      <polyline
+                        points={svgCurvePts}
+                        fill="none"
+                        stroke="var(--mm-gold)"
+                        strokeWidth="1"
+                        opacity="0.75"
+                      />
+                      {cumulativePoints.map((cp, i) => {
+                        const x = ((i + 0.5) / modulosData.length) * 100
+                        const y = 100 - cp
+                        return (
+                          <circle
+                            key={i}
+                            cx={x.toFixed(1)}
+                            cy={y.toFixed(1)}
+                            r="1.8"
+                            fill="var(--mm-gold)"
+                            opacity="0.85"
+                          />
+                        )
+                      })}
+                    </svg>
+                  )}
+                </div>
+
+                {/* Legenda */}
+                <div className="flex flex-col gap-1.5">
                   {modulosData.map((m, i) => {
-                    const pct = (m.count / maxCount) * 100
-                    const totalPct =
-                      totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
+                    const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
+                    const cumPct = Math.round(cumulativePoints[i])
                     const isVital = cumulativePoints[i] <= 80
                     return (
-                      <div
-                        key={m.label}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 3,
-                          height: '100%',
-                          justifyContent: 'flex-end',
-                        }}
-                        title={`${m.label}: ${m.count} (${totalPct}%) — acum. ${Math.round(cumulativePoints[i])}%`}
-                      >
-                        <span style={{ fontSize: 9, color: 'var(--mm-muted)', lineHeight: 1 }}>
-                          {totalPct}%
-                        </span>
+                      <div key={m.label} className="flex items-center gap-2">
                         <div
-                          style={{
-                            width: '100%',
-                            height: `${Math.max(pct, 4)}%`,
-                            background: m.color,
-                            borderRadius: '3px 3px 0 0',
-                            opacity: isVital ? 0.9 : 0.45,
-                            minHeight: 4,
-                          }}
+                          className="size-2.5 flex-shrink-0 rounded-sm"
+                          style={{ background: m.color, opacity: isVital ? 1 : 0.5 }}
                         />
+                        <span
+                          className={cn(
+                            'flex-1 truncate text-[11px]',
+                            isVital ? 'text-[var(--mm-text2)]' : 'text-[var(--mm-muted)]'
+                          )}
+                        >
+                          {m.label}
+                        </span>
+                        <span className="flex-shrink-0 text-[11px] text-[var(--mm-muted)]">
+                          {m.count} ({pct}%)
+                        </span>
+                        <span
+                          className={cn(
+                            'w-9 flex-shrink-0 text-right text-[10px] opacity-80',
+                            isVital ? 'text-[var(--mm-gold)]' : 'text-[var(--mm-muted)]'
+                          )}
+                        >
+                          ↑{cumPct}%
+                        </span>
                       </div>
                     )
                   })}
                 </div>
 
-                {/* SVG: linha acumulada + marcador 80% */}
-                {modulosData.length > 0 && (
-                  <svg
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      pointerEvents: 'none',
-                      overflow: 'visible',
-                    }}
-                  >
-                    <line
-                      x1="0"
-                      y1="20"
-                      x2="100"
-                      y2="20"
-                      stroke="#D4A843"
-                      strokeWidth="0.6"
-                      strokeDasharray="3,2"
-                      opacity="0.5"
-                    />
-                    <text x="99" y="18" fontSize="5" fill="#D4A843" opacity="0.6" textAnchor="end">
-                      80%
-                    </text>
-                    <polyline
-                      points={svgCurvePts}
-                      fill="none"
-                      stroke="#D4A843"
-                      strokeWidth="1"
-                      opacity="0.75"
-                    />
-                    {cumulativePoints.map((cp, i) => {
-                      const x = ((i + 0.5) / modulosData.length) * 100
-                      const y = 100 - cp
-                      return (
-                        <circle
-                          key={i}
-                          cx={x.toFixed(1)}
-                          cy={y.toFixed(1)}
-                          r="1.8"
-                          fill="#D4A843"
-                          opacity="0.85"
-                        />
-                      )
-                    })}
-                  </svg>
+                {/* Insight box */}
+                {paretoAlert && (
+                  <div className="mt-3.5 rounded-lg border border-[var(--mm-gold-border)] bg-[var(--mm-gold-bg)] px-3.5 py-2.5">
+                    <p className="mb-1 font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">
+                      Insight Pareto
+                    </p>
+                    <p className="text-[11px] leading-[1.5] text-[var(--mm-text2)]">
+                      Os 3 principais módulos representam{' '}
+                      <strong className="text-[var(--mm-gold)]">
+                        {Math.round((top3Count / totalTagged) * 100)}%
+                      </strong>{' '}
+                      das questões: {modulosData.slice(0, 3).map((m) => m.label).join(', ')}.
+                    </p>
+                  </div>
                 )}
-              </div>
-
-              {/* Legenda */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {modulosData.map((m, i) => {
-                  const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
-                  const cumPct = Math.round(cumulativePoints[i])
-                  const isVital = cumulativePoints[i] <= 80
-                  return (
-                    <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: 2,
-                          background: m.color,
-                          flexShrink: 0,
-                          opacity: isVital ? 1 : 0.5,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: isVital ? 'var(--mm-text2)' : 'var(--mm-muted)',
-                          flex: 1,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {m.label}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--mm-muted)', flexShrink: 0 }}>
-                        {m.count} ({pct}%)
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          color: isVital ? '#D4A843' : 'var(--mm-muted)',
-                          flexShrink: 0,
-                          width: 34,
-                          textAlign: 'right',
-                          opacity: 0.8,
-                        }}
-                      >
-                        ↑{cumPct}%
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Insight box */}
-              {paretoAlert && (
-                <div
-                  style={{
-                    marginTop: 14,
-                    background: 'var(--mm-gold-bg)',
-                    border: '1px solid var(--mm-gold-border)',
-                    borderRadius: 8,
-                    padding: '10px 14px',
-                  }}
-                >
-                  <p
-                    className="font-[family-name:var(--font-syne)]"
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: 'var(--mm-gold)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    Insight Pareto
-                  </p>
-                  <p style={{ fontSize: 11, color: 'var(--mm-text2)', lineHeight: 1.5 }}>
-                    Os 3 principais módulos representam{' '}
-                    <strong style={{ color: 'var(--mm-gold)' }}>
-                      {Math.round((top3Count / totalTagged) * 100)}%
-                    </strong>{' '}
-                    das questões: {modulosData.slice(0, 3).map((m) => m.label).join(', ')}.
-                  </p>
-                </div>
-              )}
-            </div>
+              </CardBody>
+            </Card>
 
             {/* Evolução temporal */}
-            <div
-              style={{
-                background: 'var(--mm-surface)',
-                border: '1px solid var(--mm-line)',
-                borderRadius: 12,
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 16,
-                }}
-              >
-                <span
-                  className="font-[family-name:var(--font-syne)]"
-                  style={{ fontSize: 14, fontWeight: 700 }}
-                >
-                  Evolução temporal por módulo
-                </span>
-                <span
-                  style={{
-                    background: 'rgba(79,195,247,0.1)',
-                    color: '#4FC3F7',
-                    border: '1px solid rgba(79,195,247,0.25)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                  }}
-                >
-                  Top 6
-                </span>
-              </div>
-
-              {yearFilter ? (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--mm-muted)',
-                    textAlign: 'center',
-                    padding: '20px 0',
-                  }}
-                >
-                  Remova o filtro de ano para ver a evolução temporal.
-                </p>
-              ) : topModulosByYear.length === 0 ? (
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--mm-muted)',
-                    textAlign: 'center',
-                    padding: '20px 0',
-                  }}
-                >
-                  Aguardando questões para calcular evolução.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {topModulosByYear.map((m) => (
-                    <div key={m.modulo}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          marginBottom: 5,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: 2,
-                            background: m.color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: 'var(--mm-text2)',
-                            fontWeight: 600,
-                            flex: 1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {m.modulo}
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            color: 'var(--mm-muted)',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {m.total}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 36 }}>
-                        {yearsForChart.map((y) => {
-                          const cnt = m.countByYear[y] ?? 0
-                          const barH =
-                            cnt > 0 ? Math.max(Math.round((cnt / m.maxYearCount) * 28), 4) : 0
-                          return (
-                            <div
-                              key={y}
-                              style={{
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                              }}
-                              title={`${y}: ${cnt} questões`}
-                            >
+            <Card>
+              <CardHeader>
+                <CardTitle>Evolução temporal por módulo</CardTitle>
+                <Badge tone="blue">Top 6</Badge>
+              </CardHeader>
+              <CardBody>
+                {yearFilter ? (
+                  <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
+                    Remova o filtro de ano para ver a evolução temporal.
+                  </p>
+                ) : topModulosByYear.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
+                    Aguardando questões para calcular evolução.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {topModulosByYear.map((m) => (
+                      <div key={m.modulo}>
+                        <div className="mb-1 flex items-center gap-2">
+                          <div
+                            className="size-2 flex-shrink-0 rounded-sm"
+                            style={{ background: m.color }}
+                          />
+                          <span className="flex-1 truncate text-[11px] font-semibold text-[var(--mm-text2)]">
+                            {m.modulo}
+                          </span>
+                          <span className="flex-shrink-0 text-[10px] text-[var(--mm-muted)]">
+                            {m.total}
+                          </span>
+                        </div>
+                        <div className="flex h-9 items-end gap-1">
+                          {yearsForChart.map((y) => {
+                            const cnt = m.countByYear[y] ?? 0
+                            const barH =
+                              cnt > 0 ? Math.max(Math.round((cnt / m.maxYearCount) * 28), 4) : 0
+                            return (
                               <div
-                                style={{
-                                  height: 28,
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'flex-end',
-                                  width: '100%',
-                                }}
+                                key={y}
+                                className="flex flex-1 flex-col items-center"
+                                title={`${y}: ${cnt} questões`}
                               >
-                                {cnt > 0 && (
-                                  <div
-                                    style={{
-                                      width: '100%',
-                                      height: barH,
-                                      background: m.color,
-                                      borderRadius: '2px 2px 0 0',
-                                      opacity: 0.8,
-                                    }}
-                                  />
-                                )}
+                                <div className="flex h-7 w-full flex-col justify-end">
+                                  {cnt > 0 && (
+                                    <div
+                                      className="w-full rounded-t-[2px]"
+                                      style={{
+                                        height: barH,
+                                        background: m.color,
+                                        opacity: 0.8,
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                                <span className="mt-0.5 text-[8px] leading-none text-[var(--mm-muted)]">
+                                  {String(y).slice(2)}
+                                </span>
                               </div>
-                              <span
-                                style={{
-                                  fontSize: 8,
-                                  color: 'var(--mm-muted)',
-                                  marginTop: 2,
-                                  lineHeight: 1,
-                                }}
-                              >
-                                {String(y).slice(2)}
-                              </span>
-                            </div>
-                          )
-                        })}
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
           </div>
 
           {/* Top 20 temas */}
-          <div
-            style={{
-              background: 'var(--mm-surface)',
-              border: '1px solid var(--mm-line)',
-              borderRadius: 12,
-              padding: 20,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 16,
-              }}
-            >
-              <span
-                className="font-[family-name:var(--font-syne)]"
-                style={{ fontSize: 14, fontWeight: 700 }}
-              >
-                Top 20 temas
-              </span>
-              <span
-                style={{
-                  background: 'var(--mm-gold-bg)',
-                  color: 'var(--mm-gold)',
-                  border: '1px solid var(--mm-gold-border)',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '3px 10px',
-                  borderRadius: 20,
-                }}
-              >
-                Por incidência
-              </span>
-            </div>
-
-            {top20Temas.length === 0 ? (
-              <p
-                style={{
-                  fontSize: 12,
-                  color: 'var(--mm-muted)',
-                  textAlign: 'center',
-                  padding: '20px 0',
-                }}
-              >
-                Nenhum tema (topico_edital) classificado ainda.
-              </p>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {['#', 'TEMA', 'QUESTÕES', '% DO TOTAL', 'INCIDÊNCIA'].map((col) => (
-                      <th
-                        key={col}
-                        style={{
-                          textAlign: 'left',
-                          fontSize: 10,
-                          fontWeight: 600,
-                          color: 'var(--mm-muted)',
-                          letterSpacing: '0.5px',
-                          textTransform: 'uppercase',
-                          padding: '8px 12px',
-                          borderBottom: '1px solid var(--mm-line2)',
-                        }}
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {top20Temas.map((tema, idx) => {
-                    const pct =
-                      totalTagged > 0 ? Math.round((tema.count / totalTagged) * 100) : 0
-                    const incidencia = pct >= 10 ? 'alta' : pct >= 5 ? 'média' : 'baixa'
-                    const incColor =
-                      incidencia === 'alta'
-                        ? '#EF5350'
-                        : incidencia === 'média'
-                        ? '#FF9800'
-                        : '#66BB6A'
-                    return (
-                      <tr
-                        key={tema.label}
-                        style={{ borderBottom: '1px solid var(--mm-line)' }}
-                      >
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            fontSize: 12,
-                            color: 'var(--mm-muted)',
-                            width: 32,
-                          }}
+          <Card>
+            <CardHeader>
+              <CardTitle>Top 20 temas</CardTitle>
+              <Badge tone="gold">Por incidência</Badge>
+            </CardHeader>
+            <CardBody className="p-0">
+              {top20Temas.length === 0 ? (
+                <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
+                  Nenhum tema (topico_edital) classificado ainda.
+                </p>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      {['#', 'TEMA', 'QUESTÕES', '% DO TOTAL', 'INCIDÊNCIA'].map((col) => (
+                        <th
+                          key={col}
+                          scope="col"
+                          className="border-b border-[var(--mm-line2)] px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]"
                         >
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--mm-text2)' }}>
-                          {tema.label}
-                        </td>
-                        <td
-                          style={{
-                            padding: '10px 12px',
-                            fontSize: 12,
-                            color: 'var(--mm-text)',
-                            fontWeight: 700,
-                            fontFamily: 'var(--font-syne)',
-                          }}
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top20Temas.map((tema, idx) => {
+                      const pct =
+                        totalTagged > 0 ? Math.round((tema.count / totalTagged) * 100) : 0
+                      const incidencia = pct >= 10 ? 'alta' : pct >= 5 ? 'média' : 'baixa'
+                      const incTone: 'red' | 'orange' | 'green' =
+                        incidencia === 'alta'
+                          ? 'red'
+                          : incidencia === 'média'
+                            ? 'orange'
+                            : 'green'
+                      return (
+                        <tr
+                          key={tema.label}
+                          className="border-b border-[var(--mm-border-default)]"
                         >
-                          {tema.count}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontSize: 12, color: 'var(--mm-text2)' }}>
-                          {pct}%
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span
-                            style={{
-                              background: `${incColor}15`,
-                              color: incColor,
-                              border: `1px solid ${incColor}40`,
-                              fontSize: 10,
-                              fontWeight: 600,
-                              padding: '2px 8px',
-                              borderRadius: 20,
-                              textTransform: 'capitalize',
-                            }}
-                          >
-                            {incidencia}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                          <td className="w-8 px-3 py-2.5 text-xs text-[var(--mm-muted)]">
+                            {idx + 1}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-[var(--mm-text2)]">
+                            {tema.label}
+                          </td>
+                          <td className="px-3 py-2.5 font-[family-name:var(--font-syne)] text-xs font-bold text-foreground">
+                            {tema.count}
+                          </td>
+                          <td className="px-3 py-2.5 text-xs text-[var(--mm-text2)]">
+                            {pct}%
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <Badge tone={incTone} className="capitalize">
+                              {incidencia}
+                            </Badge>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </CardBody>
+          </Card>
         </>
       )}
+    </div>
+  )
+}
+
+function FilterColumn({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
+        {label}
+      </div>
+      <div className="flex flex-col gap-1">{children}</div>
     </div>
   )
 }

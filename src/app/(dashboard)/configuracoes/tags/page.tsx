@@ -18,7 +18,7 @@ export default async function TagsPage() {
 
   const service = createServiceClient()
   const { data: profile } = await service
-    .from('profiles')
+    .from('user_profiles')
     .select('role')
     .eq('id', user.id)
     .single()
@@ -42,14 +42,42 @@ export default async function TagsPage() {
     ...tags.filter((t) => !dimensionOrder.includes(t.dimension)),
   ]
 
+  const activeCount = tags.filter((t) => t.is_active).length
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">Tags</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {tags.filter((t) => t.is_active).length} ativas · {tags.length} total
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
+            Configurações
           </p>
+          <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
+            Tags Fixas de Classificação
+          </h1>
+          <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
+            {activeCount} ativas · {tags.length} total · agrupadas por dimensão
+          </p>
+        </div>
+      </div>
+
+      {/* Info banner purple — explica que tags são injetadas no system prompt */}
+      <div className="flex items-center gap-3 rounded-[10px] border border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.08)] px-4 py-3">
+        <svg
+          width="16"
+          height="16"
+          fill="none"
+          stroke="var(--mm-purple)"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+          className="flex-shrink-0"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4m0 4h.01" />
+        </svg>
+        <div className="text-[13px] text-[var(--mm-text2)]">
+          As tags são injetadas no <strong className="text-foreground">system prompt do Claude</strong>{' '}
+          durante a classificação. Alterações entram em vigor no próximo lote. Tags marcadas como{' '}
+          <strong className="text-[var(--mm-gold)]">ativas</strong> aparecem nos filtros e na exportação.
         </div>
       </div>
 

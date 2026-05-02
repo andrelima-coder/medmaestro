@@ -53,19 +53,25 @@ export function SidebarClient({ sections }: SidebarClientProps) {
   return (
     <aside
       className={cn(
-        'relative flex flex-col h-full border-r border-border bg-sidebar transition-[width] duration-200 ease-in-out shrink-0',
+        'relative flex flex-col h-full transition-[width] duration-200 ease-in-out shrink-0',
+        'border-r border-[rgba(139,92,246,0.10)]',
+        'bg-[linear-gradient(180deg,rgba(12,9,26,0.98)_0%,rgba(9,7,20,0.98)_100%)]',
+        'shadow-[inset_-1px_0_0_rgba(139,92,246,0.06)]',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center px-4 border-b border-border shrink-0 overflow-hidden">
-        {collapsed ? (
-          <span
-            className="text-lg font-bold text-[var(--mm-gold)] font-[family-name:var(--font-syne)]"
-          >
-            M
-          </span>
-        ) : (
+      <div className="flex h-14 items-center gap-2.5 px-4 border-b border-border shrink-0 overflow-hidden">
+        <div
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg font-[family-name:var(--font-syne)] text-sm font-extrabold text-[#0A0A0A]"
+          style={{
+            background:
+              'linear-gradient(135deg, var(--mm-gold), var(--mm-orange))',
+          }}
+        >
+          M
+        </div>
+        {!collapsed && (
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold text-foreground whitespace-nowrap font-[family-name:var(--font-syne)]">
               Med<span className="text-[var(--mm-gold)]">Maestro</span>

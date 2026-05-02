@@ -50,75 +50,104 @@
   --color-mm-gold2: var(--mm-gold2);
   --color-mm-surface: var(--mm-surface);
   --color-mm-surface-elevated: var(--mm-surface-elevated);
+  --color-mm-purple: var(--mm-purple);
+  --color-mm-orange: var(--mm-orange);
+  --color-mm-blue: var(--mm-blue);
+  --color-mm-green: var(--mm-green);
+  --color-mm-red: var(--mm-red);
 }
 
 :root {
   /* ================================================================
-     MedMaestro design system — baseado em prototipo_plataforma_temi.html
-     Paleta gold/navy escuro · Fontes: Syne (heading) + DM Sans (body)
+     MedMaestro design system — purple-aurora palette (mockup.html)
+     Paleta gold/purple deep · Fontes: Syne (heading) + DM Sans (body)
   ================================================================ */
 
   /* shadcn/Tailwind aliases */
-  --background: #05080F;
-  --foreground: #E8EDF5;
-  --card: #111D35;
-  --card-foreground: #E8EDF5;
-  --popover: #090D1A;
-  --popover-foreground: #E8EDF5;
-  --primary: #D4A843;
-  --primary-foreground: #0a0a0a;
-  --secondary: #090D1A;
+  --background: #07060F;
+  --foreground: #EDF0F7;
+  --card: #0E0C22;
+  --card-foreground: #EDF0F7;
+  --popover: #0E0C22;
+  --popover-foreground: #EDF0F7;
+  --primary: #C9A84C;
+  --primary-foreground: #0A0A0A;
+  --secondary: #09071A;
   --secondary-foreground: #A8B4CC;
-  --muted: #0D1526;
-  --muted-foreground: #5A6880;
-  --accent: rgba(212, 168, 67, 0.08);
-  --accent-foreground: #D4A843;
+  --muted: #120F2A;
+  --muted-foreground: #525E76;
+  --accent: rgba(201, 168, 76, 0.12);
+  --accent-foreground: #C9A84C;
   --destructive: #EF5350;
   --border: rgba(255, 255, 255, 0.07);
   --input: rgba(255, 255, 255, 0.10);
-  --ring: rgba(212, 168, 67, 0.40);
+  --ring: rgba(201, 168, 76, 0.45);
   --radius: 8px;
 
   /* Charts — ordem Pareto dos módulos TEMI */
-  --chart-1: #D4A843; /* M1 Respiratório — gold */
+  --chart-1: #C9A84C; /* M1 Respiratório — gold */
   --chart-2: #4FC3F7; /* M2 Cardiovascular — blue */
-  --chart-3: #66BB6A; /* M3 Infecções — green */
-  --chart-4: #AB47BC; /* M4 Neuro — purple */
-  --chart-5: #FF9800; /* M5+ outros — orange */
+  --chart-3: #FF6B35; /* M3 Infecções — orange */
+  --chart-4: #5DC264; /* M4 Neuro — green */
+  --chart-5: #8B5CF6; /* M5+ outros — purple */
 
   /* Sidebar */
-  --sidebar: #090D1A;
+  --sidebar: #09071A;
   --sidebar-foreground: #A8B4CC;
-  --sidebar-primary: #D4A843;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: rgba(212, 168, 67, 0.08);
-  --sidebar-accent-foreground: #D4A843;
+  --sidebar-primary: #C9A84C;
+  --sidebar-primary-foreground: #0A0A0A;
+  --sidebar-accent: rgba(201, 168, 76, 0.12);
+  --sidebar-accent-foreground: #C9A84C;
   --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-ring: rgba(212, 168, 67, 0.40);
+  --sidebar-ring: rgba(201, 168, 76, 0.45);
 
-  /* MedMaestro brand — espelham as variáveis do protótipo */
-  --mm-gold: #D4A843;
+  /* MedMaestro brand — espelham o mockup.html */
+  --mm-gold: #C9A84C;
+  --mm-gold-light: #FFD54F;
   --mm-gold2: #E8C35A;
-  --mm-gold-bg: rgba(212, 168, 67, 0.08);
-  --mm-gold-border: rgba(212, 168, 67, 0.25);
-  --mm-surface: #111D35;
-  --mm-surface-elevated: #162240;
-  --mm-bg2: #090D1A;
-  --mm-bg3: #0D1526;
-  --mm-text: #E8EDF5;
+  --mm-gold-bg: rgba(201, 168, 76, 0.12);
+  --mm-gold-border: rgba(201, 168, 76, 0.25);
+
+  /* Backgrounds em camadas (purple-aurora) */
+  --mm-bg-primary: #07060F;
+  --mm-bg-secondary: #09071A;
+  --mm-surface: #0E0C22;
+  --mm-surface-elevated: #120F2A;
+  --mm-bg2: #09071A;
+  --mm-bg3: #120F2A;
+  --mm-card-bg: rgba(13, 10, 28, 0.92);
+
+  /* Texto */
+  --mm-text: #EDF0F7;
   --mm-text2: #A8B4CC;
-  --mm-muted: #5A6880;
+  --mm-muted: #525E76;
+
+  /* Bordas — incluindo variantes acentuadas */
   --mm-line: rgba(255, 255, 255, 0.07);
-  --mm-line2: rgba(255, 255, 255, 0.13);
+  --mm-line2: rgba(255, 255, 255, 0.14);
   --mm-line3: rgba(255, 255, 255, 0.22);
-  --mm-green: #66BB6A;
-  --mm-red: #EF5350;
+  --mm-border-default: rgba(255, 255, 255, 0.07);
+  --mm-border-hover: rgba(255, 255, 255, 0.14);
+  --mm-border-active: rgba(201, 168, 76, 0.45);
+  --mm-border-purple: rgba(139, 92, 246, 0.35);
+  --mm-border-orange: rgba(255, 107, 53, 0.40);
+
+  /* Acentos semânticos */
+  --mm-purple: #8B5CF6;
+  --mm-orange: #FF6B35;
   --mm-blue: #4FC3F7;
-  --mm-orange: #FF9800;
-  --mm-purple: #AB47BC;
+  --mm-green: #5DC264;
+  --mm-red: #EF5350;
+  --mm-warning: #FFA726;
+  --mm-info: #4FC3F7;
+
+  /* Glows nomeados — para uso em cards e elementos em destaque */
+  --mm-glow-purple: rgba(139, 92, 246, 0.18);
+  --mm-glow-orange: rgba(255, 107, 53, 0.18);
+  --mm-glow-gold: rgba(201, 168, 76, 0.15);
 }
 
-/* Noise texture overlay — idêntico ao protótipo */
+/* Noise texture overlay — mantido idêntico (subtle grain) */
 body::after {
   content: '';
   position: fixed;
@@ -129,17 +158,240 @@ body::after {
   opacity: 0.4;
 }
 
-/* Sidebar item ativo — pill gold com borda, idêntico ao protótipo */
-.sidebar-item-active {
-  background: rgba(212, 168, 67, 0.08) !important;
-  border: 1px solid rgba(212, 168, 67, 0.25) !important;
-  color: #D4A843 !important;
+/* ================================================================
+   Aurora orbs — ambient background light (mockup.html)
+   - app-shell: orbe purple top-left + orbe orange bottom-right
+   - body::before: haze purple top-center
+================================================================ */
+.app-shell {
+  position: relative;
+}
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+.app-shell::before {
+  content: '';
+  position: fixed;
+  top: -120px;
+  left: -180px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%,
+    rgba(139, 92, 246, 0.16) 0%,
+    rgba(100, 50, 200, 0.07) 40%,
+    transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+.app-shell::after {
+  content: '';
+  position: fixed;
+  bottom: -180px;
+  right: -120px;
+  width: 680px;
+  height: 680px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 70% 70%,
+    rgba(255, 107, 53, 0.14) 0%,
+    rgba(200, 80, 20, 0.06) 40%,
+    transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  content: '';
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse,
+    rgba(100, 40, 200, 0.07) 0%,
+    transparent 65%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* Gold glow para cards em destaque */
+/* Login page — aurora dupla horizontal (orange esq + purple dir) */
+.login-aurora {
+  position: relative;
+  overflow: hidden;
+}
+.login-aurora::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  left: -200px;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 90, 30, 0.22) 0%, transparent 60%);
+  pointer-events: none;
+}
+.login-aurora::after {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  right: -180px;
+  width: 650px;
+  height: 650px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(120, 50, 230, 0.22) 0%, transparent 60%);
+  pointer-events: none;
+}
+.login-aurora-top {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(100, 40, 200, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* Scrollbar custom purple — todos os scrolls */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+/* ================================================================
+   Foco acessível — keyboard focus visível em qualquer elemento
+   interativo, mesmo quando o componente usa outline-none.
+   - Aparece SOMENTE com :focus-visible (não em cliques de mouse)
+================================================================ */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+[role='link']:focus-visible {
+  outline: 2px solid var(--mm-gold);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Inputs com border interno mantêm o ring sem deslocar layout */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+  box-shadow: 0 0 0 2px var(--mm-gold);
+}
+
+/* Skip-link para usuários de teclado / leitores de tela */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  z-index: 10000;
+  padding: 8px 14px;
+  background: var(--mm-gold);
+  color: #0a0a0a;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-to-content:focus {
+  top: 8px;
+}
+
+/* Reduce motion — respeita preferência de acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Sidebar item ativo — pill gold com borda + barra inset (mockup) */
+.sidebar-item-active {
+  background: linear-gradient(90deg, rgba(201, 168, 76, 0.12), rgba(201, 168, 76, 0.05)) !important;
+  border: 1px solid rgba(201, 168, 76, 0.18) !important;
+  color: #C9A84C !important;
+  box-shadow: inset 3px 0 0 #C9A84C;
+}
+
+/* Card glows — variantes para destaque visual */
 .glow-gold {
-  box-shadow: 0 0 24px rgba(212, 168, 67, 0.15);
-  border-color: rgba(212, 168, 67, 0.25) !important;
+  box-shadow: 0 0 40px var(--mm-glow-gold);
+  border-color: rgba(201, 168, 76, 0.28) !important;
+}
+.glow-purple {
+  box-shadow: 0 0 40px var(--mm-glow-purple);
+  border-color: var(--mm-border-purple) !important;
+}
+.glow-orange {
+  box-shadow: 0 0 40px var(--mm-glow-orange);
+  border-color: var(--mm-border-orange) !important;
+}
+
+/* Glow variants — top accent line (mockup pattern) */
+.glow-purple::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.6), transparent);
+  pointer-events: none;
+}
+.glow-orange::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.6), transparent);
+  pointer-events: none;
+}
+
+/* Card accent bar — barra inferior gradient roxa (semantic highlight) */
+.card-accent-purple::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--mm-purple), transparent);
+  border-radius: 0 0 4px 4px;
+  pointer-events: none;
+}
+
+/* Pulse orange — usado pelo LiveBadge (dot pulsante) */
+@keyframes pulse-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 107, 53, 0);
+  }
 }
 
 /* Badge IA — purple reservado para indicadores de IA */
@@ -149,8 +401,8 @@ body::after {
   font-size: 8px;
   padding: 2px 6px;
   border-radius: 3px;
-  background: rgba(171, 71, 188, 0.15);
-  color: #AB47BC;
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--mm-purple);
   font-weight: 700;
   letter-spacing: 0.5px;
 }

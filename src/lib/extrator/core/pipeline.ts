@@ -5,6 +5,7 @@ import {
   MAX_IMAGES_PER_CALL,
   complete,
   MODELS,
+  recordUsage,
 } from '@/lib/ai/claude'
 import { uploadFile } from '@/lib/storage/signed-urls'
 import { rasterizePdf } from '@/lib/pdf/rasterize'
@@ -21,20 +22,8 @@ type ExtractedQuestion = {
   has_images: boolean
   image_type: string | null
   image_scope: string | null
-  image_page_index: number | null
   confidence: number
   is_complete: boolean
-}
-
-function pickImagePage<T extends { pageNumber: number }>(
-  batch: T[],
-  imagePageIndex: number | null | undefined
-): T | null {
-  if (batch.length === 0) return null
-  if (typeof imagePageIndex === 'number' && imagePageIndex >= 0 && imagePageIndex < batch.length) {
-    return batch[imagePageIndex]
-  }
-  return null
 }
 
 const CLASSIFY_BATCH_SIZE = 5
@@ -132,7 +121,8 @@ E) ${alternatives['E'] ?? ''}`
       messages: [{ role: 'user', content: questionText }],
       maxTokens: 512,
     })
-    result = parseJSON<{ tags: string[] }>(raw)
+    await recordUsage(raw.model, raw.usage, { operation: 'classify', question_id: questionId })
+    result = parseJSON<{ tags: string[] }>(raw.text)
   } catch {
     return
   }
@@ -218,11 +208,17 @@ Retorne APENAS o texto do comentário seguindo a estrutura acima.`
 
   let commentText: string
   try {
-    commentText = await complete({
+    const raw = await complete({
       model: MODELS.opus,
       messages: [{ role: 'user', content: prompt }],
       maxTokens: 4096,
     })
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'generate_comment',
+      question_id: questionId,
+      exam_id: question.exam_id as string,
+    })
+    commentText = raw.text
   } catch {
     return
   }
@@ -309,7 +305,8 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
         imageBase64s: targetPages.map((p) => p.jpegBase64),
         prompt,
       })
-      extracted = parseJSON<ExtractedQuestion[]>(raw)
+      await recordUsage(raw.model, raw.usage, { operation: 'extract_recovery', exam_id })
+      extracted = parseJSON<ExtractedQuestion[]>(raw.text)
       console.log(
         `[extract ${exam_id}] Recovery group {${group.join(',')}} pgs ${pageRange}: ${extracted.length} retornadas`
       )
@@ -333,7 +330,7 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
             alternatives: q.alternatives,
             has_images: q.has_images,
             extraction_confidence: conf,
-            status: 'pending_extraction',
+            status: 'extracted',
             extraction_method: 'recovery',
           },
           { onConflict: 'exam_id,question_number' }
@@ -353,25 +350,20 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
           ? (q.image_type as string)
           : 'outro'
         const imageScope = q.image_scope.toLowerCase()
-        const page = pickImagePage(targetPages, q.image_page_index)
-        if (!page) {
-          console.warn(
-            `[extract ${exam_id}] Recovery Q${q.question_number}: image_page_index inválido (${q.image_page_index}), pulando upload`
-          )
-          continue
-        }
-        const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
-        try {
-          await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
-          await supabase.from('question_images').insert({
-            question_id: inserted.id,
-            image_scope: imageScope,
-            image_type: imageType,
-            full_page_path: imagePath,
-            page_number: page.pageNumber,
-          })
-        } catch {
-          // não bloqueia recovery por falha de imagem
+        for (const page of targetPages) {
+          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
+          try {
+            await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
+            await supabase.from('question_images').insert({
+              question_id: inserted.id,
+              image_scope: imageScope,
+              image_type: imageType,
+              full_page_path: imagePath,
+              page_number: page.pageNumber,
+            })
+          } catch {
+            // não bloqueia recovery por falha de imagem
+          }
         }
       }
     }
@@ -385,7 +377,7 @@ async function runClassification(exam_id: string): Promise<void> {
     .from('questions')
     .select('id')
     .eq('exam_id', exam_id)
-    .in('status', ['pending_review', 'pending_extraction'])
+    .in('status', ['extracted'])
 
   if (!questions || questions.length === 0) {
     await setProgress(exam_id, 'classifying', 0, 0, 'Nenhuma questão para classificar')
@@ -564,7 +556,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
             alternatives: q.alternatives,
             has_images: false,
             extraction_confidence: conf5,
-            status: 'pending_extraction',
+            status: 'extracted',
             extraction_method: 'text',
           },
           { onConflict: 'exam_id,question_number' }
@@ -607,10 +599,12 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     let extracted: ExtractedQuestion[]
     let rawClaude = ''
     try {
-      rawClaude = await extractFromImages({
+      const result = await extractFromImages({
         imageBase64s,
         prompt: banca.promptVision(),
       })
+      await recordUsage(result.model, result.usage, { operation: 'extract_vision', exam_id })
+      rawClaude = result.text
       extracted = parseJSON<ExtractedQuestion[]>(rawClaude)
     } catch (err) {
       hasErrors = true
@@ -652,7 +646,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
             alternatives: q.alternatives,
             has_images: q.has_images,
             extraction_confidence: extractionConfidence,
-            status: 'pending_extraction',
+            status: 'extracted',
             extraction_method: 'vision',
           },
           { onConflict: 'exam_id,question_number' }
@@ -673,28 +667,25 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
           : 'outro'
         const imageScope = q.image_scope.toLowerCase()
 
-        const page = pickImagePage(batch, q.image_page_index)
-        if (!page) {
-          console.warn(
-            `[extract ${exam_id}] Q${q.question_number}: image_page_index inválido (${q.image_page_index}) — has_images=true mas página não identificada. Pulando upload.`
-          )
-          hasErrors = true
-        } else {
+        for (const page of batch) {
           const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
 
           try {
             await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
-            const { error: imgInsertError } = await supabase.from('question_images').insert({
-              question_id: inserted.id,
-              image_scope: imageScope,
-              image_type: imageType,
-              full_page_path: imagePath,
-              page_number: page.pageNumber,
-            })
-            if (imgInsertError) hasErrors = true
           } catch {
             hasErrors = true
+            continue
           }
+
+          const { error: imgInsertError } = await supabase.from('question_images').insert({
+            question_id: inserted.id,
+            image_scope: imageScope,
+            image_type: imageType,
+            full_page_path: imagePath,
+            page_number: page.pageNumber,
+          })
+
+          if (imgInsertError) hasErrors = true
         }
       }
     }
@@ -728,12 +719,6 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
   } catch {
     // gabarito pode não ter sido enviado ainda
   }
-
-  await supabase
-    .from('questions')
-    .update({ status: 'pending_review' })
-    .eq('exam_id', exam_id)
-    .eq('status', 'pending_extraction')
 
   await supabase.from('exams').update({ status: 'classifying' }).eq('id', exam_id)
   await runClassification(exam_id)

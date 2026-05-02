@@ -11,28 +11,53 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `Exportar — ${data?.title ?? 'Simulado'} — MedMaestro` }
 }
 
-function summarizeFilters(filters: unknown, total: number): string {
-  const parts: string[] = []
-  if (filters && typeof filters === 'object') {
-    const f = filters as Record<string, unknown>
-    if (typeof f.modulo === 'string') parts.push(f.modulo)
-    else if (typeof f.module === 'string') parts.push(f.module)
-    if (typeof f.especialidade === 'string') parts.push(f.especialidade)
-    else if (typeof f.specialty === 'string') parts.push(f.specialty)
-    if (Array.isArray(f.years) && f.years.length) {
-      const years = (f.years as unknown[]).filter((y) => typeof y === 'number') as number[]
-      if (years.length) {
-        const min = Math.min(...years)
-        const max = Math.max(...years)
-        parts.push(min === max ? `${min}` : `${min}–${max}`)
-      }
-    } else if (typeof f.year_range === 'string') {
-      parts.push(f.year_range)
+type FilterParts = {
+  modulo?: string
+  especialidade?: string
+  yearLabel?: string
+}
+
+function extractFilters(filters: unknown): FilterParts {
+  const out: FilterParts = {}
+  if (!filters || typeof filters !== 'object') return out
+  const f = filters as Record<string, unknown>
+  if (typeof f.modulo === 'string') out.modulo = f.modulo
+  else if (typeof f.module === 'string') out.modulo = f.module
+  if (typeof f.especialidade === 'string') out.especialidade = f.especialidade
+  else if (typeof f.specialty === 'string') out.especialidade = f.specialty
+  if (Array.isArray(f.years) && f.years.length) {
+    const years = (f.years as unknown[]).filter((y) => typeof y === 'number') as number[]
+    if (years.length) {
+      const min = Math.min(...years)
+      const max = Math.max(...years)
+      out.yearLabel = min === max ? `${min}` : `${min}–${max}`
     }
+  } else if (typeof f.year_range === 'string') {
+    out.yearLabel = f.year_range
   }
-  const filtroLabel = parts.length ? parts.join(' / ') : 'simulado completo'
+  return out
+}
+
+function summarizeFilters(parts: FilterParts, total: number): string {
+  const labelParts: string[] = []
+  if (parts.modulo) labelParts.push(parts.modulo)
+  if (parts.especialidade) labelParts.push(parts.especialidade)
+  if (parts.yearLabel) labelParts.push(parts.yearLabel)
+  const filtroLabel = labelParts.length ? labelParts.join(' / ') : 'simulado completo'
   const plural = total === 1 ? 'questão selecionada' : 'questões selecionadas'
   return `${total} ${plural} (${filtroLabel})`
+}
+
+function previewSubtitle(parts: FilterParts, total: number): string {
+  const left: string[] = []
+  if (parts.modulo) left.push(parts.modulo)
+  if (parts.especialidade) left.push(parts.especialidade)
+  const right: string[] = []
+  const plural = total === 1 ? 'questão' : 'questões'
+  right.push(`${total} ${plural}`)
+  if (parts.yearLabel) right.push(parts.yearLabel)
+  const head = left.length ? left.join(' — ') : 'Simulado MedMaestro'
+  return `${head} · ${right.join(' · ')}`
 }
 
 export default async function ExportarSimuladoPage({
@@ -64,7 +89,9 @@ export default async function ExportarSimuladoPage({
     .eq('simulado_id', id)
 
   const total = questionsCount ?? simulado.total_questions ?? 0
-  const summary = summarizeFilters(simulado.filters_used, total)
+  const filterParts = extractFilters(simulado.filters_used)
+  const summary = summarizeFilters(filterParts, total)
+  const previewLine = previewSubtitle(filterParts, total)
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
@@ -77,14 +104,19 @@ export default async function ExportarSimuladoPage({
         </Link>
       </div>
 
-      <header className="flex flex-col gap-1 items-center text-center">
+      <header className="flex flex-col gap-1">
         <h1 className="font-[family-name:var(--font-syne)] text-2xl font-semibold text-foreground">
           Exportar questões
         </h1>
         <p className="text-sm text-muted-foreground">{summary}</p>
       </header>
 
-      <ExportForm simuladoId={id} filtersSummary={summary} totalQuestions={total} />
+      <ExportForm
+        simuladoId={id}
+        filtersSummary={summary}
+        previewSubtitle={previewLine}
+        totalQuestions={total}
+      />
     </div>
   )
 }

@@ -12,7 +12,7 @@ async function assertAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const service = createServiceClient()
-  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await service.from('user_profiles').select('role').eq('id', user.id).single()
   const rank: Record<string, number> = { analista: 0, professor: 1, admin: 2, superadmin: 3 }
   if ((rank[profile?.role ?? ''] ?? -1) < rank['admin']) return null
   return user

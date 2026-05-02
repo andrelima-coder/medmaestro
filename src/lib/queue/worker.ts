@@ -8,10 +8,11 @@ export type Job = {
   payload: Record<string, unknown>
   status: string
   attempts: number
+  max_attempts: number
   error: string | null
   created_at: string
-  updated_at: string | null
-  retry_after: string | null
+  started_at: string | null
+  finished_at: string | null
 }
 
 export type JobHandler = (job: Job) => Promise<void>
@@ -68,7 +69,7 @@ export async function processBatch(concurrency = 5): Promise<{
 
         await supabase
           .from('jobs')
-          .update({ status: 'completed', error: null, updated_at: new Date().toISOString() })
+          .update({ status: 'done', error: null, finished_at: new Date().toISOString() })
           .eq('id', job.id)
 
         processed++
@@ -77,18 +78,16 @@ export async function processBatch(concurrency = 5): Promise<{
         const errorMsg = err instanceof Error ? err.message : String(err)
         console.error(`[worker] job ${job.id} (${job.type}) falhou:`, errorMsg)
 
-        if (job.attempts >= 3) {
+        const maxAttempts = job.max_attempts ?? 3
+        if (job.attempts >= maxAttempts) {
           await supabase
             .from('jobs')
-            .update({ status: 'failed', error: errorMsg, updated_at: new Date().toISOString() })
+            .update({ status: 'error', error: errorMsg, finished_at: new Date().toISOString() })
             .eq('id', job.id)
         } else {
-          // Backoff exponencial: 60s × 2^(attempt-1)
-          const backoffMs = 60_000 * Math.pow(2, job.attempts - 1)
-          const retryAfter = new Date(Date.now() + backoffMs).toISOString()
           await supabase
             .from('jobs')
-            .update({ status: 'pending', error: errorMsg, retry_after: retryAfter })
+            .update({ status: 'pending', error: errorMsg })
             .eq('id', job.id)
         }
       }

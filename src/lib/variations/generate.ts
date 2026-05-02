@@ -87,7 +87,7 @@ GABARITO ORIGINAL: ${q.correct_answer ?? 'não informado'}`
       messages: [{ role: 'user', content: userMsg }],
       maxTokens: 4096,
     })
-    variations = parseJSON<GeneratedVariation[]>(raw)
+    variations = parseJSON<GeneratedVariation[]>(raw.text)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[variations ${questionId}] geração falhou: ${msg}`)

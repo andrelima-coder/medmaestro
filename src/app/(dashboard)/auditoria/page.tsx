@@ -170,7 +170,7 @@ export default async function AuditoriaPage({
   if (!user) redirect('/login')
 
   const service = createServiceClient()
-  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await service.from('user_profiles').select('role').eq('id', user.id).single()
   if ((ROLE_RANK[profile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) redirect('/dashboard')
 
   const params = await searchParams
@@ -208,7 +208,7 @@ export default async function AuditoriaPage({
   const userMap: Record<string, string> = {}
   if (userIds.length > 0) {
     const { data: profiles } = await service
-      .from('profiles')
+      .from('user_profiles')
       .select('id, full_name, email')
       .in('id', userIds)
     for (const p of profiles ?? []) {

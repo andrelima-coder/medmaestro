@@ -41,31 +41,18 @@ export default async function VariacoesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1
-            className="font-[family-name:var(--font-syne)]"
-            style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text)' }}
-          >
+          <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
             Variações
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
+          <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
             Gere variações de questões existentes (mesma habilidade, dificuldade ajustável)
           </p>
         </div>
         <Link
           href="/revisao-variacoes"
-          style={{
-            background: 'var(--mm-bg2)',
-            border: '1px solid var(--mm-line2)',
-            color: 'var(--mm-gold)',
-            fontFamily: 'var(--font-syne)',
-            fontSize: 12,
-            fontWeight: 700,
-            padding: '8px 14px',
-            borderRadius: 8,
-            textDecoration: 'none',
-          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--mm-border-default)] bg-transparent px-3.5 py-2 font-[family-name:var(--font-syne)] text-xs font-bold text-[var(--mm-gold)] no-underline transition-colors hover:border-[var(--mm-border-active)]"
         >
           Revisar pendentes ({pendingCount ?? 0})
         </Link>

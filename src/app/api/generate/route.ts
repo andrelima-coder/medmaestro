@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { complete, parseJSON, MODELS } from '@/lib/ai/claude'
+import { complete, parseJSON, MODELS, recordUsage } from '@/lib/ai/claude'
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.WORKER_SECRET
@@ -80,7 +80,12 @@ Retorne APENAS JSON (sem markdown):
       messages: [{ role: 'user', content: prompt }],
       maxTokens: 1536,
     })
-    generated = parseJSON<GeneratedQuestion>(raw)
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'generate_variation',
+      question_id,
+      exam_id: question.exam_id as string,
+    })
+    generated = parseJSON<GeneratedQuestion>(raw.text)
   } catch (err) {
     return NextResponse.json(
       { error: `Falha ao gerar variante: ${err instanceof Error ? err.message : String(err)}` },
@@ -103,7 +108,7 @@ Retorne APENAS JSON (sem markdown):
       correct_answer: correctAnswer,
       has_images: false,
       extraction_confidence: 80,
-      status: 'pending_review',
+      status: 'draft',
     })
     .select('id')
     .single()

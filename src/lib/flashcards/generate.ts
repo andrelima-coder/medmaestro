@@ -84,7 +84,7 @@ Gabarito: ${q.correct_answer ?? 'não informado'}`
       messages: [{ role: 'user', content: userMsg }],
       maxTokens: 2048,
     })
-    cards = parseJSON<GeneratedCard[]>(raw)
+    cards = parseJSON<GeneratedCard[]>(raw.text)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[flashcards ${questionId}] geração falhou: ${msg}`)

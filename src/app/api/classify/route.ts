@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { complete, parseJSON, MODELS } from '@/lib/ai/claude'
+import { complete, parseJSON, MODELS, recordUsage } from '@/lib/ai/claude'
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.WORKER_SECRET
@@ -92,7 +92,8 @@ E) ${alternatives['E'] ?? ''}`
       messages: [{ role: 'user', content: questionText }],
       maxTokens: 512,
     })
-    result = parseJSON<{ tags: string[] }>(raw)
+    await recordUsage(raw.model, raw.usage, { operation: 'classify', question_id })
+    result = parseJSON<{ tags: string[] }>(raw.text)
   } catch (err) {
     return NextResponse.json(
       { error: `Falha na classificação: ${err instanceof Error ? err.message : String(err)}` },

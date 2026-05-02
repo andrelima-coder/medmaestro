@@ -11,7 +11,7 @@ export async function GET() {
   try {
     const t0 = Date.now()
     const service = createServiceClient()
-    const { error } = await service.from('profiles').select('id').limit(1)
+    const { error } = await service.from('user_profiles').select('id').limit(1)
     checks.database = { ok: !error, latencyMs: Date.now() - t0, ...(error ? { error: error.message } : {}) }
   } catch (e) {
     checks.database = { ok: false, error: String(e) }

@@ -1,6 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ROLE_LABELS } from '@/types'
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardTitle,
+  KpiCard,
+  ParetoBar,
+} from '@/components/ui'
+import { CheckCircle2, Database, MessageSquare, ClipboardList } from 'lucide-react'
 import { LotesTableClient, type LoteRow } from './lotes-table-client'
 
 export const metadata = { title: 'Dashboard — MedMaestro' }
@@ -26,6 +35,11 @@ export default async function DashboardPage() {
 
   const service = createServiceClient()
 
+  const monthStart = new Date()
+  monthStart.setUTCDate(1)
+  monthStart.setUTCHours(0, 0, 0, 0)
+  const monthStartISO = monthStart.toISOString()
+
   const [
     profileRes,
     totalQuestoesRes,
@@ -35,8 +49,9 @@ export default async function DashboardPage() {
     modTagsRes,
     examsTableRes,
     lastExamRes,
+    apiUsageMonthRes,
   ] = await Promise.all([
-    service.from('profiles').select('role, full_name').eq('id', user!.id).single(),
+    service.from('user_profiles').select('role, full_name').eq('id', user!.id).single(),
     service.from('questions').select('id', { count: 'exact', head: true }),
     service.from('question_tags').select('question_id', { count: 'exact', head: true }),
     service.from('question_comments').select('question_id', { count: 'exact', head: true }),
@@ -57,6 +72,10 @@ export default async function DashboardPage() {
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    service
+      .from('api_usage')
+      .select('cost_usd, input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens')
+      .gte('created_at', monthStartISO),
   ])
 
   const profile = profileRes.data
@@ -68,7 +87,18 @@ export default async function DashboardPage() {
   const comentadas = comentadasRes.count ?? 0
   const totalLotes = lotesRes.count ?? 0
 
-  // Conta por módulo
+  const apiRows = apiUsageMonthRes.data ?? []
+  const apiCostUsdMonth = apiRows.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0)
+  const apiTokensMonth = apiRows.reduce(
+    (s, r) =>
+      s +
+      (Number(r.input_tokens ?? 0) +
+        Number(r.output_tokens ?? 0) +
+        Number(r.cache_read_input_tokens ?? 0) +
+        Number(r.cache_creation_input_tokens ?? 0)),
+    0
+  )
+
   const moduloCount: Record<string, number> = {}
   for (const row of modTagsRes.data ?? []) {
     const tag = row.tags as unknown as
@@ -89,11 +119,13 @@ export default async function DashboardPage() {
 
   const top8 = [...modulosData].sort((a, b) => b.count - a.count).slice(0, 8)
 
-  // Pareto: 3 maiores módulos somam X% do total
   const sorted = [...modulosData].sort((a, b) => b.count - a.count)
   const top3Sum = sorted.slice(0, 3).reduce((s, m) => s + m.count, 0)
   const top3Pct = totalTagged > 0 ? Math.round((top3Sum / totalTagged) * 100) : 0
-  const top3Names = sorted.slice(0, 3).map((m, i) => `M${i + 1} ${m.label.split(' ')[0]}`).join(' + ')
+  const top3Names = sorted
+    .slice(0, 3)
+    .map((m, i) => `M${i + 1} ${m.label.split(' ')[0]}`)
+    .join(' + ')
 
   const exams: LoteRow[] = (examsTableRes.data ?? []).map((e) => {
     const board = e.exam_boards as unknown as { name: string; short_name: string } | null
@@ -110,24 +142,24 @@ export default async function DashboardPage() {
 
   const lastUpdated = lastExamRes.data?.updated_at as string | undefined
 
-  // Range de anos
   const years = exams.map((e) => e.year).filter(Number.isFinite)
   const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear()
   const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear()
+
+  const classifPct = totalQuestoes > 0 ? Math.round((classificadas / totalQuestoes) * 100) : 0
+  const comentPct = totalQuestoes > 0 ? Math.round((comentadas / totalQuestoes) * 100) : 0
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1
-          className="font-[family-name:var(--font-syne)]"
-          style={{ fontSize: 24, fontWeight: 800, color: 'var(--mm-text)' }}
-        >
-          Dashboard — Visão geral
+        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
+          Dashboard
         </h1>
-        <p style={{ fontSize: 12, color: 'var(--mm-muted)', marginTop: 4 }}>
-          Olá, <span style={{ color: 'var(--mm-text2)' }}>{name.split(' ')[0]}</span>
-          {' · '}{roleLabel}
+        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
+          Olá, <span className="text-[var(--mm-text2)]">{name.split(' ')[0]}</span>
+          {' · '}
+          {roleLabel}
           {' · '}Banco {minYear === maxYear ? minYear : `${minYear}–${maxYear}`}
           {lastUpdated && (
             <>
@@ -138,311 +170,204 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Stat cards com gradient */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-        <KPICard
-          value={totalQuestoes}
+      {/* KPIs (4 cards com tone semântico) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          tone="total"
           label="Questões no banco"
-          gradient="linear-gradient(135deg, #D4A843, #F5D58C)"
-          href="/questoes"
+          icon={<Database className="size-3" />}
+          value={totalQuestoes.toLocaleString('pt-BR')}
         />
-        <KPICard
-          value={classificadas}
+        <KpiCard
+          tone="ok"
           label="Classificadas"
-          gradient="linear-gradient(135deg, #66BB6A, #A5D6A7)"
-          href="/questoes"
+          icon={<CheckCircle2 className="size-3" />}
+          value={classificadas.toLocaleString('pt-BR')}
+          valueClassName="text-[var(--mm-green)]"
+          delta={
+            totalQuestoes > 0
+              ? { direction: 'up', text: `${classifPct}% do total` }
+              : undefined
+          }
         />
-        <KPICard
-          value={comentadas}
+        <KpiCard
+          tone="info"
           label="Comentadas"
-          gradient="linear-gradient(135deg, #4FC3F7, #81D4FA)"
-          href="/comentarios"
+          icon={<MessageSquare className="size-3" />}
+          value={comentadas.toLocaleString('pt-BR')}
+          delta={
+            totalQuestoes > 0
+              ? { direction: 'neutral', text: `${comentPct}% cobertura` }
+              : undefined
+          }
         />
-        <KPICard
-          value={totalLotes}
+        <KpiCard
+          tone="pending"
           label="Provas importadas"
-          gradient="linear-gradient(135deg, #BA68C8, #CE93D8)"
-          href="/lotes"
+          icon={<ClipboardList className="size-3" />}
+          value={totalLotes.toLocaleString('pt-BR')}
+          valueClassName="text-[var(--mm-gold)]"
         />
       </div>
 
+      {/* Consumo da API Claude (mês corrente) */}
+      <ApiUsageCard costUsd={apiCostUsdMonth} tokens={apiTokensMonth} />
+
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Distribuição por módulo */}
-        <div
-          style={{
-            background: 'var(--mm-surface)',
-            border: '1px solid var(--mm-line)',
-            borderRadius: 12,
-            padding: 20,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 20,
-            }}
-          >
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Distribuição por módulo — barras verticais */}
+        <Card glow="purple" accent="purple">
+          <CardHeader>
+            <CardTitle>Distribuição por módulo</CardTitle>
             <span
-              className="font-[family-name:var(--font-syne)]"
-              style={{ fontSize: 14, fontWeight: 700 }}
-            >
-              Distribuição por módulo
-            </span>
-            <span
+              className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
               style={{
                 background: 'var(--mm-gold-bg)',
                 color: 'var(--mm-gold)',
-                border: '1px solid var(--mm-gold-border)',
-                fontSize: 10,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 20,
+                borderColor: 'var(--mm-gold-border)',
               }}
             >
               Pareto 80/20
             </span>
-          </div>
-
-          {/* Bar chart com label numérico */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 130 }}>
-            {modulosData.map((m, i) => {
-              const pct = maxCount > 0 ? (m.count / maxCount) * 100 : 0
-              return (
-                <div
-                  key={m.label}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                  title={`${m.label}: ${m.count}`}
-                >
-                  <span
-                    className="font-[family-name:var(--font-syne)]"
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: m.count === 0 ? 'var(--mm-muted)' : 'var(--mm-text2)',
-                    }}
-                  >
-                    {m.count}
-                  </span>
+          </CardHeader>
+          <CardBody>
+            <div className="flex h-[140px] items-end gap-2">
+              {modulosData.map((m, i) => {
+                const pct = maxCount > 0 ? (m.count / maxCount) * 100 : 0
+                return (
                   <div
-                    style={{
-                      width: '100%',
-                      height: `${Math.max(pct, 2)}%`,
-                      background: m.count === 0
-                        ? 'var(--mm-bg2)'
-                        : `linear-gradient(180deg, ${m.color}, ${m.color}80)`,
-                      borderRadius: '4px 4px 0 0',
-                      minHeight: 4,
-                      transition: 'all 0.3s',
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: 'var(--mm-muted)',
-                      letterSpacing: '0.3px',
-                    }}
+                    key={m.label}
+                    className="flex flex-1 flex-col items-center gap-1"
+                    title={`${m.label}: ${m.count}`}
                   >
-                    M{i + 1}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+                    <span
+                      className="font-[family-name:var(--font-syne)] text-[11px] font-bold"
+                      style={{
+                        color: m.count === 0 ? 'var(--mm-muted)' : 'var(--mm-text2)',
+                      }}
+                    >
+                      {m.count}
+                    </span>
+                    <div
+                      className="w-full rounded-t transition-all duration-300"
+                      style={{
+                        height: `${Math.max(pct, 2)}%`,
+                        minHeight: 4,
+                        background:
+                          m.count === 0
+                            ? 'rgba(255,255,255,0.05)'
+                            : `linear-gradient(180deg, ${m.color}, ${m.color}80)`,
+                      }}
+                    />
+                    <span className="text-[9px] tracking-wider text-[var(--mm-muted)]">
+                      M{i + 1}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
 
-          {/* Concentração 80/20 */}
-          {totalTagged > 0 && top3Sum > 0 && (
-            <p
-              style={{
-                fontSize: 11,
-                color: 'var(--mm-muted)',
-                marginTop: 16,
-                paddingTop: 12,
-                borderTop: '1px solid var(--mm-line2)',
-              }}
-            >
-              <span style={{ color: 'var(--mm-gold)', fontWeight: 700 }}>●</span> {top3Names} ={' '}
-              <span style={{ color: 'var(--mm-gold)', fontWeight: 700 }}>{top3Pct}%</span> das classificações
-            </p>
-          )}
-        </div>
+            {totalTagged > 0 && top3Sum > 0 && (
+              <p className="mt-4 border-t border-[var(--mm-line2)] pt-3 text-[11px] text-[var(--mm-muted)]">
+                <span className="font-bold text-[var(--mm-gold)]">●</span> {top3Names} ={' '}
+                <span className="font-bold text-[var(--mm-gold)]">{top3Pct}%</span> das
+                classificações
+              </p>
+            )}
+          </CardBody>
+        </Card>
 
-        {/* Incidência por tema */}
-        <div
-          style={{
-            background: 'var(--mm-surface)',
-            border: '1px solid var(--mm-line)',
-            borderRadius: 12,
-            padding: 20,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16,
-            }}
-          >
+        {/* Incidência por tema — usa ParetoBar do design system */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Incidência por tema</CardTitle>
             <span
-              className="font-[family-name:var(--font-syne)]"
-              style={{ fontSize: 14, fontWeight: 700 }}
-            >
-              Incidência por tema
-            </span>
-            <span
+              className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
               style={{
                 background: 'var(--mm-gold-bg)',
                 color: 'var(--mm-gold)',
-                border: '1px solid var(--mm-gold-border)',
-                fontSize: 10,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 20,
+                borderColor: 'var(--mm-gold-border)',
               }}
             >
               Top 8
             </span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {top8.map((m) => {
-              const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
-              const pctColor =
-                pct >= 80 ? 'var(--mm-gold)' :
-                pct >= 60 ? '#4FC3F7' :
-                pct >= 30 ? '#66BB6A' : 'var(--mm-muted)'
-              return (
-                <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: 'var(--mm-text2)',
-                      width: 140,
-                      flexShrink: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {m.label}
-                  </span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 6,
-                      background: 'var(--mm-bg2)',
-                      borderRadius: 3,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: '100%',
-                        borderRadius: 3,
-                        background: `linear-gradient(90deg, ${m.color}, ${m.color}99)`,
-                        width: `${pct}%`,
-                      }}
-                    />
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: pctColor,
-                      width: 36,
-                      textAlign: 'right',
-                      flexShrink: 0,
-                      fontWeight: 700,
-                      fontFamily: 'var(--font-syne)',
-                    }}
-                  >
-                    {pct}%
-                  </span>
-                </div>
-              )
-            })}
-            {totalTagged === 0 && (
-              <p
-                style={{
-                  fontSize: 12,
-                  color: 'var(--mm-muted)',
-                  textAlign: 'center',
-                  padding: '20px 0',
-                }}
-              >
+          </CardHeader>
+          <CardBody>
+            {totalTagged === 0 ? (
+              <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
                 Nenhuma questão classificada ainda
               </p>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                {top8.map((m) => {
+                  const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
+                  return (
+                    <ParetoBar
+                      key={m.label}
+                      module={m.label}
+                      count={m.count}
+                      widthPct={pct}
+                      percentLabel={`${pct}%`}
+                      color={m.color}
+                    />
+                  )
+                })}
+              </div>
             )}
-          </div>
-        </div>
+          </CardBody>
+        </Card>
       </div>
 
-      {/* Lotes importados (client com filtros + paginação) */}
+      {/* Lotes importados (preserva client com filtros + paginação) */}
       <LotesTableClient exams={exams} />
     </div>
   )
 }
 
-function KPICard({
-  value,
-  label,
-  gradient,
-  href,
-}: {
-  value: number
-  label: string
-  gradient: string
-  href: string
-}) {
+function ApiUsageCard({ costUsd, tokens }: { costUsd: number; tokens: number }) {
+  const monthLabel = new Date().toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  })
+  const costFmt = costUsd.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  const tokensFmt =
+    tokens >= 1_000_000
+      ? `${(tokens / 1_000_000).toFixed(2)}M`
+      : tokens >= 1_000
+        ? `${(tokens / 1_000).toFixed(1)}k`
+        : tokens.toString()
   return (
-    <a href={href} style={{ textDecoration: 'none' }}>
-      <div
-        style={{
-          background: 'var(--mm-surface)',
-          border: '1px solid var(--mm-line)',
-          borderRadius: 12,
-          padding: '20px 18px',
-          textAlign: 'center',
-          transition: 'transform 0.15s, box-shadow 0.15s',
-        }}
-        className="hover:-translate-y-0.5 hover:shadow-lg"
-      >
-        <div
-          className="font-[family-name:var(--font-syne)]"
-          style={{
-            fontSize: 56,
-            fontWeight: 800,
-            lineHeight: 1,
-            background: gradient,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {value.toLocaleString('pt-BR')}
+    <Card>
+      <CardBody className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
+            Consumo API Claude · {monthLabel}
+          </div>
+          <div
+            className="mt-1 font-[family-name:var(--font-syne)] text-[28px] font-extrabold leading-none"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--mm-gold), var(--mm-gold-light))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            {costFmt}
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: 10,
-            color: 'var(--mm-muted)',
-            marginTop: 8,
-            letterSpacing: '0.5px',
-            textTransform: 'uppercase',
-            fontWeight: 600,
-          }}
-        >
-          {label}
+        <div className="text-right">
+          <div className="text-[11px] text-[var(--mm-muted)]">Tokens (mês)</div>
+          <div className="mt-0.5 font-[family-name:var(--font-syne)] text-[18px] font-bold text-[var(--mm-text2)]">
+            {tokensFmt}
+          </div>
         </div>
-      </div>
-    </a>
+      </CardBody>
+    </Card>
   )
 }
