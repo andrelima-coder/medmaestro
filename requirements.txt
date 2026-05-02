@@ -1,0 +1,14 @@
+# Dependências Python para os scripts de extração (Estágios 1, 2, 3)
+# Tested with Python 3.11+
+
+# HTTP para Supabase REST (PostgREST + Storage)
+requests>=2.31.0
+
+# Manipulação de imagens (crops, otimização JPEG)
+Pillow>=10.0.0
+
+# Cliente Anthropic Claude API
+anthropic>=0.39.0
+
+# Manipulação de PDFs e ZIPs (Estágio 1)
+# (zipfile e re vêm da stdlib; nada extra)
