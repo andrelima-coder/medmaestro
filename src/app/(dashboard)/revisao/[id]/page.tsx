@@ -113,6 +113,18 @@ export default async function RevisaoItemPage({
     (question.alternatives_html as Record<'A' | 'B' | 'C' | 'D' | 'E', string> | null) ?? {}
   const stemHtml = (question.stem_html as string | null) ?? ''
 
+  // Mapeia scope → signed URL pra imagens cujo escopo é uma alternativa.
+  // Permite renderizar a figura inline na alternativa quando o texto vem vazio.
+  const scopeImageUrls: Partial<Record<string, string>> = {}
+  for (const img of images) {
+    if (!img.image_scope.startsWith('alternative_') && img.image_scope !== 'statement') continue
+    const path = img.use_cropped && img.cropped_path ? img.cropped_path : img.full_page_path
+    const { data: signed } = await service.storage
+      .from('question-images')
+      .createSignedUrl(path, 60 * 60)
+    if (signed?.signedUrl) scopeImageUrls[img.image_scope] = signed.signedUrl
+  }
+
   const now = new Date()
 
   const { data: assignment } = await service
@@ -262,6 +274,7 @@ export default async function RevisaoItemPage({
                 initialAlternativesHtml={alternativesHtml}
                 correctAnswer={(question.correct_answer as string | null) ?? null}
                 hasUndoableEdit={hasUndoableRevision}
+                scopeImageUrls={scopeImageUrls}
               />
 
               {images.length > 0 && <ImageModal images={images} />}

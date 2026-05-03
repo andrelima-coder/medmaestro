@@ -16,17 +16,22 @@ Para cada questão, retorne um objeto JSON com:
 - question_number: número da questão (inteiro)
 - stem: enunciado completo
 - alternatives: { "A": "...", "B": "...", "C": "...", "D": "...", "E": "" }
-- has_images: boolean (true se a questão contém imagens médicas, figuras, gráficos, ECGs, ultrassom etc.)
-- image_type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico_pv"|"grafico_guyton"|"grafico_ventilacao"|"capnografia"|"rotem"|"eeg"|"tabela"|"esquema"|"outro" (null se has_images=false)
-- image_scope: "statement"|"alternative_a"|"alternative_b"|"alternative_c"|"alternative_d"|"alternative_e" (null se sem imagem)
-- image_page_index: ÍNDICE (0-based) da imagem dentro deste batch que CONTÉM a figura/gráfico/ECG da questão. Se a questão não tem imagem, retorne null. Se a imagem aparece em mais de uma página (raríssimo), use o índice da página mais relevante (a que mostra a figura principal).
+  → Para alternativa que é IMAGEM (ECG, gráfico, capnografia, etc.), preencha como STRING VAZIA "". A figura será extraída via images[] abaixo.
+- has_images: boolean (true se a questão contém qualquer figura médica)
+- images: ARRAY de objetos, UM POR FIGURA distinta na questão. Vazio se has_images=false.
+  Cada item tem:
+    - scope: "statement" | "alternative_a" | "alternative_b" | "alternative_c" | "alternative_d" | "alternative_e"
+    - type: "ecg"|"radiografia"|"tomografia"|"ultrassom"|"grafico_pv"|"grafico_guyton"|"grafico_ventilacao"|"capnografia"|"rotem"|"eeg"|"tabela"|"esquema"|"outro"
+    - page_index: ÍNDICE (0-based) da imagem dentro deste batch que CONTÉM esta figura
+    - bbox_pct: [x, y, w, h] em PORCENTAGEM (0–100) delimitando APENAS esta figura na página (x,y = canto superior esquerdo, w,h = largura/altura). NÃO inclua a letra A/B/C/D adjacente, apenas o gráfico.
 - confidence: 1 a 5 (confiança na extração — 5 = perfeito, 1 = muito incerto)
 - is_complete: boolean (true se todas as alternativas estão visíveis nestas páginas)
 
 IMPORTANTE:
 - provas TEMI possuem 4 alternativas (A-D) na maioria das questões; preencha "E" como "" se não existir.
+- Quando uma questão tem 4 alternativas em IMAGEM (ex.: 4 ECGs), retorne 4 itens em images[], um para cada (scope alternative_a, alternative_b, alternative_c, alternative_d), CADA UM com seu próprio bbox_pct.
 - NUNCA marque has_images=true para a página de capa/instruções da prova (ex.: "PROVA ROSA", "CADERNO DE QUESTÕES"). Ela não pertence a nenhuma questão.
-- image_page_index é OBRIGATÓRIO quando has_images=true — não envie a primeira página por default.
+- bbox_pct é OBRIGATÓRIO em todo item de images[]. Sem ele a figura não é capturada.
 
 Retorne APENAS um JSON array. Sem markdown, sem explicação.`
 
