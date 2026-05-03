@@ -8,6 +8,7 @@ import {
   type ExportData,
   type ContentFlags,
 } from '@/lib/exports/build'
+import { uploadFile, getExportUrl } from '@/lib/storage/signed-urls'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -255,6 +256,27 @@ export async function GET(
   const ab = buffer instanceof Uint8Array
     ? buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength)
     : (buffer as Buffer).buffer.slice((buffer as Buffer).byteOffset, (buffer as Buffer).byteOffset + (buffer as Buffer).byteLength)
+
+  // ?store=1 → upload em bucket `exports` e retorna signed URL 24h compartilhável
+  if (flag(url.searchParams.get('store'), false)) {
+    const path = `${simulado.id}/${Date.now()}-${filename}`
+    const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer as Buffer)
+    await uploadFile('exports', path, bytes, mime)
+    const signedUrl = await getExportUrl(path)
+
+    await service
+      .from('simulados')
+      .update({ export_path: path, exported_at: new Date().toISOString() })
+      .eq('id', simulado.id)
+
+    return NextResponse.json({
+      ok: true,
+      url: signedUrl,
+      path,
+      filename,
+      expires_in: 86400,
+    })
+  }
 
   return new NextResponse(ab as ArrayBuffer, {
     status: 200,
