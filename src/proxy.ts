@@ -70,7 +70,7 @@ export async function proxy(request: NextRequest) {
       role = cachedRole
     } else {
       const { data } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()

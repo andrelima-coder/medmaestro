@@ -51,7 +51,7 @@ export default async function DashboardPage() {
     lastExamRes,
     apiUsageMonthRes,
   ] = await Promise.all([
-    service.from('user_profiles').select('role, full_name').eq('id', user!.id).single(),
+    service.from('profiles').select('role, full_name').eq('id', user!.id).single(),
     service.from('questions').select('id', { count: 'exact', head: true }),
     service.from('question_tags').select('question_id', { count: 'exact', head: true }),
     service.from('question_comments').select('question_id', { count: 'exact', head: true }),

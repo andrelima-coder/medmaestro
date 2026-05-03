@@ -156,7 +156,7 @@ export default async function RevisaoPage({
   const profileMap: Record<string, string> = {}
   if (reviewerIds.length > 0) {
     const { data: profiles } = await service
-      .from('user_profiles')
+      .from('profiles')
       .select('id, full_name, email')
       .in('id', reviewerIds)
     for (const p of profiles ?? []) {

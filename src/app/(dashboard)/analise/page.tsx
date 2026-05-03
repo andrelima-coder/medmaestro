@@ -80,7 +80,7 @@ export default async function AnalisePage({
   if (!user) redirect('/login')
 
   const service = createServiceClient()
-  const { data: profile } = await service.from('user_profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if ((ROLE_RANK[profile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) redirect('/dashboard')
 
   const [

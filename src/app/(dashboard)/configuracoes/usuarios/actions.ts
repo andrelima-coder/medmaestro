@@ -18,7 +18,7 @@ async function assertAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
   const service = createServiceClient()
-  const { data: profile } = await service.from('user_profiles').select('role').eq('id', user.id).single()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if ((ROLE_RANK[profile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) return null
   return { user, role: profile?.role as Role }
 }
@@ -35,7 +35,7 @@ export async function changeUserRole(
   // Apenas superadmin pode promover a superadmin ou rebaixar superadmin
   const service = createServiceClient()
   const { data: target } = await service
-    .from('user_profiles')
+    .from('profiles')
     .select('role, email')
     .eq('id', targetUserId)
     .single()
@@ -56,7 +56,7 @@ export async function changeUserRole(
   }
 
   const { error } = await service
-    .from('user_profiles')
+    .from('profiles')
     .update({ role: newRole, updated_at: new Date().toISOString() })
     .eq('id', targetUserId)
 

@@ -21,7 +21,7 @@ export default async function UsuariosPage() {
 
   const service = createServiceClient()
   const { data: callerProfile } = await service
-    .from('user_profiles')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
@@ -29,7 +29,7 @@ export default async function UsuariosPage() {
   if ((ROLE_RANK[callerProfile?.role ?? ''] ?? -1) < ROLE_RANK['admin']) redirect('/dashboard')
 
   const { data: profiles } = await service
-    .from('user_profiles')
+    .from('profiles')
     .select('id, email, full_name, role, created_at')
     .order('created_at', { ascending: true })
 

@@ -14,7 +14,7 @@ async function assertAdmin() {
 
   const service = createServiceClient()
   const { data: profile } = await service
-    .from('user_profiles')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
