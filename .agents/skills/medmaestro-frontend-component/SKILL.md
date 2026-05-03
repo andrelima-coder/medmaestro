@@ -206,7 +206,7 @@ components/
 ## Anti-padrões
 
 - ❌ Hardcoda cores hex (`#0A0A0A`) — sempre `var(--bg-primary)`
-- ❌ Cria classe Tailwind customizada — use as do tema (`bg-[var(--...)]`)
+- ❌ Cria classe Tailwind customizada — use as do tema (ex.: `bg-[var(--bg-primary)]`, `bg-[var(--accent-gold)]`)
 - ❌ Mistura `font-sans` com Syne — atribua a font certa por elemento
 - ❌ Esquece `'use client'` quando precisa de useState
 - ❌ Componente sem prop tipada (`...props: any`)

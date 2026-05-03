@@ -275,10 +275,11 @@ Resumo:
    - **Bom** (≥90% das alternativas detectáveis): TEMI 2020, 2024, 2025-rosa
    - **Degradado** (perdeu letras das alternativas): TEMI 2021, 2022, 2023
    - **Vazio** (Vision-only): PROVA_TEC 2025
-3. **3 formatos de marcação** (auto-detectáveis):
+3. **4 formatos suportados** (auto-detectáveis — A/B/C de marcação textual + VISION_ONLY):
    - Formato A: `QUESTÃO 08` + `A.` `B.` (TEMI 2021/2024/2025-rosa)
-   - Formato B: `01.` + `a)` `b)` (TEMI 2020)
-   - Formato C: `Questão 5` + `a.` `b.` (TEMI 2022/2023)
+   - Formato B: `01.` + `a)` `b)` (TEMI 2020/2023)
+   - Formato C: `Questão 5` + `a.` `b.` (TEMI 2022)
+   - Formato VISION_ONLY: OCR vazio, página inteira via Claude Vision (PROVA_TEC 2025)
 4. **Casos clínicos compartilhados NÃO são usados** em TEMI 2020-2025
    (verificado por inspeção). Cada questão é independente.
 

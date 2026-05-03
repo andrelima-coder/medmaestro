@@ -166,17 +166,20 @@ alternativa-com-texto.
 
 ## Confidence típica esperada
 
-| Tipo de questão | Confidence média |
-|---|---|
-| Texto puro sem imagem | 0.95-0.98 |
-| Texto + tabela simples | 0.92-0.95 |
-| Texto + gráfico simples (linha, barras) | 0.90-0.95 |
-| Caso clínico com tabela hemodinâmica | 0.88-0.92 |
-| Imagem de ECG/EEG | 0.82-0.88 |
-| 4 ECGs como alternativas | 0.78-0.85 |
-| Tomografia/Radiografia | 0.85-0.92 |
+> Escala do banco: `extraction_confidence` smallint **0-100** (não float 0-1).
+> Multiplique por 100 antes de inserir.
 
-Confidence < 0.85 → marcar para revisão humana antes de publicar.
+| Tipo de questão | Confidence média (0-100) |
+|---|---|
+| Texto puro sem imagem | 95-98 |
+| Texto + tabela simples | 92-95 |
+| Texto + gráfico simples (linha, barras) | 90-95 |
+| Caso clínico com tabela hemodinâmica | 88-92 |
+| Imagem de ECG/EEG | 82-88 |
+| 4 ECGs como alternativas | 78-85 |
+| Tomografia/Radiografia | 85-92 |
+
+Confidence < 85 → marcar para revisão humana antes de publicar.
 
 ## Gabaritos disponíveis
 
