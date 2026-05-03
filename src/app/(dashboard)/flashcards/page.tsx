@@ -7,6 +7,7 @@ import {
   listQuestionsForFlashcards,
 } from './actions'
 import { FlashcardsClient } from './flashcards-client'
+import { ExportFlashcardsButton } from '@/components/flashcards/export-button'
 
 export const metadata = { title: 'Flashcards — MedMaestro' }
 
@@ -53,22 +54,25 @@ export default async function FlashcardsPage({
             Geração automática de cards Q&A e cloze para revisão espaçada
           </p>
         </div>
-        <Link
-          href="/revisao-flashcards"
-          style={{
-            background: 'var(--mm-bg2)',
-            border: '1px solid var(--mm-line2)',
-            color: 'var(--mm-gold)',
-            fontFamily: 'var(--font-syne)',
-            fontSize: 12,
-            fontWeight: 700,
-            padding: '8px 14px',
-            borderRadius: 8,
-            textDecoration: 'none',
-          }}
-        >
-          Revisar pendentes ({pendingCount ?? 0})
-        </Link>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ExportFlashcardsButton examId={filter.examId} approvedOnly />
+          <Link
+            href="/revisao-flashcards"
+            style={{
+              background: 'var(--mm-bg2)',
+              border: '1px solid var(--mm-line2)',
+              color: 'var(--mm-gold)',
+              fontFamily: 'var(--font-syne)',
+              fontSize: 12,
+              fontWeight: 700,
+              padding: '8px 14px',
+              borderRadius: 8,
+              textDecoration: 'none',
+            }}
+          >
+            Revisar pendentes ({pendingCount ?? 0})
+          </Link>
+        </div>
       </div>
 
       <FlashcardsClient
