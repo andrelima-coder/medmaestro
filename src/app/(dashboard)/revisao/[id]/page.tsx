@@ -4,16 +4,18 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { AssignmentBar } from '@/components/revisao/assignment-bar'
 import { ActionsPanel } from '@/components/revisao/actions-panel'
+import { QuestionEditor } from '@/components/revisao/question-editor'
 import { TagPanel, type TagItem } from '@/components/questoes/tag-panel'
 import { CommentList } from '@/components/revisao/comment-list'
+import { ImageModal } from '@/components/questoes/image-modal'
 import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
+import { getQuestionImages } from '@/app/(dashboard)/questoes/[id]/image-actions'
 import {
   Card,
   CardBody,
   CardHeader,
   CardTitle,
   Badge,
-  AltCard,
   LockBanner,
 } from '@/components/ui'
 
@@ -45,8 +47,6 @@ const STATUS_TONE: Record<string, BadgeTone> = {
   draft: 'muted',
 }
 
-const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
-
 export default async function RevisaoItemPage({
   params,
 }: {
@@ -62,12 +62,12 @@ export default async function RevisaoItemPage({
 
   const service = createServiceClient()
 
-  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments] =
+  const [questionRes, assignedTagsRes, allTagsRawRes, lastTagRevRes, comments, images] =
     await Promise.all([
       service
         .from('questions')
         .select(
-          'id, question_number, stem, alternatives, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
+          'id, question_number, stem, stem_html, alternatives, alternatives_html, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
         )
         .eq('id', id)
         .single(),
@@ -81,12 +81,14 @@ export default async function RevisaoItemPage({
         .order('label'),
       service
         .from('question_revisions')
-        .select('id')
+        .select('id, change_reason')
         .eq('question_id', id)
-        .eq('change_reason', 'tag_update')
+        .in('change_reason', ['tag_update', 'content_edit'])
+        .order('revision_number', { ascending: false })
         .limit(1)
-        .single(),
+        .maybeSingle(),
       getQuestionComments(id),
+      getQuestionImages(id),
     ])
 
   const question = questionRes.data
@@ -107,7 +109,9 @@ export default async function RevisaoItemPage({
     specialties: { name: string; exam_boards: { name: string } | null } | null
   } | null
 
-  const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+  const alternativesHtml =
+    (question.alternatives_html as Record<'A' | 'B' | 'C' | 'D' | 'E', string> | null) ?? {}
+  const stemHtml = (question.stem_html as string | null) ?? ''
 
   const now = new Date()
 
@@ -126,7 +130,7 @@ export default async function RevisaoItemPage({
   let lockedByName = ''
   if (lockedByOther) {
     const { data: lockerProfile } = await service
-      .from('user_profiles')
+      .from('profiles')
       .select('full_name')
       .eq('id', assignment.assigned_to)
       .single()
@@ -154,7 +158,7 @@ export default async function RevisaoItemPage({
   }
 
   const { data: myProfile } = await service
-    .from('user_profiles')
+    .from('profiles')
     .select('full_name')
     .eq('id', user.id)
     .single()
@@ -252,26 +256,15 @@ export default async function RevisaoItemPage({
               </div>
             </CardHeader>
             <CardBody className="flex flex-col gap-4">
-              {/* Enunciado */}
-              <p className="whitespace-pre-wrap text-[14px] leading-[1.8] text-foreground">
-                {(question.stem as string | null) ?? '(sem enunciado)'}
-              </p>
+              <QuestionEditor
+                questionId={id}
+                initialStemHtml={stemHtml || (question.stem as string | null) || ''}
+                initialAlternativesHtml={alternativesHtml}
+                correctAnswer={(question.correct_answer as string | null) ?? null}
+                hasUndoableEdit={hasUndoableRevision}
+              />
 
-              {/* Alternativas */}
-              {Object.keys(alternatives).length > 0 && (
-                <div className="flex flex-col gap-0">
-                  {LETTERS.map((letter) => {
-                    const text = alternatives[letter]
-                    if (!text) return null
-                    const isCorrect = question.correct_answer === letter
-                    return (
-                      <AltCard key={letter} letter={letter} correct={isCorrect}>
-                        {text}
-                      </AltCard>
-                    )
-                  })}
-                </div>
-              )}
+              {images.length > 0 && <ImageModal images={images} />}
 
               {/* Aviso quando gabarito não disponível */}
               {!(question.correct_answer as string | null) && (

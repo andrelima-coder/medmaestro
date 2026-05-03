@@ -28,7 +28,7 @@ export async function getSignedImageUrl(
   const service = createServiceClient()
   const { data, error } = await service.storage
     .from('question-images')
-    .createSignedUrl(path, 60 * 5) // 5 min
+    .createSignedUrl(path, 60 * 60) // 1h — D13
   if (error) return { url: null, error: error.message }
   return { url: data.signedUrl }
 }

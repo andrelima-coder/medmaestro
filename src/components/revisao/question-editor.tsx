@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useTransition, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
-import { saveQuestionContent } from '@/app/(dashboard)/revisao/[id]/content-actions'
+import {
+  saveQuestionContent,
+  undoLastEdit,
+} from '@/app/(dashboard)/revisao/[id]/content-actions'
 import { uploadInlineImage } from '@/app/(dashboard)/revisao/[id]/inline-image-actions'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
@@ -15,6 +19,7 @@ interface QuestionEditorProps {
   initialAlternativesHtml: AlternativesHtml
   correctAnswer: string | null
   readOnly?: boolean
+  hasUndoableEdit?: boolean
 }
 
 export function QuestionEditor({
@@ -23,7 +28,9 @@ export function QuestionEditor({
   initialAlternativesHtml,
   correctAnswer,
   readOnly = false,
+  hasUndoableEdit = false,
 }: QuestionEditorProps) {
+  const router = useRouter()
   const [stem, setStem] = useState(initialStemHtml)
   const [alts, setAlts] = useState<AlternativesHtml>(initialAlternativesHtml)
   const [pending, startTransition] = useTransition()
@@ -31,6 +38,21 @@ export function QuestionEditor({
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dirtyRef = useRef(false)
+
+  function handleUndo() {
+    if (!confirm('Desfazer a última edição? O texto atual será substituído pela versão anterior.')) {
+      return
+    }
+    startTransition(async () => {
+      const res = await undoLastEdit(questionId)
+      if (res.ok) {
+        setError(null)
+        router.refresh()
+      } else {
+        setError(res.error ?? 'Falha ao desfazer')
+      }
+    })
+  }
 
   function scheduleSave() {
     if (readOnly) return
@@ -83,7 +105,19 @@ export function QuestionEditor({
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Enunciado
           </label>
-          <SaveStatus pending={pending} savedAt={savedAt} error={error} />
+          <div className="flex items-center gap-3">
+            {!readOnly && hasUndoableEdit && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={pending}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed underline-offset-2 hover:underline"
+              >
+                Desfazer última edição
+              </button>
+            )}
+            <SaveStatus pending={pending} savedAt={savedAt} error={error} />
+          </div>
         </div>
         {readOnly ? (
           <div
