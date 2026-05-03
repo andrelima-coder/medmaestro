@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Local DB backups (não comitar)
 backups/
+
+# Local dev .next em /tmp (NEXT_DIST_DIR fora da working tree)
+tmp/
