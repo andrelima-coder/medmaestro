@@ -14,10 +14,12 @@ export type RasterizedPage = {
 
 export async function rasterizePdf(
   pdfBuffer: Buffer,
-  options?: { dpi?: number; maxPages?: number }
+  options?: { dpi?: number; maxPages?: number; firstPage?: number; lastPage?: number }
 ): Promise<RasterizedPage[]> {
   const dpi = options?.dpi ?? 150
   const maxPages = options?.maxPages
+  const firstPage = options?.firstPage
+  const lastPage = options?.lastPage
 
   const id = crypto.randomUUID()
   const pdfPath = `/tmp/mm-${id}.pdf`
@@ -27,7 +29,9 @@ export async function rasterizePdf(
 
   try {
     const args = ['-jpeg', '-r', String(dpi)]
-    if (maxPages) args.push('-l', String(maxPages))
+    if (firstPage) args.push('-f', String(firstPage))
+    if (lastPage) args.push('-l', String(lastPage))
+    else if (maxPages) args.push('-l', String(maxPages))
     args.push(pdfPath, outPrefix)
 
     await execFileAsync(PDFTOPPM, args).catch((err: NodeJS.ErrnoException) => {

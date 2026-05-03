@@ -869,3 +869,136 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .update({ status: hasErrors ? 'error' : 'done' })
     .eq('id', exam_id)
 }
+
+export type ReextractResult =
+  | { ok: true; question_number: number; images_added: number }
+  | { ok: false; question_number: number | null; error: string }
+
+export async function reextractQuestionImages(
+  questionId: string
+): Promise<ReextractResult> {
+  const supabase = createServiceClient()
+
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('id, exam_id, question_number, has_images, exams(source_pdf_path, year, booklet_color, extractor_id, specialty_id, specialties(slug))')
+    .eq('id', questionId)
+    .single()
+
+  if (qErr || !question) {
+    return { ok: false, question_number: null, error: `Questão não encontrada: ${qErr?.message ?? 'no row'}` }
+  }
+  if (!question.has_images) {
+    return { ok: false, question_number: question.question_number as number, error: 'has_images=false (nada a re-extrair)' }
+  }
+
+  const examRaw = question.exams as unknown as {
+    source_pdf_path: string | null
+    year: number
+    booklet_color: string | null
+    extractor_id: string | null
+    specialty_id: string
+    specialties: { slug: string } | { slug: string }[] | null
+  } | null
+
+  if (!examRaw?.source_pdf_path) {
+    return { ok: false, question_number: question.question_number as number, error: 'Exame sem source_pdf_path' }
+  }
+
+  const banca = examRaw.extractor_id ? getBancaPorId(examRaw.extractor_id) : getBancaPorId('amib_temi')
+  const specialtyRaw = examRaw.specialties
+  const specialtySlug = Array.isArray(specialtyRaw)
+    ? (specialtyRaw[0]?.slug ?? 'unknown')
+    : (specialtyRaw?.slug ?? 'unknown')
+
+  const { data: existingImages } = await supabase
+    .from('question_images')
+    .select('page_number')
+    .eq('question_id', questionId)
+
+  const knownPages = (existingImages ?? [])
+    .map((r) => r.page_number as number | null)
+    .filter((n): n is number => n != null && n > 0)
+
+  const centerPage = knownPages.length > 0 ? Math.min(...knownPages) : null
+
+  const { data: fileData, error: dlErr } = await supabase.storage
+    .from('exam-pdfs')
+    .download(examRaw.source_pdf_path)
+
+  if (dlErr || !fileData) {
+    return { ok: false, question_number: question.question_number as number, error: `Download PDF: ${dlErr?.message ?? 'no data'}` }
+  }
+
+  const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
+
+  const firstPage = centerPage ? Math.max(1, centerPage - 1) : 1
+  const lastPage = centerPage ? centerPage + 1 : 3
+
+  let pages: Awaited<ReturnType<typeof rasterizePdf>>
+  try {
+    pages = await rasterizePdf(pdfBuffer, { firstPage, lastPage })
+  } catch (err) {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: `Rasterizar páginas ${firstPage}-${lastPage}: ${err instanceof Error ? err.message : String(err)}`,
+    }
+  }
+
+  if (pages.length === 0) {
+    return { ok: false, question_number: question.question_number as number, error: 'Nenhuma página rasterizada' }
+  }
+
+  const prompt = `${banca.promptVision()}
+
+EXTRAIA APENAS a questão de número ${question.question_number}. Ignore as outras. Retorne array com 1 elemento.`
+
+  let extracted: ExtractedQuestion[]
+  try {
+    const raw = await extractFromImages({
+      imageBase64s: pages.map((p) => p.jpegBase64),
+      prompt,
+    })
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'reextract_images',
+      question_id: questionId,
+      exam_id: question.exam_id as string,
+    })
+    extracted = parseJSON<ExtractedQuestion[]>(raw.text)
+  } catch (err) {
+    return { ok: false, question_number: question.question_number as number, error: `Vision: ${err instanceof Error ? err.message : String(err)}` }
+  }
+
+  const target = extracted.find((q) => q.question_number === question.question_number)
+  if (!target) {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: `Claude não retornou Q${question.question_number} (retornou ${extracted.length} questões)`,
+    }
+  }
+
+  const imagesCount = target.images?.length ?? (target.image_scope ? 1 : 0)
+
+  const result = await persistQuestionImages({
+    exam_id: question.exam_id as string,
+    questionId,
+    questionNumber: question.question_number as number,
+    question: target,
+    batch: pages,
+    specialtySlug,
+    examMeta: { year: examRaw.year, booklet_color: examRaw.booklet_color },
+    banca,
+  })
+
+  if (result === 'error') {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: 'Persistência parcial — checar logs',
+    }
+  }
+
+  return { ok: true, question_number: question.question_number as number, images_added: imagesCount }
+}
