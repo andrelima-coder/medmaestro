@@ -13,6 +13,8 @@ const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
 type AlternativesHtml = Partial<Record<(typeof LETTERS)[number], string>>
 
+type ScopeImageUrls = Partial<Record<'statement' | `alternative_${Lowercase<(typeof LETTERS)[number]>}`, string>>
+
 interface QuestionEditorProps {
   questionId: string
   initialStemHtml: string
@@ -20,6 +22,9 @@ interface QuestionEditorProps {
   correctAnswer: string | null
   readOnly?: boolean
   hasUndoableEdit?: boolean
+  /** Signed URLs por scope. Quando a alternativa está vazia mas existe imagem
+   * do scope correspondente, renderiza a figura inline. */
+  scopeImageUrls?: ScopeImageUrls
 }
 
 export function QuestionEditor({
@@ -29,6 +34,7 @@ export function QuestionEditor({
   correctAnswer,
   readOnly = false,
   hasUndoableEdit = false,
+  scopeImageUrls = {},
 }: QuestionEditorProps) {
   const router = useRouter()
   const [stem, setStem] = useState(initialStemHtml)
@@ -144,6 +150,9 @@ export function QuestionEditor({
           {LETTERS.map((letter) => {
             const isCorrect = correctAnswer === letter
             const html = alts[letter] ?? ''
+            const scopeKey = `alternative_${letter.toLowerCase()}` as keyof ScopeImageUrls
+            const imageUrl = scopeImageUrls[scopeKey]
+            const isImageOnly = !html.trim() && !!imageUrl
             return (
               <div
                 key={letter}
@@ -162,7 +171,14 @@ export function QuestionEditor({
                   {letter})
                 </span>
                 <div className="flex-1 min-w-0">
-                  {readOnly ? (
+                  {isImageOnly ? (
+                    <img
+                      src={imageUrl}
+                      alt={`Alternativa ${letter} (figura)`}
+                      className="max-w-full rounded border border-white/5 bg-black/20"
+                      style={{ maxHeight: 220 }}
+                    />
+                  ) : readOnly ? (
                     <div
                       className="text-sm leading-relaxed"
                       dangerouslySetInnerHTML={{ __html: html || '<em class="opacity-60">vazia</em>' }}

@@ -8,9 +8,26 @@ import { sanitizeRichTextHtml, htmlToPlainText } from '@/lib/utils/sanitize-html
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 type Letter = (typeof LETTERS)[number]
 
+const REVIEWER_ROLES = new Set(['professor', 'admin', 'superadmin'])
+
 interface SavePayload {
   stem_html: string
   alternatives_html: Partial<Record<Letter, string>>
+}
+
+async function requireReviewer(
+  service: ReturnType<typeof createServiceClient>,
+  userId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: profile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()
+  if (!profile || !REVIEWER_ROLES.has(profile.role as string)) {
+    return { ok: false, error: 'Apenas revisores podem editar questões' }
+  }
+  return { ok: true }
 }
 
 export async function saveQuestionContent(
@@ -24,6 +41,9 @@ export async function saveQuestionContent(
   if (!user) return { ok: false, error: 'Não autenticado' }
 
   const service = createServiceClient()
+
+  const authz = await requireReviewer(service, user.id)
+  if (!authz.ok) return authz
 
   const { data: assignment } = await service
     .from('review_assignments')
@@ -136,6 +156,9 @@ export async function undoLastEdit(
   if (!user) return { ok: false, error: 'Não autenticado' }
 
   const service = createServiceClient()
+
+  const authz = await requireReviewer(service, user.id)
+  if (!authz.ok) return authz
 
   const { data: assignment } = await service
     .from('review_assignments')

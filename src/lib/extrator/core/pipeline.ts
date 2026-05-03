@@ -9,22 +9,42 @@ import {
 } from '@/lib/ai/claude'
 import { uploadFile } from '@/lib/storage/signed-urls'
 import { rasterizePdf } from '@/lib/pdf/rasterize'
+import { cropPageByBbox } from '@/lib/pdf/crop'
 import { extractTextFirst } from './text-first'
 import { detectarBanca, getBancaPorId } from '../bancas/registry'
 import type { BancaParser } from './types'
 
 const TEXT_FIRST_MIN_CONFIDENCE = 0.7
 
+type ExtractedImage = {
+  scope: string
+  type: string | null
+  page_index: number
+  bbox_pct: [number, number, number, number]
+}
+
 type ExtractedQuestion = {
   question_number: number
   stem: string
   alternatives: Record<string, string>
   has_images: boolean
-  image_type: string | null
-  image_scope: string | null
+  // Legacy single-image fields (mantidos pra compat com extrator antigo).
+  image_type?: string | null
+  image_scope?: string | null
+  // Novo: array de figuras por questão (statement + uma por alternativa).
+  images?: ExtractedImage[]
   confidence: number
   is_complete: boolean
 }
+
+const VALID_SCOPES = new Set([
+  'statement',
+  'alternative_a',
+  'alternative_b',
+  'alternative_c',
+  'alternative_d',
+  'alternative_e',
+])
 
 const CLASSIFY_BATCH_SIZE = 5
 const COMMENTS_BATCH_SIZE = 3
@@ -236,6 +256,134 @@ Retorne APENAS o texto do comentário seguindo a estrutura acima.`
   }
 }
 
+type PersistImagesArgs = {
+  exam_id: string
+  questionId: string
+  questionNumber: number
+  question: ExtractedQuestion
+  batch: Awaited<ReturnType<typeof rasterizePdf>>
+  specialtySlug: string
+  examMeta: { year: number; booklet_color: string | null }
+  banca: BancaParser
+}
+
+async function persistQuestionImages(
+  args: PersistImagesArgs
+): Promise<'ok' | 'noop' | 'error'> {
+  const { exam_id, questionId, questionNumber, question, batch, specialtySlug, examMeta, banca } =
+    args
+
+  if (!question.has_images) return 'noop'
+
+  const items = (question.images?.length ?? 0) > 0
+    ? (question.images as ExtractedImage[])
+    : question.image_scope
+      ? [
+          {
+            scope: question.image_scope,
+            type: question.image_type ?? null,
+            page_index: 0,
+            bbox_pct: [0, 0, 100, 100] as [number, number, number, number],
+          },
+        ]
+      : []
+
+  if (items.length === 0) return 'noop'
+
+  const supabase = createServiceClient()
+  const baseDir = `${specialtySlug}/${examMeta.year}/${examMeta.booklet_color ?? 'unknown'}/q${questionNumber}`
+  let hadError = false
+
+  for (const item of items) {
+    const scope = item.scope?.toLowerCase() ?? ''
+    if (!VALID_SCOPES.has(scope)) {
+      console.warn(`[extract ${exam_id}] Q${questionNumber}: scope inválido "${item.scope}"`)
+      hadError = true
+      continue
+    }
+
+    const page = batch[item.page_index ?? 0] ?? batch[0]
+    if (!page) {
+      hadError = true
+      continue
+    }
+
+    const imageType = banca.vocabImagens.includes(item.type ?? '')
+      ? (item.type as string)
+      : 'outro'
+
+    const fullPath = `${baseDir}/page_${page.pageNumber}.jpg`
+    try {
+      await uploadFile('question-images', fullPath, page.jpegBuffer, 'image/jpeg')
+    } catch (err) {
+      console.error(
+        `[extract ${exam_id}] Q${questionNumber} ${scope}: upload page falhou: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      )
+      hadError = true
+      continue
+    }
+
+    let croppedPath: string | null = null
+    let bboxPxJson: Record<string, number> | null = null
+    const hasBbox =
+      Array.isArray(item.bbox_pct) &&
+      item.bbox_pct.length === 4 &&
+      // Aceita só se NÃO é o fallback "página inteira" (que vem do legado).
+      !(item.bbox_pct[0] === 0 && item.bbox_pct[1] === 0 && item.bbox_pct[2] === 100 && item.bbox_pct[3] === 100)
+
+    if (hasBbox) {
+      try {
+        const crop = await cropPageByBbox(page.jpegBuffer, item.bbox_pct)
+        croppedPath = `${baseDir}/${scope}_p${page.pageNumber}.jpg`
+        await uploadFile('question-images', croppedPath, crop.buffer, 'image/jpeg')
+        bboxPxJson = crop.bbox_px
+      } catch (err) {
+        console.warn(
+          `[extract ${exam_id}] Q${questionNumber} ${scope}: crop falhou (${
+            err instanceof Error ? err.message : String(err)
+          }) — segue só com full_page`
+        )
+        croppedPath = null
+        bboxPxJson = null
+      }
+    }
+
+    const { data: lastFig } = await supabase
+      .from('question_images')
+      .select('figure_number')
+      .eq('question_id', questionId)
+      .eq('image_scope', scope)
+      .order('figure_number', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextFigureNumber = ((lastFig?.figure_number as number | null) ?? 0) + 1
+
+    const { error: imgInsertError } = await supabase.from('question_images').insert({
+      question_id: questionId,
+      image_scope: scope,
+      image_type: imageType,
+      figure_number: nextFigureNumber,
+      full_page_path: fullPath,
+      cropped_path: croppedPath,
+      use_cropped: !!croppedPath,
+      bounding_box: bboxPxJson,
+      page_number: page.pageNumber,
+    })
+
+    if (imgInsertError) {
+      console.error(
+        `[extract ${exam_id}] Q${questionNumber} ${scope} fig#${nextFigureNumber}: insert falhou: ${imgInsertError.message}`
+      )
+      hadError = true
+    }
+  }
+
+  return hadError ? 'error' : 'ok'
+}
+
 async function recoverMissingQuestions(
   exam_id: string,
   pages: Awaited<ReturnType<typeof rasterizePdf>>,
@@ -345,27 +493,16 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
         continue
       }
 
-      if (q.has_images && q.image_scope) {
-        const imageType = banca.vocabImagens.includes(q.image_type ?? '')
-          ? (q.image_type as string)
-          : 'outro'
-        const imageScope = q.image_scope.toLowerCase()
-        for (const page of targetPages) {
-          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
-          try {
-            await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
-            await supabase.from('question_images').insert({
-              question_id: inserted.id,
-              image_scope: imageScope,
-              image_type: imageType,
-              full_page_path: imagePath,
-              page_number: page.pageNumber,
-            })
-          } catch {
-            // não bloqueia recovery por falha de imagem
-          }
-        }
-      }
+      await persistQuestionImages({
+        exam_id,
+        questionId: inserted.id as string,
+        questionNumber: q.question_number,
+        question: q,
+        batch: targetPages,
+        specialtySlug,
+        examMeta: exam,
+        banca,
+      })
     }
   }
 }
@@ -661,33 +798,17 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
         continue
       }
 
-      if (q.has_images && q.image_scope) {
-        const imageType = banca.vocabImagens.includes(q.image_type ?? '')
-          ? (q.image_type as string)
-          : 'outro'
-        const imageScope = q.image_scope.toLowerCase()
-
-        for (const page of batch) {
-          const imagePath = `${specialtySlug}/${exam.year}/${exam.booklet_color ?? 'unknown'}/q${q.question_number}/page_${page.pageNumber}.jpg`
-
-          try {
-            await uploadFile('question-images', imagePath, page.jpegBuffer, 'image/jpeg')
-          } catch {
-            hasErrors = true
-            continue
-          }
-
-          const { error: imgInsertError } = await supabase.from('question_images').insert({
-            question_id: inserted.id,
-            image_scope: imageScope,
-            image_type: imageType,
-            full_page_path: imagePath,
-            page_number: page.pageNumber,
-          })
-
-          if (imgInsertError) hasErrors = true
-        }
-      }
+      const persistedAny = await persistQuestionImages({
+        exam_id,
+        questionId: inserted.id as string,
+        questionNumber: q.question_number,
+        question: q,
+        batch,
+        specialtySlug,
+        examMeta: { year: exam.year as number, booklet_color: exam.booklet_color as string | null },
+        banca,
+      })
+      if (persistedAny === 'error') hasErrors = true
     }
 
     const pagesProcessed = Math.min(batchStart + batch.length, visionPages.length)
@@ -747,4 +868,137 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .from('exams')
     .update({ status: hasErrors ? 'error' : 'done' })
     .eq('id', exam_id)
+}
+
+export type ReextractResult =
+  | { ok: true; question_number: number; images_added: number }
+  | { ok: false; question_number: number | null; error: string }
+
+export async function reextractQuestionImages(
+  questionId: string
+): Promise<ReextractResult> {
+  const supabase = createServiceClient()
+
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('id, exam_id, question_number, has_images, exams(source_pdf_path, year, booklet_color, extractor_id, specialty_id, specialties(slug))')
+    .eq('id', questionId)
+    .single()
+
+  if (qErr || !question) {
+    return { ok: false, question_number: null, error: `Questão não encontrada: ${qErr?.message ?? 'no row'}` }
+  }
+  if (!question.has_images) {
+    return { ok: false, question_number: question.question_number as number, error: 'has_images=false (nada a re-extrair)' }
+  }
+
+  const examRaw = question.exams as unknown as {
+    source_pdf_path: string | null
+    year: number
+    booklet_color: string | null
+    extractor_id: string | null
+    specialty_id: string
+    specialties: { slug: string } | { slug: string }[] | null
+  } | null
+
+  if (!examRaw?.source_pdf_path) {
+    return { ok: false, question_number: question.question_number as number, error: 'Exame sem source_pdf_path' }
+  }
+
+  const banca = examRaw.extractor_id ? getBancaPorId(examRaw.extractor_id) : getBancaPorId('amib_temi')
+  const specialtyRaw = examRaw.specialties
+  const specialtySlug = Array.isArray(specialtyRaw)
+    ? (specialtyRaw[0]?.slug ?? 'unknown')
+    : (specialtyRaw?.slug ?? 'unknown')
+
+  const { data: existingImages } = await supabase
+    .from('question_images')
+    .select('page_number')
+    .eq('question_id', questionId)
+
+  const knownPages = (existingImages ?? [])
+    .map((r) => r.page_number as number | null)
+    .filter((n): n is number => n != null && n > 0)
+
+  const centerPage = knownPages.length > 0 ? Math.min(...knownPages) : null
+
+  const { data: fileData, error: dlErr } = await supabase.storage
+    .from('exam-pdfs')
+    .download(examRaw.source_pdf_path)
+
+  if (dlErr || !fileData) {
+    return { ok: false, question_number: question.question_number as number, error: `Download PDF: ${dlErr?.message ?? 'no data'}` }
+  }
+
+  const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
+
+  const firstPage = centerPage ? Math.max(1, centerPage - 1) : 1
+  const lastPage = centerPage ? centerPage + 1 : 3
+
+  let pages: Awaited<ReturnType<typeof rasterizePdf>>
+  try {
+    pages = await rasterizePdf(pdfBuffer, { firstPage, lastPage })
+  } catch (err) {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: `Rasterizar páginas ${firstPage}-${lastPage}: ${err instanceof Error ? err.message : String(err)}`,
+    }
+  }
+
+  if (pages.length === 0) {
+    return { ok: false, question_number: question.question_number as number, error: 'Nenhuma página rasterizada' }
+  }
+
+  const prompt = `${banca.promptVision()}
+
+EXTRAIA APENAS a questão de número ${question.question_number}. Ignore as outras. Retorne array com 1 elemento.`
+
+  let extracted: ExtractedQuestion[]
+  try {
+    const raw = await extractFromImages({
+      imageBase64s: pages.map((p) => p.jpegBase64),
+      prompt,
+    })
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'reextract_images',
+      question_id: questionId,
+      exam_id: question.exam_id as string,
+    })
+    extracted = parseJSON<ExtractedQuestion[]>(raw.text)
+  } catch (err) {
+    return { ok: false, question_number: question.question_number as number, error: `Vision: ${err instanceof Error ? err.message : String(err)}` }
+  }
+
+  const target = extracted.find((q) => q.question_number === question.question_number)
+  if (!target) {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: `Claude não retornou Q${question.question_number} (retornou ${extracted.length} questões)`,
+    }
+  }
+
+  const imagesCount = target.images?.length ?? (target.image_scope ? 1 : 0)
+
+  const result = await persistQuestionImages({
+    exam_id: question.exam_id as string,
+    questionId,
+    questionNumber: question.question_number as number,
+    question: target,
+    batch: pages,
+    specialtySlug,
+    examMeta: { year: examRaw.year, booklet_color: examRaw.booklet_color },
+    banca,
+  })
+
+  if (result === 'error') {
+    return {
+      ok: false,
+      question_number: question.question_number as number,
+      error: 'Persistência parcial — checar logs',
+    }
+  }
+
+  return { ok: true, question_number: question.question_number as number, images_added: imagesCount }
 }
