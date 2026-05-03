@@ -1,0 +1,56 @@
+name: Worker tick
+
+# Dispara o pipeline de jobs (extract / classify / comments / generate)
+# em intervalo regular. O endpoint usa claim_jobs() com SKIP LOCKED, então
+# múltiplas execuções concorrentes não criam corrida.
+#
+# Pré-requisitos (Settings → Secrets and variables → Actions):
+#   - WORKER_SECRET    (mesmo valor configurado em produção em WORKER_SECRET)
+#   - APP_URL          (https://medmaestro.example.com — sem barra final)
+#
+# Para pausar o cron sem deletar o workflow: comente a sessão `schedule` abaixo
+# ou desative em Settings → Actions → Workflows.
+
+on:
+  schedule:
+    # GitHub Actions cron tem granularidade mínima de 5 min.
+    # Off-minute (3) reduz colisão com :00 / :30 do fleet global.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: worker-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Trigger /api/worker/tick
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$WORKER_SECRET" ]; then
+            echo "::error::APP_URL ou WORKER_SECRET não configurados nas secrets do repositório"
+            exit 1
+          fi
+
+          response=$(curl -fsSL --max-time 180 \
+            -X POST \
+            -H "Authorization: Bearer $WORKER_SECRET" \
+            -H "Content-Type: application/json" \
+            -w "\n__HTTP_STATUS__:%{http_code}" \
+            "$APP_URL/api/worker/tick")
+
+          http_status=$(echo "$response" | grep '__HTTP_STATUS__' | cut -d':' -f2)
+          body=$(echo "$response" | grep -v '__HTTP_STATUS__')
+
+          echo "Status: $http_status"
+          echo "Body: $body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::worker tick falhou com HTTP $http_status"
+            exit 1
+          fi
