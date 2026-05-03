@@ -19,6 +19,7 @@ const YEARS = Array.from(
 )
 
 const PRESET_COLORS = [
+  { value: 'unica', label: 'Sem cor (caderno único)' },
   { value: 'amarelo', label: 'Amarelo' },
   { value: 'azul', label: 'Azul' },
   { value: 'rosa', label: 'Rosa' },
