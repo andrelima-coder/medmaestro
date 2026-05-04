@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { sanitizeRichTextHtml } from '@/lib/utils/sanitize-html'
 
 type RichTextEditorProps = {
   value: string
@@ -148,7 +149,7 @@ export function RichTextEditor({
         onBlur={emit}
         className="rich-editor-content px-3 py-2 text-sm text-foreground outline-none whitespace-pre-wrap"
         style={{ minHeight }}
-        dangerouslySetInnerHTML={{ __html: value || '' }}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(value) }}
       />
       <style jsx>{`
         .rich-editor-content[data-placeholder]:empty::before {

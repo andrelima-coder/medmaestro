@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { processBatch } from '@/lib/queue/worker'
+
+function safeBearerCheck(authHeader: string, secret: string): boolean {
+  const expected = `Bearer ${secret}`
+  const a = Buffer.from(authHeader)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
 
 // Registrar handlers de cada fase do pipeline
 // (importados à medida que as Sessões 2.2 e 2.3 são implementadas)
@@ -21,7 +30,7 @@ export async function POST(request: Request) {
   const auth = request.headers.get('authorization') ?? ''
   const secret = process.env.WORKER_SECRET
 
-  if (secret && auth !== `Bearer ${secret}`) {
+  if (secret && !safeBearerCheck(auth, secret)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 

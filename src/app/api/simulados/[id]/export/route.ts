@@ -40,6 +40,20 @@ export async function GET(
 
   if (!simulado) return NextResponse.json({ error: 'Simulado não encontrado' }, { status: 404 })
 
+  // Authz: dono OU admin/superadmin
+  const isOwner = simulado.created_by === user.id
+  if (!isOwner) {
+    const { data: profile } = await service
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Sem permissão para exportar este simulado' }, { status: 403 })
+    }
+  }
+
   const url = req.nextUrl
   const formatRaw = (url.searchParams.get('format') ?? 'docx').toLowerCase()
   const format: 'pdf' | 'docx' | 'xlsx' =
@@ -274,7 +288,7 @@ export async function GET(
       url: signedUrl,
       path,
       filename,
-      expires_in: 86400,
+      expires_in: 600,
     })
   }
 

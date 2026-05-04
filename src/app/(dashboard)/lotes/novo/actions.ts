@@ -48,14 +48,18 @@ export async function createExamAction(
 
   const supabase = createServiceClient()
 
-  // Verifica se a banca suporta cores
-  const { data: board } = await supabase
+  // Verifica se a banca existe + se suporta cores
+  const { data: board, error: boardErr } = await supabase
     .from('exam_boards')
-    .select('supports_booklet_colors')
+    .select('id, supports_booklet_colors')
     .eq('id', boardId)
     .single()
 
-  const requiresColor = board?.supports_booklet_colors ?? true
+  if (boardErr || !board) {
+    return { error: 'Banca inválida.' }
+  }
+
+  const requiresColor = board.supports_booklet_colors ?? true
   if (requiresColor && !colorRaw) {
     return { error: 'Cor do caderno é obrigatória para esta banca.' }
   }

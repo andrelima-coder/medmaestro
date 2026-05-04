@@ -215,68 +215,6 @@ export default async function DashboardPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Distribuição por módulo — barras verticais */}
-        <Card glow="purple" accent="purple">
-          <CardHeader>
-            <CardTitle>Distribuição por módulo</CardTitle>
-            <span
-              className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
-              style={{
-                background: 'var(--mm-gold-bg)',
-                color: 'var(--mm-gold)',
-                borderColor: 'var(--mm-gold-border)',
-              }}
-            >
-              Pareto 80/20
-            </span>
-          </CardHeader>
-          <CardBody>
-            <div className="flex h-[140px] items-end gap-2">
-              {modulosData.map((m, i) => {
-                const pct = maxCount > 0 ? (m.count / maxCount) * 100 : 0
-                return (
-                  <div
-                    key={m.label}
-                    className="flex flex-1 flex-col items-center gap-1"
-                    title={`${m.label}: ${m.count}`}
-                  >
-                    <span
-                      className="font-[family-name:var(--font-syne)] text-[11px] font-bold"
-                      style={{
-                        color: m.count === 0 ? 'var(--mm-muted)' : 'var(--mm-text2)',
-                      }}
-                    >
-                      {m.count}
-                    </span>
-                    <div
-                      className="w-full rounded-t transition-all duration-300"
-                      style={{
-                        height: `${Math.max(pct, 2)}%`,
-                        minHeight: 4,
-                        background:
-                          m.count === 0
-                            ? 'rgba(255,255,255,0.05)'
-                            : `linear-gradient(180deg, ${m.color}, ${m.color}80)`,
-                      }}
-                    />
-                    <span className="text-[9px] tracking-wider text-[var(--mm-muted)]">
-                      M{i + 1}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
-            {totalTagged > 0 && top3Sum > 0 && (
-              <p className="mt-4 border-t border-[var(--mm-line2)] pt-3 text-[11px] text-[var(--mm-muted)]">
-                <span className="font-bold text-[var(--mm-gold)]">●</span> {top3Names} ={' '}
-                <span className="font-bold text-[var(--mm-gold)]">{top3Pct}%</span> das
-                classificações
-              </p>
-            )}
-          </CardBody>
-        </Card>
-
         {/* Incidência por tema — usa ParetoBar do design system */}
         <Card>
           <CardHeader>

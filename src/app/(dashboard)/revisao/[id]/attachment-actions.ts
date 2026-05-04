@@ -92,6 +92,17 @@ export async function uploadQuestionAttachment(
 
   const service = createServiceClient()
 
+  // Authz: só revisores (professor/admin/superadmin) podem anexar
+  const { data: profileRow } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  const role = profileRow?.role as string | undefined
+  if (!role || !['professor', 'admin', 'superadmin'].includes(role)) {
+    return { ok: false, error: 'Apenas revisores podem adicionar anexos' }
+  }
+
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
   const path = `${questionId}/${Date.now()}_${safeName}`
 
@@ -185,13 +196,27 @@ export async function deleteQuestionAttachment(
     return { ok: false, error: 'Sem permissão para excluir' }
   }
 
-  await service.storage.from('question-attachments').remove([row.storage_path as string])
+  // Delete atomic: se outro usuário/processo já deletou, count=0 e saímos cedo
+  const deleteQuery = isAdmin
+    ? service.from('question_attachments').delete({ count: 'exact' }).eq('id', attachmentId)
+    : service
+        .from('question_attachments')
+        .delete({ count: 'exact' })
+        .eq('id', attachmentId)
+        .eq('uploaded_by', user.id)
 
-  const { error: delErr } = await service
-    .from('question_attachments')
-    .delete()
-    .eq('id', attachmentId)
+  const { error: delErr, count } = await deleteQuery
   if (delErr) return { ok: false, error: delErr.message }
+  if (count === 0) {
+    // Outro processo já deletou — idempotente
+    return { ok: true }
+  }
+
+  // Storage delete só depois do DB confirmado (best-effort; órfão é tolerável)
+  await service.storage
+    .from('question-attachments')
+    .remove([row.storage_path as string])
+    .catch(() => {})
 
   revalidatePath(`/revisao/${row.question_id}`)
   revalidatePath(`/questoes/${row.question_id}`)

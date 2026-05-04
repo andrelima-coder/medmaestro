@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (format === 'tsv') {
-    const lines: string[] = ['#separator:tab', '#html:false', '#tags column:3']
+    const lines: string[] = ['#separator:tab', '#html:true', '#tags column:3']
     for (const r of rows) {
       lines.push(
         [escapeTsv(r.front ?? ''), escapeTsv(r.back ?? ''), buildTagsField(r)].join('\t')

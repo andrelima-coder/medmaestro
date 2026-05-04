@@ -2,7 +2,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 const TTL = {
   images: 3_600,     // 1 hora — D13
-  exports: 86_400,   // 24 horas — D13
+  exports: 600,      // 10 min — short-lived; re-gerar sob demanda
 } as const
 
 type Bucket =

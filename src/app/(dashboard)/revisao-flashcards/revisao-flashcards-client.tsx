@@ -8,6 +8,8 @@ import {
   rejectFlashcardAction,
   type PendingCard,
 } from '../flashcards/actions'
+import { RichEditor } from '@/components/ui/rich-editor'
+import { sanitizeHtml, isHtml } from '@/lib/sanitize-html'
 
 export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
   const router = useRouter()
@@ -47,8 +49,8 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
 
   function startEdit() {
     if (!card) return
-    setEditFront(card.front)
-    setEditBack(card.back)
+    setEditFront(toEditableHtml(card.front))
+    setEditBack(toEditableHtml(card.back))
     setEditDifficulty(card.difficulty)
     setEditing(true)
   }
@@ -57,13 +59,22 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
     if (!card || pending) return
     startTransition(async () => {
       await editFlashcardAction(card.id, {
-        front: editFront,
-        back: editBack,
+        front: sanitizeHtml(editFront),
+        back: sanitizeHtml(editBack),
         difficulty: editDifficulty,
       })
       await approveFlashcardAction(card.id)
       next()
     })
+  }
+
+  function toEditableHtml(text: string): string {
+    if (!text) return ''
+    if (isHtml(text)) return text
+    return text
+      .split(/\n{2,}/)
+      .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+      .join('')
   }
 
   // Atalhos
@@ -137,12 +148,12 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
           <>
             <div>
               <div style={labelStyle}>Front</div>
-              <div style={contentStyle}>{card.front}</div>
+              <RenderRichText html={card.front} />
             </div>
             {showBack && (
               <div style={{ paddingTop: 16, borderTop: '1px solid var(--mm-line2)' }}>
                 <div style={labelStyle}>Back</div>
-                <div style={contentStyle}>{card.back}</div>
+                <RenderRichText html={card.back} />
               </div>
             )}
             {!showBack && (
@@ -155,20 +166,22 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
           <>
             <div>
               <div style={labelStyle}>Front</div>
-              <textarea
+              <RichEditor
                 value={editFront}
-                onChange={(e) => setEditFront(e.target.value)}
-                style={textareaStyle}
-                rows={3}
+                onChange={setEditFront}
+                placeholder="Pergunta do card…"
+                ariaLabel="Editar frente do card"
+                minRows={3}
               />
             </div>
             <div>
               <div style={labelStyle}>Back</div>
-              <textarea
+              <RichEditor
                 value={editBack}
-                onChange={(e) => setEditBack(e.target.value)}
-                style={textareaStyle}
-                rows={5}
+                onChange={setEditBack}
+                placeholder="Resposta do card…"
+                ariaLabel="Editar verso do card"
+                minRows={5}
               />
             </div>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -220,6 +233,20 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
   )
 }
 
+function RenderRichText({ html }: { html: string }) {
+  const text = html ?? ''
+  if (isHtml(text)) {
+    return (
+      <div
+        className="mm-rich-output"
+        style={contentStyle}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+      />
+    )
+  }
+  return <div style={contentStyle}>{text}</div>
+}
+
 const labelStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 600,
@@ -234,17 +261,6 @@ const contentStyle: React.CSSProperties = {
   color: 'var(--mm-text)',
   lineHeight: 1.5,
   whiteSpace: 'pre-wrap',
-}
-
-const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'var(--mm-bg2)',
-  border: '1px solid var(--mm-line2)',
-  borderRadius: 8,
-  padding: 10,
-  fontSize: 14,
-  color: 'var(--mm-text)',
-  fontFamily: 'inherit',
 }
 
 const selectStyle: React.CSSProperties = {

@@ -8,6 +8,7 @@ import {
   undoLastEdit,
 } from '@/app/(dashboard)/revisao/[id]/content-actions'
 import { uploadInlineImage } from '@/app/(dashboard)/revisao/[id]/inline-image-actions'
+import { sanitizeRichTextHtml } from '@/lib/utils/sanitize-html'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
@@ -128,7 +129,7 @@ export function QuestionEditor({
         {readOnly ? (
           <div
             className="rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-sm text-foreground"
-            dangerouslySetInnerHTML={{ __html: stem || '<em>(sem enunciado)</em>' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(stem) || '<em>(sem enunciado)</em>' }}
           />
         ) : (
           <RichTextEditor
@@ -181,7 +182,7 @@ export function QuestionEditor({
                   ) : readOnly ? (
                     <div
                       className="text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: html || '<em class="opacity-60">vazia</em>' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(html) || '<em class="opacity-60">vazia</em>' }}
                     />
                   ) : (
                     <RichTextEditor

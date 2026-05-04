@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { generateFlashcardsForQuestion, type CardType } from '@/lib/flashcards/generate'
 import { logAudit } from '@/lib/audit'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 
 const BATCH_CONCURRENCY = 3
 
@@ -231,8 +232,8 @@ export async function editFlashcardAction(
   const update: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
-  if (patch.front !== undefined) update.front = patch.front.slice(0, 500)
-  if (patch.back !== undefined) update.back = patch.back.slice(0, 1500)
+  if (patch.front !== undefined) update.front = sanitizeHtml(patch.front).slice(0, 4000)
+  if (patch.back !== undefined) update.back = sanitizeHtml(patch.back).slice(0, 8000)
   if (patch.difficulty !== undefined)
     update.difficulty = Math.max(1, Math.min(5, Math.round(patch.difficulty)))
 

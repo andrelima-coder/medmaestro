@@ -36,13 +36,16 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
     ...(can(role, 'professor')
       ? [{ label: 'Simulados', href: '/simulados', iconKey: 'FileText' }]
       : []),
+    ...(can(role, 'professor')
+      ? [{ label: 'Flashcards', href: '/banco-flashcards', iconKey: 'Layers' }]
+      : []),
   ]
 
   const gerar: NavItemDef[] = can(role, 'admin')
     ? [
         { label: 'Comentários', href: '/comentarios', iconKey: 'MessageSquare' },
         { label: 'Variações', href: '/variacoes', iconKey: 'Copy' },
-        { label: 'Flashcards', href: '/flashcards', iconKey: 'Layers' },
+        { label: 'Gerar flashcards', href: '/flashcards', iconKey: 'Sparkles' },
       ]
     : []
 
