@@ -11,6 +11,7 @@ const WORKER_ROUTES = [
   '/api/comments',
   '/api/worker',
   '/api/health',
+  '/api/admin',
 ]
 
 const ADMIN_ROUTES = ['/auditoria', '/configuracoes/usuarios']
