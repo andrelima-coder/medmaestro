@@ -29,8 +29,51 @@ export type ParseGabaritoResult =
       correct_answers_synced: number
       alteracoes_applied: number
       extractor_id: string
+      /** P1-3: questões cujo gabarito aponta uma letra inexistente nas alternativas */
+      answer_mismatches?: number[]
     }
   | { ok: false; status: number; error: string }
+
+/**
+ * P1-3: valida coerência entre o gabarito sincronizado e as alternativas da
+ * questão. Sinaliza (não corrige silenciosamente) quando a letra correta não
+ * existe nas alternativas — ex.: gabarito diz "E" mas a questão só tem A–D, ou
+ * cor de caderno trocada. Alternativas-imagem (texto vazio) só contam como
+ * problema quando a questão NÃO tem figura.
+ *
+ * Retorna a lista de question_number inconsistentes. Apenas detecta e loga;
+ * a decisão editorial fica para a revisão humana.
+ */
+export async function validateAnswerKeys(examId: string): Promise<number[]> {
+  const supabase = createServiceClient()
+  const { data: questions } = await supabase
+    .from('questions')
+    .select('question_number, correct_answer, alternatives, has_images')
+    .eq('exam_id', examId)
+
+  if (!questions || questions.length === 0) return []
+
+  const mismatches: number[] = []
+  for (const q of questions) {
+    const letter = (q.correct_answer as string | null)?.toUpperCase()
+    if (!letter) continue // ainda sem gabarito — não é erro aqui
+    const alts = (q.alternatives as Record<string, string> | null) ?? {}
+    const present = letter in alts
+    const empty = (alts[letter] ?? '').trim().length === 0
+    if (!present || (empty && !q.has_images)) {
+      mismatches.push(q.question_number as number)
+    }
+  }
+
+  if (mismatches.length > 0) {
+    console.warn(
+      `[gabarito ${examId}] ⚠ ${mismatches.length} questões com gabarito inconsistente ` +
+        `(letra ausente nas alternativas): ${mismatches.sort((a, b) => a - b).join(', ')}. ` +
+        `Verifique a cor do caderno e a extração dessas questões.`
+    )
+  }
+  return mismatches.sort((a, b) => a - b)
+}
 
 export async function parseGabaritoForExam(
   examId: string,
@@ -135,11 +178,14 @@ export async function parseGabaritoForExam(
     (a) => a.version === versionKey || a.version === versao
   )
 
+  const answer_mismatches = await validateAnswerKeys(examId)
+
   return {
     ok: true,
     questions_saved: rows.length,
     correct_answers_synced: synced,
     alteracoes_applied: alteracoesForVersion.length,
     extractor_id: banca.id,
+    answer_mismatches,
   }
 }

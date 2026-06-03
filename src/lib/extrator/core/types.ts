@@ -51,4 +51,13 @@ export interface BancaParser {
 
   /** Parse do texto do PDF de gabarito. */
   parseGabarito(text: string): GabaritoResult
+
+  /**
+   * Remove "chrome" da banca (cabeçalho/rodapé/número de página) que o
+   * pdftotext intercala no fluxo de texto. Sem isso, a última alternativa de
+   * uma questão que termina no rodapé fica contaminada (ex.:
+   * "Ceftriaxona sódica. PROVA TEÓRICA - ROSA 2 AMIB TEMI 2025").
+   * Opcional — bancas que não implementarem usam identidade.
+   */
+  limparRuido?(s: string): string
 }

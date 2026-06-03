@@ -1,0 +1,32 @@
+{
+  "label": "TEMI 2025 ROSA (exemplo)",
+  "extractor_id": "amib_temi",
+  "pdf_path": "../PROVAS-ANTERIORES/2025/3fff41cc-f74a-4b1e-93ef-a262216696da.pdf",
+  "_instrucoes": "Copie este arquivo para temi_2025_rosa.json e preencha TODAS as questões revisadas à mão. Ajuste pdf_path para o caminho real (relativo ao cwd onde rodar, ou absoluto). As 2 questões abaixo são amostra para o harness rodar; substitua pela prova inteira.",
+  "questions": [
+    {
+      "question_number": 4,
+      "stem": "Paciente com BAVT, FC: 35 bpm, sonolento, mas estável. Após o implante de marcapasso transvenoso, observam-se os parâmetros de ajuste representados no fac-símile do gerador, juntamente ao registro eletrocardiográfico em única derivação, ambos apresentados nas imagens a seguir. Analise os dados e assinale o ajuste mais apropriado a ser feito:",
+      "alternatives": {
+        "A": "Trocar a bateria do gerador.",
+        "B": "Ajustar em maior amplitude.",
+        "C": "Reposicionar o eletrodo.",
+        "D": "Aumentar a sensibilidade"
+      },
+      "expected_figures": 2,
+      "expected_figure_types": ["esquema", "ecg"]
+    },
+    {
+      "question_number": 6,
+      "stem": "Paciente com quadro de SDRA grave, evoluindo com hipoxemia refratária e hipercapnia. Apresenta hipotensão - PAM: 55 mHg - e taquicardia sinusal - FC: 130 bpm, cujos traçados, assim como a ultrassonografia cardíaca, estão nas imagens a seguir. Analise-as e determine a conduta mais adequada:",
+      "alternatives": {
+        "A": "Expansão volêmica.",
+        "B": "Noradrenalina.",
+        "C": "Beta-bloqueador.",
+        "D": "Trombólise."
+      },
+      "expected_figures": 2,
+      "expected_figure_types": ["ultrassom", "grafico_ventilacao"]
+    }
+  ]
+}

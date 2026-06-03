@@ -1,0 +1,966 @@
+{
+  "label": "TEMI 2025 ROSA",
+  "extractor_id": "amib_temi",
+  "pdf_path": "../PROVAS-ANTERIORES/2025/3fff41cc-f74a-4b1e-93ef-a262216696da.pdf",
+  "_nota": "Golden gerado do texto nativo do PDF (pdftotext) + atribuição posicional de figuras (pdftohtml). Requer revisão clínica final do André, sobretudo questões com alternativas-imagem (alternativas vazias) e expected_figures.",
+  "questions": [
+    {
+      "question_number": 1,
+      "stem": "Paciente de 65 anos, em tratamento quimioterápico por neoplasia de mama, apresenta quadro súbito de choque circulatório. Ao internar na UTI, é submetido a exame ultrassonográfico pulmonar e cardíaco, cujos achados mais relevantes estão ilustrados nas imagens a seguir. Analise as informações e assinale a alternativa com o diagnóstico mais provável:",
+      "alternatives": {
+        "A": "Lesão mitral aguda.",
+        "B": "IAM anterior-extenso.",
+        "C": "Choque séptico.",
+        "D": "Embolia pulmonar."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 2,
+      "stem": "Paciente cirrótico é diagnosticado com peritonite bacteriana espontânea após paracentese diagnóstica. Está hemodinamicamente estável. Qual seria a antibioticoterapia mais benéfica para o caso?",
+      "alternatives": {
+        "A": "Penicilina cristalina.",
+        "B": "Ciprofloxacino.",
+        "C": "Amoxacilina/clavulanato.",
+        "D": "Ceftriaxona sódica."
+      }
+    },
+    {
+      "question_number": 3,
+      "stem": "Paciente internado na UTI com abalos musculares intensos e rebaixamento do sensório, não acordando aos chamados. É portador de transtorno do humor grave, em uso de medicações antidepressivas. Um eletroencefalograma realizado na ocasião é o que se segue na imagem. O que este exame mais provavelmente indica?",
+      "alternatives": {
+        "A": "Padrão eletroencefálico normal.",
+        "B": "Estado de mal não convulsivo.",
+        "C": "Estado de mal convulsivo.",
+        "D": "Distúrbio metabólico grave."
+      },
+      "expected_figures": 3
+    },
+    {
+      "question_number": 4,
+      "stem": "Paciente com BAVT, FC: 35 bpm, sonolento, mas estável. Após o implante de marcapasso transvenoso, observam-se os parâmetros de ajuste representados no fac-símile do gerador, juntamente ao registro eletrocardiográfico em única derivação, ambos apresentados nas imagens a seguir. Analise os dados e assinale o ajuste mais apropriado a ser feito:",
+      "alternatives": {
+        "A": "Trocar a bateria do gerador.",
+        "B": "Ajustar em maior amplitude.",
+        "C": "Reposicionar o eletrodo.",
+        "D": "Aumentar a sensibilidade"
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 5,
+      "stem": "Paciente de 68 anos, com eletrocardiograma e USG pulmonar de admissão nas imagens a seguir. Apresenta também tempo de enchimento capilar de 6 segundos e PA: 86/59 (68) mmHg. Após terapia de reperfusão, qual é a conduta farmacológica mais apropriada?",
+      "alternatives": {
+        "A": "Furosemida.",
+        "B": "Noradrenalina.",
+        "C": "Morfina.",
+        "D": "Nitroglicerina."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 6,
+      "stem": "Paciente com quadro de SDRA grave, evoluindo com hipoxemia refratária e hipercapnia. Apresenta hipotensão - PAM: 55 mHg - e taquicardia sinusal - FC: 130 bpm, cujos traçados, assim como a ultrassonografia cardíaca, estão nas imagens a seguir. Analise-as e determine a conduta mais adequada:",
+      "alternatives": {
+        "A": "Expansão volêmica.",
+        "B": "Noradrenalina.",
+        "C": "Beta-bloqueador.",
+        "D": "Trombolítico."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 7,
+      "stem": "Paciente em suporte com ECMO veno-venosa evolui com hipoxemia progressiva. As pressões medidas no circuito mostram pré- bomba de –80 mmHg, com rotações constantes, porém queda do fluxo sanguíneo. Com base nesses achados, qual é a causa mais provável da redução do fluxo?",
+      "alternatives": {
+        "A": "Obstrução ou falha no sistema de gás.",
+        "B": "Hipovolemia e colapso na linha de drenagem.",
+        "C": "Trombose na linha arterial de retorno.",
+        "D": "Disfunção mecânica da bomba centrífuga."
+      }
+    },
+    {
+      "question_number": 8,
+      "stem": "Paciente em quadro de choque cardiogênico após IAM extenso. Ao analisar a evolução da curva P-V (pressão-volume) do ventrículo esquerdo, você observa a mudança ilustrada na imagem a seguir (de A para B). Assinale a intervenção que mais provavelmente ocasionou esse fenômeno: Volume",
+      "alternatives": {
+        "A": "Furosemida.",
+        "B": "Noradrenalina.",
+        "C": "Dobutamina.",
+        "D": "Nitroprussiato."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 9,
+      "stem": "Durante expansão volêmica, você observou a curva, em preto, do débito cardíaco (DC), que se deslocou de DC1 para DC2 e a curva da água pulmonar extravascular (APEV), em cinza, APEV1 para APEV2, conforme ilustrado. Analise as curvas e defina a intervenção mais apropriada para otimizar a perfusão, em seguida:",
+      "alternatives": {
+        "A": "Manter a pré-carga do VE.",
+        "B": "Interferir na complacência do VE.",
+        "C": "Diminuir a pós carga do VE.",
+        "D": "Aumentar a contratilidade do VE."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 10,
+      "stem": "Paciente em pós-operatório imediato de cirurgia de revascularização do miocárdio apresenta sinais súbitos e compatíveis com tamponamento cardíaco. Com base nisso, assinale a melhor representação gráfica desse cenário:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 4,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 11,
+      "stem": "Você está analisando o gráfico obtido pela tomografia por impedância elétrica após manobra de recrutamento alveolar em um paciente com SDRA. Considerando os conceitos envolvidos como colapso, hiperdistensão e complacência, assinale a alternativa com o ponto que melhor define a PEEP ideal:",
+      "alternatives": {
+        "A": "PONTO D.",
+        "B": "PONTO B.",
+        "C": "PONTO A.",
+        "D": "PONTO C."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 12,
+      "stem": "Paciente de 72 kg em hemodiafiltração venovenosa contínua há 24 horas e com a prescrição resumida na tabela logo após o texto do enunciado. Evolui com acidose metabólica moderada sem melhora com a diálise desde seu início (bicarbonato:17,5 mEq/L e pH: 7,28). Assinale o ajuste mais adequado para corrigir a acidose metabólica deste paciente:",
+      "alternatives": {
+        "A": "Trocar a anticoagulação de citrato para heparina.",
+        "B": "Aumentar o volume de banho de diálise e reposição.",
+        "C": "Aumentar a concentração de bicarbonato nos banhos.",
+        "D": "Reduzir a ultrafiltração até melhora da acidose."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 13,
+      "stem": "Paciente com antecedente de transplante renal, admitido há uma semana por quadro de confusão mental. Devido ao crescimento de leveduras em hemocultura, foi iniciado tratamento com equinocandina. O líquor colhido posteriormente também evidenciou presença de leveduras. Qual o ajuste antimicrobiano mais adequado?",
+      "alternatives": {
+        "A": "Infundir equinocandina intratecal.",
+        "B": "Associar fluconazol à equinocandina.",
+        "C": "Trocar para anfotericina junto à flucitosina.",
+        "D": "Dobrar dose de equinocandina para SNC."
+      }
+    },
+    {
+      "question_number": 14,
+      "stem": "Paciente de 55 anos, vítima de trauma craniano grave, em uso de tiopental e submetido à hipotermia terapêutica (34 °C). Após melhora do quadro de hipertensão intracraniana, optou-se pela suspensão do barbitúrico e pelo reaquecimento para 36 °C em uma hora. Ao término do reaquecimento, apresentou hipotensão arterial grave associada à alteração eletrocardiográfica, (representada na imagem após o enunciado), evoluindo em seguida para parada cardiorrespiratória em assistolia. Qual a causa mais provável dessa apresentação?",
+      "alternatives": {
+        "A": "Vasoplegia de tronco.",
+        "B": "Isquemia cardíaca.",
+        "C": "Herniação do uncus.",
+        "D": "Hiperpotassemia."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 15,
+      "stem": "Paciente internado por hemorragia digestiva alta secundária a úlcera péptica apresentou, nos exames da manhã, hemoglobina de 6,5 g/dL. Foi prescrito transfusão de concentrado de hemácias. Durante a infusão, desenvolveu dor torácica, hipotensão arterial, dispneia, tremores e urina avermelhada. Qual a causa mais provável para a piora clínica observada?",
+      "alternatives": {
+        "A": "Reação febril hemolítica aguda imune.",
+        "B": "Coagulação intravascular disseminada.",
+        "C": "Reação alérgica ao hemocomponente.",
+        "D": "Sobrecarga volêmica associado a transfusão."
+      }
+    },
+    {
+      "question_number": 16,
+      "stem": "Paciente com cirrose hepática, internado na UTI por recidiva de hemorragia digestiva alta por varizes esofágicas (último episódio há quatro dias). Nova endoscopia de urgência não obteve controle do sangramento, sendo realizada passagem de balão de Sengstaken–Blakemore. Qual a melhor conduta terapêutica subsequente?",
+      "alternatives": {
+        "A": "TIPS caso ocorra ressangramento em 24 horas.",
+        "B": "Priorização na fila de transplante hepático.",
+        "C": "Ácido tranexâmico como coadjuvante.",
+        "D": "Noradrenalina como vasoconstritor esplâncnico."
+      }
+    },
+    {
+      "question_number": 17,
+      "stem": "O estudo ISIS-2 (Lancet 1988;2:349-60) demonstrou o benefício clínico do uso de aspirina e trombolíticos em pacientes com infarto agudo do miocárdio com supradesnivelamento do segmento ST. Foram realizadas 28 análises de subgrupos, nas quais se observou, de forma espúria, que indivíduos dos signos de Gêmeos ou Libra não teriam benefício com aspirina. Esse achado ilustra um exemplo de:",
+      "alternatives": {
+        "A": "Heterogeneidade de tratamento.",
+        "B": "Erro estatístico de hipótese tipo II.",
+        "C": "Erro estatístico de hipótese tipo I.",
+        "D": "Análise de clusters terapêutica."
+      }
+    },
+    {
+      "question_number": 18,
+      "stem": "Paciente com antecedente de revascularização do miocárdio sofreu queda com fratura de úmero, sendo submetido a fixação interna. Recebeu antibioticoprofilaxia com cefazolina, analgesia com metadona e dipirona, profilaxia tromboembólica com heparina e fisioterapia desde o 1º pós-operatório. No 7º dia, apresentou dor, edema e hiperemia em membro inferior esquerdo; doppler sugeriu trombose venosa profunda. Antes de iniciar anticoagulação, foram colhidos novos exames e comparados aos do pré- operatório:  Pré-operatório: Hb 13,2 g/dL; leucócitos 11.200/mm³; plaquetas 330.000/mm³; TTPA-R 0,9; INR 0,98.  7º pós-operatório: Hb 12,8 g/dL; leucócitos 14.000/mm³; plaquetas 80.000/mm³; TTPA-R 1,1; INR 1,12. Qual a conduta mais adequada para investigação?",
+      "alternatives": {
+        "A": "Hemoculturas e antibioticoterapia para infecção de partes moles.",
+        "B": "Dosagem de anti-PF4. Se positivo, teste de liberação de serotonina.",
+        "C": "Anticoagulação com heparina e avaliação da cirurgia vascular.",
+        "D": "Realização de angiotomografia de artéria pulmonar para trombectomia."
+      }
+    },
+    {
+      "question_number": 19,
+      "stem": "Paciente de 60 kg em terapia dialítica contínua por hemofiltração apresentou três episódios de coagulação do filtro nas últimas 24 horas. A prescrição dialítica atual é a que consta na tabela após este texto. Analise os dados e assinale a conduta mais apropriada para a continuidade da diálise: Dados da diálise: Solução de reposição: Método: Hemofiltração VV Contínua Sódio: 140 mEq/L Cateter venoso central de Via: curta permanência em VJD Potassio: 4 mEq/L – 13,5 Fr Fluxo sanguíneo: 120 mL/min Bicarbonato: 30 mEq/L Anticoagulante regional: Citrato Fósforo: 3,1 mg/dL Solução de reposição pós- 3.000mL/h Magnésio: 1,8 mg/dL capilar: Taxa de ultrafiltração 100 mL/h",
+      "alternatives": {
+        "A": "Dosar nível de antitrombina-3 e, se adequado, iniciar heparina.",
+        "B": "Trocar o cateter venoso por um de longa permanência e de maior calibre.",
+        "C": "Reduzir a taxa de infusão do cálcio na reposição sistêmica.",
+        "D": "Diminuir o fluxo da solução de reposição e aumentar o do sangue."
+      }
+    },
+    {
+      "question_number": 20,
+      "stem": "Paciente com síndrome do desconforto respiratório agudo (SDRA) secundária a pneumonia comunitária, intubado há 48 horas. Encontra-se em ventilação mecânica com volume corrente de 6 mL/kg de peso predito, PEEP: 10 cmH₂O e FiO₂: 70%, mantendo relação PaO₂/FiO₂ de 130. Foi submetido a posição prona por 18 horas, alcançando PaO₂/FiO₂ de 135 durante o procedimento. Após seis horas em posição supina, mantendo os mesmos parâmetros ventilatórios, apresentou nova relação PaO₂/FiO₂ de 136. Qual a estratégia mais adequada para a continuidade do tratamento?",
+      "alternatives": {
+        "A": "Óxido nítrico por via inalatória.",
+        "B": "Nova sessão de posição prona.",
+        "C": "Manobra de recrutamento prolongada.",
+        "D": "ECMO-VV e ventilação ultraprotetora."
+      }
+    },
+    {
+      "question_number": 21,
+      "stem": "Mulher de 22 anos com histórico de lúpus, doença renal crônica e miocardite com disfunção sistólica grave do ventrículo esquerdo. Apresenta-se com diagnóstico de sepse de fonte desconhecida. Realizada reanimação volêmica adequada e iniciado noradrenalina. Os principais dados hemodinâmicos da paciente encontram-se na tabela a seguir. Analise os dados e assinale a melhor conduta segundo as diretrizes da Campanha Sobrevivendo à Sepse:",
+      "alternatives": {
+        "A": "Acrescentar adrenalina.",
+        "B": "Transfundir hemácias.",
+        "C": "Iniciar dobutamina.",
+        "D": "Associar vasopressina."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 22,
+      "stem": "Durante a avaliação do ventilador de uma paciente em pós-operatório imediato, foi identificada assincronia paciente– ventilador (Gráfico 1 da imagem). Optou-se pela mudança do modo ventilatório para pressão controlada (PCV), sem resolução do problema. A paciente encontra-se com RASS –5, em uso de fentanil e propofol, hemodinamicamente estável e sem necessidade de drogas vasoativas. Foi realizada pausa expiratória (Gráfico 2 da imagem) para investigação do achado. Analise os dados e assinale a conduta mais apropriada: O resultado da Gasometria Arterial estão na tabela a seguir: PARÂMETRO VALOR pH 7,36 PaCO2 45 mmHg PaO2 120 mmHg HCO3 24 mEq/L SaO2 98% Pausa expiratória",
+      "alternatives": {
+        "A": "Modificar tempo Inspiratório e manter em modo PCV.",
+        "B": "Adequar sedo-analgesia e neutralizar esforço do paciente.",
+        "C": "Despertar paciente e alterar ventilação para modo PSV.",
+        "D": "Realizar bloqueio neuromuscular e manter em modo VCV."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 23,
+      "stem": "A análise de líquor de um paciente com suspeita de meningoencefalite aguda revela pleocitose com predomínio mononuclear, proteína aumentada, glicose semelhante à glicemia sérica. O exame de imagem revela encefalite do lobo temporal. O antimicrobiano mais adequado neste momento seria:",
+      "alternatives": {
+        "A": "Ceftriaxone.",
+        "B": "Ampicilina.",
+        "C": "Anfotericina.",
+        "D": "Aciclovir."
+      }
+    },
+    {
+      "question_number": 24,
+      "stem": "Paciente com pancreatite aguda grave, evoluindo com estabilidade hemodinâmica, em uso de noradrenalina - 0,1 microgramas/Kg/min; amilase e lipase acima da normalidade; e lactato sérico de 12 mg/dl. Sob ventilação mecânica invasiva e com abdome sem distensão e indolor. Analise os dados e assinale o momento mais adequado para início da dieta por via gástrica:",
+      "alternatives": {
+        "A": "Após diminuição do lactato sérico.",
+        "B": "O início pode ser imediatamente.",
+        "C": "Ao normalizar as enzimas pancreáticas.",
+        "D": "Depois da extubação do paciente."
+      }
+    },
+    {
+      "question_number": 25,
+      "stem": "Durante uma discussão o preceptor apresenta quatro gasometrias arteriais, todas com SaO₂ = 100%, e questiona os residentes qual item apresenta o maior conteúdo arterial de oxigênio (CaO₂):",
+      "alternatives": {
+        "A": "Hemoglobina: 10,0 g/dL; PaO2 180 mmHg.",
+        "B": "Hemoglobina: 11,0 g/dL; PaO2: 120mmHg.",
+        "C": "Hemoglobina: 9,0 g/dL; PaO2: 190 mmHg.",
+        "D": "Hemoglobina: 12,0 g/dL; PaO₂: 150 mmHg."
+      }
+    },
+    {
+      "question_number": 26,
+      "stem": "Homem de 36 anos é admitido na UTI após ingestão voluntária de cerca de 40 g de paracetamol, associada ao consumo excessivo de bebidas alcoólicas. À admissão, encontrava-se consciente, orientado e com Escala de Coma de Glasgow (ECG) 15. Nas horas seguintes, evoluiu com cefaleia intensa, náuseas, vômitos e sonolência progressiva, apresentando Glasgow 12 após 8 horas de internação. Pupilas isocóricas e fotorreagentes, sem déficits motores focais. Assinale a alternativa com a causa mais provável para essa evolução:",
+      "alternatives": {
+        "A": "Evolução progressiva para edema cerebral.",
+        "B": "Ocorrência de acidente vascular cerebral.",
+        "C": "Progressão da uremia pela injúria renal aguda.",
+        "D": "Surgimento de sangramento intracerebral."
+      }
+    },
+    {
+      "question_number": 27,
+      "stem": "Paciente de 76 anos, com sepse abdominal, evolui com PA: 80 × 50 mmHg; hipoperfusão; e sinais clínicos de baixa pré-carga. Você aplicou a analogia da imagem abaixo para compreender o retorno venoso e decidir sobre reposição volêmica. Qual alternativa representa o maior impacto no aumento do retorno venoso?",
+      "alternatives": {
+        "A": "D",
+        "B": "B",
+        "C": "A",
+        "D": "C"
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 28,
+      "stem": "Paciente com internação prolongada e uso combinado de meropenem, polimixina B, amicacina e vancomicina evolui com injúria renal aguda associada a hiponatremia, hipomagnesemia e hipocalemia. Qual dessas medicações está mais provavelmente relacionada aos distúrbios hidroeletrolíticos descritos?",
+      "alternatives": {
+        "A": "Amicacina.",
+        "B": "Polimixina B.",
+        "C": "Meropenem.",
+        "D": "Vancomicina."
+      }
+    },
+    {
+      "question_number": 29,
+      "stem": "Paciente de 32 anos, previamente hígido, é admitido 4 horas após ingestão intencional de 12g de paracetamol (24 comprimidos de 500mg), configurando tentativa de autoextermínio. Encontra-se hemodinamicamente estável, assintomático e com transaminases dentro dos valores de referência. Qual é a conduta mais apropriada neste momento?",
+      "alternatives": {
+        "A": "Indicar lavagem gástrica.",
+        "B": "Solicitar parecer da psiquiatria.",
+        "C": "Iniciar N-acetilcisteína.",
+        "D": "Coletar laboratório em 4h."
+      }
+    },
+    {
+      "question_number": 30,
+      "stem": "Paciente com internação prolongada, no pós-operatório tardio de ressecção de metástase cerebral, é readmitido com quadro clínico sugestivo de sepse. A avaliação inicial inclui a radiografia de tórax apresentada a seguir. Com base nos achados da imagem, identifique e classifique o evento adverso evidenciado:",
+      "alternatives": {
+        "A": "Evento sentinela.",
+        "B": "Quase erro (\"Near miss\").",
+        "C": "Evento adverso grave.",
+        "D": "Evento adverso moderado."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 31,
+      "stem": "Paciente com Síndrome do Desconforto Respiratório Agudo (SDRA) secundária a pneumonia comunitária, em ventilação mecânica invasiva. Apresenta pressão arterial de 74 × 45 mmHg, lactato sérico de 36 mg/dL (≈4 mmol/L) e relação PaO₂/FiO₂ de 155. A imagem (A) ilustra o padrão ultrassonográfico detectado na maioria dos campos pulmonares. À direita, observa-se a variação do VTI da VSVE em resposta à manobra de elevação passiva dos membros inferiores (de B para C) a qual o paciente foi submetido, na mesma ocasião. Analise os dados e assinale a conduta mais apropriada:",
+      "alternatives": {
+        "A": "Diurético de alça.",
+        "B": "Dobutamina.",
+        "C": "Prova volêmica.",
+        "D": "Noradrenalina."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 32,
+      "stem": "Um estudo prospectivo avaliou a utilidade da dosagem de proteína C-reativa (PCR) no líquor como marcador diagnóstico de meningite bacteriana. Foram analisadas três coortes: uma de validação em adultos, outra de validação pediátrica e uma de implementação clínica. Os valores da área sob a curva ROC (AUC) e seus respectivos intervalos de confiança (IC) estão apresentados no gráfico a seguir. Analise as curvas e assinale a alternativa que mais bem descreve o desempenho da dosagem da PCR no LCR para o diagnóstico da meningite bacteriana:",
+      "alternatives": {
+        "A": "Baixa sensibilidade e alta especificidade.",
+        "B": "Excelente acurácia conforme valor da AUC.",
+        "C": "Acurácia ruim pois IC inclui 1,00.",
+        "D": "Alta sensibilidade e baixa especificidade."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 33,
+      "stem": "Paciente com hipotensão e sinais de hipoperfusão clínica e laboratorial é submetido à manobra de elevação passiva dos membros inferiores, obtendo resposta compatível com fluidorresponsividade. Qual das curvas de Guyton é compatível com esse cenário? (Legenda da figura: RV = retorno venoso; PVC = pressão venosa central. As setas indicam o sentido da modificação do estado)",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 4,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 34,
+      "stem": "Homem de 58 anos, politraumatizado, encontra-se no 2º dia de ventilação mecânica invasiva (VM). Escore RASS = –4, em uso de fentanil 25 mcg/h e propofol 2 mg/kg/h. Foi iniciado desmame da analgo-sedação. Minutos depois, a enfermagem relata agitação, flexão dos membros e assincronias com a ventilação. Paciente sem contato ou abertura ocular, apenas com franzimento da testa. Qual a conduta inicial mais adequada?",
+      "alternatives": {
+        "A": "Aumentar infusão de propofol.",
+        "B": "Infundir bolus de propofol.",
+        "C": "Incrementar infusão de fentanil.",
+        "D": "Administrar bolus de fentanil."
+      }
+    },
+    {
+      "question_number": 35,
+      "stem": "Homem, 55 anos, portador de asma grave, encontra-se no 2º dia de ventilação mecânica invasiva em modo volume-controlado (6 mL/kg de peso predito). Recebia infusão contínua de propofol e cetamina, mas permanecia com dificuldade ventilatória (T0). Diante disso, foi administrado atracúrio em dose de ataque e manutenção (T1). Minutos após, observou-se piora da mecânica ventilatória (T2). Os gráficos sequenciais da ventilação mecânica com pausa inspiratória são apresentados a seguir, mantendo-se inalterados os demais parâmetros ventilatórios ao longo do tempo. Analise os dados e defina qual seria a melhor conduta inicial:",
+      "alternatives": {
+        "A": "Diminuir fluxo ventilatório",
+        "B": "Aumentar a PEEP",
+        "C": "Incrementar vazão do atracúrio.",
+        "D": "Trocar o atracúrio por rocurônio."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 36,
+      "stem": "Homem, 78 anos, portador de DPOC (GOLD D) em oxigenoterapia domiciliar e doença renal crônica estágio IV, encontra-se internado em UTI há 7 dias por pneumonia associada a choque séptico. Permanece em ventilação mecânica, com uso de noradrenalina 0,8 mcg/kg/min, anúria, PaO₂/FiO₂ < 150, RASS –3, apresentando corrugação da testa, flexão das mãos e alguns duplos disparos na ventilação. Encontra-se caquético. Familiares demonstram angústia e questionam sobre sofrimento do paciente. Não há diretivas antecipadas de vontade registradas. Qual a conduta mais apropriada nesse contexto?",
+      "alternatives": {
+        "A": "Proceder com extubação paliativa e retirada de suportes.",
+        "B": "Começar hemodiálise contínua e indicar traqueostomia.",
+        "C": "Aprofundar a sedação e iniciar bloqueio neuromuscular.",
+        "D": "Maximizar analgesia e reunir família para plano de cuidado."
+      }
+    },
+    {
+      "question_number": 37,
+      "stem": "Homem, 85 anos, portador de insuficiência cardíaca (NYHA IV), encontra-se internado na UTI por exacerbação grave. Possui histórico de múltiplas internações, declínio funcional acentuado, demência e perda ponderal importante. A avaliação fonoaudiológica evidenciou disfagia grave para líquidos e pastosos finos, com alto risco de broncoaspiração. Apesar da dificuldade de comunicação, o paciente manifesta desejo de se alimentar por via oral. Familiares, preocupados, questionam a equipe quanto à conduta nutricional. Qual a abordagem mais apropriada?",
+      "alternatives": {
+        "A": "Oferecer pequenas porções por via oral.",
+        "B": "Prescrever Nutrição Parenteral Total.",
+        "C": "Manter jejum absoluto por risco de aspiração.",
+        "D": "Indicar gastrostomia para suporte nutricional."
+      }
+    },
+    {
+      "question_number": 38,
+      "stem": "Paciente de 60 anos, doença de Alzheimer avançada, acamado e dependente para atividades básicas da vida. Foi intubado na Emergência por broncoaspiração. Na UTI, pela inevitável progressão da doença de base e a ausência de resposta a tratamentos curativos, a equipe em consenso com a família estabeleceu a decisão de retirada do suporte ventilatório. Qual seria a melhor conduta após a extubação?",
+      "alternatives": {
+        "A": "Monitorizar sinais vitais e considerar reintubação se piora.",
+        "B": "Aumentar fração inspirada de O2 para saturação 92-94%.",
+        "C": "Promover sedação profunda com uso de benzodiazepínicos.",
+        "D": "Controlar a dispneia e desconfortos com uso de opioides."
+      }
+    },
+    {
+      "question_number": 39,
+      "stem": "Paciente com choque séptico e disfunção hepática está em hemodiafiltração contínua com anticoagulação por citrato. Evolui com hipotensão com elevação de norepinefrina 0.8mcg/kg/min, alargamento do intervalo QT no monitor, tetania. Taxa de ultrafiltração de 50 ml/h. Qual a melhor conduta?",
+      "alternatives": {
+        "A": "Suspender a ultrafiltração e administrar um bolus de volume.",
+        "B": "Aumentar os fluxos de sangue para otimizar a depuração.",
+        "C": "Repor cálcio e ajustar as infusões de citrato e cálcio.",
+        "D": "Trocar o sistema de diálise por suspeita de coagulação do filtro."
+      }
+    },
+    {
+      "question_number": 40,
+      "stem": "Paciente em pós-operatório de cirurgia cardíaca apresenta sangramento maciço. O ROTEM® realizado é o da imagem. Qual a conduta mais adequada?",
+      "alternatives": {
+        "A": "Ácido tranexâmico.",
+        "B": "Plasma fresco congelado.",
+        "C": "Concentrado de plaquetas.",
+        "D": "Crioprecipitado."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 41,
+      "stem": "Homem de 40 anos, com queimaduras em 20% do corpo após incêndio em ambiente fechado, com choque refratário. Exames: lactato 19 mmol/L e carboxi-hemoglobina em 10%. Sangue venoso vermelho-vivo. Qual mecanismo fisiopatológico primário melhor explica a refratariedade do choque?",
+      "alternatives": {
+        "A": "Hipóxia hipoxêmica.",
+        "B": "Lesão mitocondrial.",
+        "C": "Cardiotoxicidade direta.",
+        "D": "Vasoplegia mantida."
+      }
+    },
+    {
+      "question_number": 42,
+      "stem": "Internado por TCE devido a acidente de arma de fogo, tendo evoluído com PAV e, finalmente, após 10 dias na UTI, é diagnosticado com morte encefálica. Iniciado o processo de doação de órgãos, durante o qual surge a dúvida sobre a responsabilidade pelo preenchimento da declaração de óbito. De quem seria a atribuição?",
+      "alternatives": {
+        "A": "Diarista ou coordenador da UTI.",
+        "B": "Cirurgião da equipe de transplante.",
+        "C": "Legista do instituto médico legal.",
+        "D": "Responsável pelo diagnóstico de ME."
+      }
+    },
+    {
+      "question_number": 43,
+      "stem": "Homem de 32 anos, vítima de acidente automobilístico, apresenta edema cerebral difuso sem lesões focais. Encontra-se em ventilação mecânica, sob sedação contínua, com monitorização da pressão intracraniana (PIC), pressão de perfusão cerebral (PPC), pressão arterial invasiva e pressões arteriais de gás carbônico/oxigênio (PaCO2/PaO2). 1 2 3 4 PRESSÃO ARTERIAL Analise o gráfico e indique qual variável influencia de forma mais linear o fluxo sanguíneo cerebral durante o controle desse paciente.",
+      "alternatives": {
+        "A": "PPC.",
+        "B": "PIC.",
+        "C": "PaCO2.",
+        "D": "PaO2."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 44,
+      "stem": "Paciente muito grave, com PIC persistentemente acima de 30 mmHg. As imagens da tomografia são as que se seguem. Assinale qual o padrão de curva da pressão intracraniana esperado:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 5,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 45,
+      "stem": "Paciente com queimadura de 40% da superfície corporal há 72 horas, evolui com hipoxemia e sinais de desconforto respiratório. Foi indicada sequência rápida de intubação. Qual dos seguintes fármacos deve ser evitado nesse contexto?",
+      "alternatives": {
+        "A": "Etomidato.",
+        "B": "Succinilcolina.",
+        "C": "Rocurônio.",
+        "D": "Cisatracúrio."
+      }
+    },
+    {
+      "question_number": 46,
+      "stem": "Paciente de 38 anos, previamente saudável, é admitido na UTI com evolução, há 5 horas, de: visão turva, boca seca, disfagia e fraqueza muscular progressiva. Apresenta-se com insuficiência respiratória do tipo II, ptose palpebral bilateral, pupilas midriáticas com reflexo fotomotor ausente, voz anasalada e paralisia flácida descendente, sem alteração sensitiva. Assinale a conduta mais adequada:",
+      "alternatives": {
+        "A": "Sessões de plasmaférese.",
+        "B": "Antitoxina polivalente.",
+        "C": "Anticorpo monoclonal.",
+        "D": "Imunoglobulina humana."
+      }
+    },
+    {
+      "question_number": 47,
+      "stem": "Paciente com história de cardiomiopatia e insuficiência aórtica, internado com queixas de dispneia. Qual a alteração da curva de pressão arterial invasiva esperada neste caso?",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 4,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 48,
+      "stem": "Gestante de 32 semanas, com diagnóstico de pré-eclâmpsia grave, apresenta pressão arterial (PA): 180 × 110 mmHg, cefaleia intensa e escotomas visuais. Está lúcida, sem sinais de trabalho de parto. Qual das seguintes medicações é a mais adequada para controle imediato da PA nesse contexto?",
+      "alternatives": {
+        "A": "Sulfato de magnésio.",
+        "B": "Nifedipino.",
+        "C": "Hidralazina.",
+        "D": "Alfa-metildopa."
+      }
+    },
+    {
+      "question_number": 49,
+      "stem": "Paciente em UTI evolui com hipocalcemia grave. Assinale a alternativa que apresenta uma causa plausível para essa alteração.",
+      "alternatives": {
+        "A": "Insuficiência adrenal.",
+        "B": "Síndrome de lise tumoral.",
+        "C": "Hiperparatireoidismo.",
+        "D": "Mieloma múltiplo."
+      }
+    },
+    {
+      "question_number": 50,
+      "stem": "Gestante no terceiro trimestre é admitida na UTI com dor em hipocôndrio direito, náuseas, elevação da pressão arterial sistêmica e alterações laboratoriais. Assinale a alternativa que apresenta o critério laboratorial típico dessa condição:",
+      "alternatives": {
+        "A": "Fibrinogênio sérico elevado.",
+        "B": "Desidrogenase lática reduzida.",
+        "C": "Bilirrubina direta aumentada.",
+        "D": "Haptoglobina sérica diminuída."
+      }
+    },
+    {
+      "question_number": 51,
+      "stem": "Você está avaliando um paciente visivelmente desconfortável sob ventilação pulmonar artificial invasiva e observa a seguinte imagem na tela de monitorização do ventilador. Analise-a e indique a conduta mais adequada para corrigir o problema:",
+      "alternatives": {
+        "A": "Diminuir pressão expiratória.",
+        "B": "Ajustar fluxo inspiratório.",
+        "C": "Reduzir volume corrente.",
+        "D": "Elevar frequência ventilatória."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 52,
+      "stem": "Paciente com traumatismo cranioencefálico grave há 5 dias evolui com episódios recorrentes de febre, hipertensão arterial, taquicardia e assincronia com o ventilador. A infusão contínua de fentanil e midazolam foi suspensa há 20 horas. Prescrição atual: solução salina 0,9%, inibidor de bomba de prótons, enoxaparina profilática e antitérmico. Radiografia de tórax sem novos infiltrados. Relação PaO₂/FiO₂ > 400. Assinale o diagnóstico mais compatível com esse quadro:",
+      "alternatives": {
+        "A": "Delirium hiperativo.",
+        "B": "Síndrome serotoninérgica.",
+        "C": "Hipertermia maligna.",
+        "D": "Hiperatividade simpática."
+      }
+    },
+    {
+      "question_number": 53,
+      "stem": "Paciente de 65 anos, internado em UTI há 14 dias por choque séptico pulmonar, evolui com distensão abdominal aguda. Encontra- se afebril, com abdome flácido, hipertimpânico e indolor. Tomografia de abdome não mostrou ponto de transição, pneumoperitônio ou sinais de sofrimento de alça. Medidas como reposição volêmica, correção de distúrbios eletrolíticos, descompressão gástrica com sonda e neostigmina IV não resultaram em melhora clínica. Qual a melhor conduta?",
+      "alternatives": {
+        "A": "Iniciar vancomicina enteral.",
+        "B": "Realizar laparotomia exploradora.",
+        "C": "Indicar colonoscopia descompressiva.",
+        "D": "Solicitar arteriografia de abdome."
+      }
+    },
+    {
+      "question_number": 54,
+      "stem": "Paciente de 62 anos com diagnóstico de sepse por pneumonia comunitária está em ventilação mecânica, sem sinais de hipoperfusão tecidual. Apresenta função gastrointestinal preservada, débito urinário adequado, lactato normal e estabilidade hemodinâmica nas últimas 24 horas. Qual a prescrição mais apropriada para suporte nutricional enteral?",
+      "alternatives": {
+        "A": "Começar com nutrição enteral oferecendo o total calórico estimado e elevada quantidade de proteínas.",
+        "B": "Iniciar nutrição com oferta calórica total desde o primeiro dia de internação acompanhada de aporte proteico reduzido.",
+        "C": "Optar por nutrição hipocalórica com aumento progressivo e oferta proteica na meta desde o início.",
+        "D": "Manter paciente em jejum por 24 horas após obter estabilidade hemodinâmica e da função gastrointestinal."
+      }
+    },
+    {
+      "question_number": 55,
+      "stem": "Homem, 58 anos, intubado há 5 dias por insuficiência respiratória aguda secundária a pneumonia grave, em ventilação assisto- controlada. Encontra-se em processo de desmame, com parâmetros ventilatórios satisfatórios. Como parte da avaliação pré- extubação, foi realizado o teste de cuff leak, cujos valores estão registrados na ilustração a seguir. Analise os dados e assinale a conduta mais apropriada:",
+      "alternatives": {
+        "A": "Cogitar processo de extubação.",
+        "B": "Abortar o desmame ventilatório.",
+        "C": "Indicar traqueostomia precoce.",
+        "D": "Trocar tubo orotraqueal."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 56,
+      "stem": "Paciente intubado por pneumonia comunitária em desmame ventilatório. Em modo pressão de suporte apresentou as curvas com pausa inspiratória (terceiro ciclo) vistas na imagem a seguir. Qual a causa mais provável deste fenômeno visto com a pausa inspiratória?",
+      "alternatives": {
+        "A": "Esforço excessivo.",
+        "B": "Disparo reverso.",
+        "C": "\"Pendelluft\".",
+        "D": "Hiperinsuflação."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 57,
+      "stem": "Durante o acompanhamento hemodinâmico de um paciente com choque séptico em resolução, observou-se, ao longo das horas, elevação progressiva da pressão arterial média associada ao uso crescente de norepinefrina. A evolução das curvas Pressão–Volume do ventrículo esquerdo está representada na figura a seguir (sequência A–B–C–D). Assinale a alternativa que melhor explica a evolução observada no gráfico:",
+      "alternatives": {
+        "A": "Houve elevação progressiva da resistência vascular sistêmica.",
+        "B": "Ocorreu redução gradual da complacência ventricular esquerda.",
+        "C": "Houve aumento progressivo da pressão diastólica final ventricular esquerda.",
+        "D": "Ocorreu incremento simultâneo da pré-carga e redução da contratilidade."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 58,
+      "stem": "Você ensina aos residentes de Medicina Intensiva que algumas taquiarritmias específicas podem ser revertidas por meio da aplicação de uma manobra vagal. Assinale a arritmia que poderia mais facilmente ser revertida por meio de uma tal intervenção:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 5,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 59,
+      "stem": "Você, em uma palestra, informa que um dos dados mais relevantes obtidos por meio da curva pressão-volume (na imagem a seguir), relaciona-se à estimativa do trabalho elástico inspiratório. Assinale qual porção da curva melhor representa essa variável:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 5,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 60,
+      "stem": "Como preceptor dos residentes de Medicina Intensiva, você os ensina que a medida do débito cardíaco pode ser feita por meio de uma equação que leva em conta a captação de oxigênio pelos pulmões e as concentrações desse gás no lado venoso e arterial da circulação pulmonar. Com base nos dados presentes na gravura, aponte o débito cardíaco correspondente:",
+      "alternatives": {
+        "A": "2,5 L/min.",
+        "B": "1,2 L/min.",
+        "C": "7,5 L/min",
+        "D": "5,0 L/min."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 61,
+      "stem": "Ao inserir um Cateter de Artéria Pulmonar em um paciente em choque circulatório grave e recém-internado durante o seu plantão na UTI, você observa a sequência de curvas apresentadas na imagem logo após este enunciado. Analise-as e assinale a alternativa com o diagnóstico mais provável:",
+      "alternatives": {
+        "A": "Embolia pulmonar maciça.",
+        "B": "Tamponamento pericárdico.",
+        "C": "Falência de ventrículo esquerdo.",
+        "D": "Choque séptico + SDRA grave."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 62,
+      "stem": "Você está supervisionando residentes na UTI e discute a utilidade do índice de pulsatilidade da artéria pulmonar, que é considerado um marcador prognóstico. Analise os quatro registros apresentados e assinale aquele associado ao pior desfecho clínico: A B Pressão pulmonar (mmHg) Pressão pulmonar (mmHg) Pressão venosa central Pressão venosa central (mmHg) (mmHg) C D Pressão pulmonar (mmHg) Pressão pulmonar (mmHg) Pressão venosa central Pressão venosa central (mmHg) (mmHg)",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 8,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 63,
+      "stem": "PARÂMETRO VALOR PARÂMETRO VALOR HbA1C 6,40% pH: 7,26 Lactato sérico: 1,5 mMol/L pO2: 97 mmHg Potássio sérico: 2,9 mEq/L pCO2: 25 mmHg Sódio sérico: 130 mEq/L HCO3: 12 mEq/L Cloro sérico: 102 mEq/L Glicosúria: +++ Glicemia: 253 mg/dL Piúria: 3 piócitos/campo Cetonemia: 3,1 mMol/L Paciente no segundo trimestre de gestação, apresenta quadro de náuseas, vômitos, desorientação, taquipneia, taquicardia e exames laboratoriais da tabela. Qual a melhor conduta inicialmente adotada?",
+      "alternatives": {
+        "A": "Infundir SF 0,45%.",
+        "B": "Administrar Potássio.",
+        "C": "Repor Bicarbonato.",
+        "D": "Iniciar Insulina."
+      }
+    },
+    {
+      "question_number": 64,
+      "stem": "Você é responsável por orientar residentes de Medicina Intensiva sobre a interpretação da equação do movimento respiratório: Considerando a curva de pressão das vias aéreas apresentada na figura, assinale a área que corresponde exclusivamente ao componente elástico (E × V) da equação.",
+      "alternatives": {
+        "A": "1.",
+        "B": "2.",
+        "C": "3.",
+        "D": "4."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 65,
+      "stem": "Após intubar um paciente em sequência rápida com succinilcolina e conectá-lo ao ventilador artificial, você decide checar se o procedimento foi bem sucedido. Assinale qual o melhor método para confirmar se ambos os pulmões estão sendo ventilados:",
+      "alternatives": {
+        "A": "Ausculta pulmonar.",
+        "B": "Ultrassonografia pulmonar.",
+        "C": "Ausculta gástrica.",
+        "D": "Radiografia de tórax."
+      }
+    },
+    {
+      "question_number": 66,
+      "stem": "Você pretende realizar um exame ultrassonográfico da aorta abdominal de um paciente com suspeita de aneurisma aórtico. Assinale a alternativa com o transdutor mais apropriado para tal finalidade:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 4,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 67,
+      "stem": "Homem de 50 anos, etilista, há 3 dias sem ingesta alcoólica, é trazido à emergência por crises tônicoclônicas, com duração menor que 5 minutos. Assinale a melhor conduta neste momento:",
+      "alternatives": {
+        "A": "Valproato.",
+        "B": "Diazepam.",
+        "C": "Fenitoína.",
+        "D": "Propofol."
+      }
+    },
+    {
+      "question_number": 68,
+      "stem": "Paciente de 62 anos, portador de DPOC grave, encontra-se em ventilação mecânica invasiva devido a pneumonia comunitária. Durante o plantão, você observa queda progressiva do volume corrente expiratório e redução da SpO₂ para 90%, sem alterações significativas nos parâmetros ajustados do ventilador. Com base na análise da curva fluxo-volume exibida pelo ventilador, assinale a alternativa que melhor justifica o padrão observado:",
+      "alternatives": {
+        "A": "Tempo inspiratório excessivo.",
+        "B": "Escape aéreo no sistema.",
+        "C": "Colapso de vias aéreas.",
+        "D": "Volume corrente em demasia."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 69,
+      "stem": "Paciente de 60 anos, com câncer de pâncreas e perda de peso importante, encontra-se em nutrição parenteral total após pós- operatório complicado. Apresenta fadiga muscular e câimbras, com suspeita de síndrome de realimentação. Qual o eletrocardiograma de 12 derivações mais compatível com esse quadro?",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 5,
+      "_review_image_alternatives": true
+    },
+    {
+      "question_number": 70,
+      "stem": "Paciente jovem é admitido na UTI com diagnóstico de crise asmática grave, refratária às medidas terapêuticas iniciais otimizadas (salbutamol, ipratrópio, terbutalina, corticosteroide), sem foco infeccioso aparente. Ao exame físico apresenta-se taquipneico, taquicárdico, normotenso, afebril e com SpO₂ de 92% utilizando cateter nasal. Exames laboratoriais revelam lactato sérico aumentado. Qual é o mecanismo mais provável para a hiperlactatemia?",
+      "alternatives": {
+        "A": "Exacerbação do ciclo de Cori devido a taquipneia.",
+        "B": "Anaerobiose secundária à hipoperfusão tecidual.",
+        "C": "Aumento da atividade da bomba Na⁺/K⁺-ATPase.",
+        "D": "Inibição da piruvato desidrogenase pela hipóxia."
+      }
+    },
+    {
+      "question_number": 71,
+      "stem": "Paciente sob ventilação mecânica apresentou a curva de capnografia ilustrada na imagem. Qual a conduta mais adequada",
+      "alternatives": {
+        "A": "Prescrever broncodilatador.",
+        "B": "Otimizar sedoanalgesia.",
+        "C": "Reduzir a frequência respiratória.",
+        "D": "Ajustar o valor da PEEP."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 72,
+      "stem": "Ao analisar o comportamento da mecânica ventilatória de um paciente submetido a VMI em modo PSV, você se depara com os seguintes gráficos. Analise-os e defina a conduta mais adequada:",
+      "alternatives": {
+        "A": "Elevar a pressão de suporte.",
+        "B": "Reduzir percentil de ciclagem.",
+        "C": "Aumentar o tempo de subida.",
+        "D": "Mudar para volume controlado."
+      },
+      "expected_figures": 3
+    },
+    {
+      "question_number": 73,
+      "stem": "Paciente de 32 anos apresenta quadro há três dias de febre alta, mialgia, artralgia intensa e cefaleia. Evoluiu com exantema maculopapular difuso e sangramento gengival. Exames laboratoriais evidenciam leucopenia, trombocitopenia e elevação de enzimas hepáticas. Ao exame físico: FC = 140 bpm (ritmo sinusal), tempo de enchimento capilar de 6 segundos, PA = 85/60 mmHg. Teste para antígeno NS1 positivo. Qual o melhor parâmetro para guiar a conduta?",
+      "alternatives": {
+        "A": "Albumina.",
+        "B": "Plaquetas.",
+        "C": "Transaminases.",
+        "D": "Hematócrito."
+      }
+    },
+    {
+      "question_number": 74,
+      "stem": "Homem, 50 anos, apresenta parada cardiorrespiratória extra-hospitalar sem causa aparente. Após reanimação cardiopulmonar, obtém retorno da circulação espontânea, mas permanece com Escala de Coma de Glasgow = 3. O eletrocardiograma logo abaixo foi registrado na admissão hospitalar. A angiocoronariografia não evidenciou anormalidades. Qual o exame complementar mais indicado, nesse contexto?",
+      "alternatives": {
+        "A": "Eletroencefalograma.",
+        "B": "Tomografia de crânio.",
+        "C": "Troponina seriada.",
+        "D": "Ecocardiograma."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 75,
+      "stem": "Paciente sob ventilação mecânica invasiva, modo volume-controlado, com fluxo inspiratório de 60 L/min. Após pausa inspiratória de 2 segundos, o gráfico de pressão-tempo a seguir evidenciou pressão de pico de 40 cmH₂O e pressão de platô de 18 cmH₂O. Qual a alteração mais provável na mecânica ventilatória desse paciente?",
+      "alternatives": {
+        "A": "Resistência das vias aéreas aumentada.",
+        "B": "Complacência pulmonar reduzida.",
+        "C": "Elastância pulmonar reduzida.",
+        "D": "Pressão de distensão aumentada."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 76,
+      "stem": "Paciente sob ventilação mecânica no modo volume-controlado (VCV). Após administração de um fármaco, observa-se alteração no traçado da onda de fluxo, conforme ilustrado no gráfico abaixo. Qual a classe farmacológica mais provavelmente administrada?",
+      "alternatives": {
+        "A": "Midazolam.",
+        "B": "N-acetil-cisteína.",
+        "C": "Cisatracúrio.",
+        "D": "Salbutamol."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 77,
+      "stem": "Um estudo clínico apresentou o resultado expresso na curva de Kaplan-Meier a seguir. Esse achado sugere que a intervenção:",
+      "alternatives": {
+        "A": "Duplicou a mortalidade.",
+        "B": "Aumentou a mortalidade.",
+        "C": "Reduziu a mortalidade.",
+        "D": "Não alterou a mortalidade."
+      },
+      "expected_figures": 3
+    },
+    {
+      "question_number": 78,
+      "stem": "Paciente de 50 anos, vítima de TCE grave, encontra-se no 5º dia de internação em UTI, em ventilação mecânica no modo PSV, sem uso de drogas vasoativas, em analgesia com fentanil (BPS = 3). Abdome sem distensão, ruídos hidroaéreos presentes e ausência de diarreia. Residual gástrico de 250 mL foi identificado em uma aferição; após 10 horas, o novo volume residual gástrico foi de 350 mL. Qual a conduta mais indicada nesse contexto?",
+      "alternatives": {
+        "A": "Reduzir a taxa de infusão da nutrição enteral.",
+        "B": "Interromper a nutrição enteral após cada evento.",
+        "C": "Complementar a dieta com nutrição parenteral.",
+        "D": "Continuar a nutrição enteral normalmente."
+      }
+    },
+    {
+      "question_number": 79,
+      "stem": "Paciente de 68 anos sob ventilação mecânica (VM) por tubo endotraqueal, devida à exacerbação aguda de DPOC. Ao avaliar a descontinuação da VM, o gráfico a seguir foi observado (passou da condição A para B). Analise-o cuidadosamente e assinale a melhor conduta:",
+      "alternatives": {
+        "A": "Diminuir a sedo-analgesia.",
+        "B": "Manter parâmetros atuais.",
+        "C": "Iniciar retirada do ventilador.",
+        "D": "Maximizar suporte da VM."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 80,
+      "stem": "Um paciente com DPOC grave e ventilado em modo Pressão de Suporte apresenta-se visivelmente desconfortável. O registro das curvas ventilatórias está representado na imagem. Qual a conduta mais apropriada para mitigar esse problema?",
+      "alternatives": {
+        "A": "Prolongar o tempo expiratório.",
+        "B": "Incrementar o tempo inspiratório.",
+        "C": "Mudar para modo volume controlado.",
+        "D": "Diminuir a pressão de suporte."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 81,
+      "stem": "Paciente de 20 anos, vítima de lesão por arma branca em abdome e feito laparotomia com rafia de alça intestinal de emergência. Foram realizados na admissão da UTI punção venosa central, cateterismo vesical de demora. No quinto dia, devido a quadro febril e piora clínica foi coletada hemocultura periférica e realizada nova laparotomia identificando secreção purulenta em toda a cavidade abdominal. Na hemocultura houve isolamento de Escherichia coli. Qual a definição do quadro infeccioso segundo os critérios da ANVISA?",
+      "alternatives": {
+        "A": "Infecção primária de corrente sanguínea.",
+        "B": "Infecção intra-abdominal comunitária.",
+        "C": "Infecção de trato urinário associada a cateter vesical.",
+        "D": "Infecção de sítio cirúrgico órgão/cavidade."
+      }
+    },
+    {
+      "question_number": 82,
+      "stem": "Um ensaio clínico prospectivo e controlado avaliou 200 pacientes, comparando a mortalidade em 28 dias entre uma intervenção (A) e os cuidados habituais (B). A mortalidade foi de 14% no grupo A e 19% no grupo B, correspondendo a um risco relativo de 0,69 (IC 95%: 0,36–1,31). À luz dos princípios da Medicina Baseada em Evidências, qual é a interpretação estatística mais adequada sobre a mortalidade no período ao comparar a intervenção (A) com os cuidados habituais (B)?",
+      "alternatives": {
+        "A": "Diminuição da mortalidade, mas com risco relativo presente no IC 95%.",
+        "B": "Redução da mortalidade, porém sem significância estatística confirmada.",
+        "C": "Diminuição da mortalidade, mas sem relevância clínica demonstrada.",
+        "D": "Redução da mortalidade, com significância estatística expressiva."
+      }
+    },
+    {
+      "question_number": 83,
+      "stem": "Paciente de 22 anos, vítima de acidente crotálico. Evoluiu em 20 horas com mialgia progressiva, ptose palpebral bilateral, náuseas e vômitos, oligúria com coloração marrom. Internado na UTI, após receber soro antiofídico específico, com os parâmetros apresentados na tabela. Prescrito bicarbonato de sódio em bolus imediato, associado a: PARÂMETRO VALOR PA 120/70 mmHg FC 110 bpm FR 25 ipm HEMOGRAMA Dentro da normalidade UREIA 90 mg/dL CREATININA 4,2 mg/dL POTÁSSIO 6,8 mEq/L CPK 20.000 UI pH 7,16 pO2 75 mmHg pCO2 29 mmHg HCO3 10 mEq/L SatO2 95% (com FiO2: 21%)",
+      "alternatives": {
+        "A": "Diálise Peritoneal.",
+        "B": "Plasmaférese.",
+        "C": "Hemodiálise intermitente.",
+        "D": "Hemodiálise contínua."
+      }
+    },
+    {
+      "question_number": 84,
+      "stem": "Um paciente em sepse internado na UTI iniciou tratamento com piperacilina-tazobactam. Foi sugerida a administração em infusão contínua, visando aumentar a probabilidade de atingir os objetivos terapêuticos. Considerando a Concentração Inibitória Mínima (MIC), qual característica da curva concentração sérica-tempo justifica essa forma de prescrição?",
+      "alternatives": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 85,
+      "stem": "Você assume a coordenação de uma UTI que é pouco eficiente. Dentre os problemas está a falta de vaga na UTI que gera suspensão frequente de cirurgias eletivas de alto risco. A melhor estratégia para mitigar este problema seria:",
+      "alternatives": {
+        "A": "Implementar critérios mais restritivos para internação pós-operatória.",
+        "B": "Propor abertura de novos leitos na UTI direcionados para pós-operatório",
+        "C": "Implantar visita multiprofissional diária.",
+        "D": "Aumentar o tempo de permanência na recuperação pós-anestésica."
+      }
+    },
+    {
+      "question_number": 86,
+      "stem": "O gráfico apresenta a matriz de eficiência, que relaciona a taxa de mortalidade padronizada (TMP) com a taxa de utilização de recursos padronizada (TURP) em unidades de terapia intensiva. Essa matriz é utilizada para benchmarking, permitindo comparar o desempenho entre diferentes UTI. Como gestor, em qual quadrante da matriz você gostaria que a sua UTI estivesse posicionada?",
+      "alternatives": {
+        "A": "Quadrante 1.",
+        "B": "Quadrante 2.",
+        "C": "Quadrante 3.",
+        "D": "Quadrante 4."
+      },
+      "expected_figures": 2
+    },
+    {
+      "question_number": 87,
+      "stem": "O coordenador de uma UTI adulto propõe ao gestor hospitalar a implantação de um modelo de visitação aberta para familiares. Além da discussão sobre possíveis benefícios, qual argumento mais bem fundamentaria essa proposta, perante o gestor?",
+      "alternatives": {
+        "A": "Adesão seria isenta de barreiras.",
+        "B": "Determinado por política institucional.",
+        "C": "Nas UTI, é a prática mais comum.",
+        "D": "No Brasil, é uma obrigação legal."
+      }
+    },
+    {
+      "question_number": 88,
+      "stem": "Gestante de 35 anos, 37 semanas, apresenta um episódio convulsivo no pronto-socorro, diagnosticado como eclâmpsia. Após cesariana, encontra-se estável e consciente na UTI, em infusão contínua de sulfato de magnésio. Qual a melhor conduta em relação à manutenção do anticonvulsivante?",
+      "alternatives": {
+        "A": "Trocar sulfato de magnésio por fenitoína em esquema de manutenção.",
+        "B": "Suspender sulfato de magnésio e reiniciar apenas se houver nova crise.",
+        "C": "Manter sulfato de magnésio por 24 horas após o procedimento obstétrico.",
+        "D": "Manter sulfato de magnésio por 24 horas após o episódio convulsivo."
+      }
+    },
+    {
+      "question_number": 89,
+      "stem": "A equipe assistencial decide iniciar monitorização da pressão venosa central para guiar a conduta hemodinâmica em um paciente com choque circulatório. Analise a imagem do sistema de transdução (logo após este texto) e determine qual dos quatro pontos deve ser nivelado com o correspondente à altura da valva tricúspide, na parede torácica do paciente:",
+      "alternatives": {
+        "A": "Ponto 3.",
+        "B": "Ponto 2.",
+        "C": "Ponto 4.",
+        "D": "Ponto 1."
+      },
+      "expected_figures": 1
+    },
+    {
+      "question_number": 90,
+      "stem": "Um paciente interna na UTI com choque circulatório grave. A ultrassonografia cardíaca de admissão é a que se segue logo após este texto. Você decide implantar um cateter de artéria pulmonar. Assinale a alternativa que melhor representa o conjunto de curvas de pressão esperado:",
+      "alternatives": {
+        "A": "",
+        "B": "",
+        "C": "",
+        "D": ""
+      },
+      "expected_figures": 5,
+      "_review_image_alternatives": true
+    }
+  ]
+}

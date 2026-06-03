@@ -189,6 +189,20 @@ export const bancaAmibTemi: BancaParser = {
     return PROMPT
   },
 
+  // Remove cabeçalho/rodapé/numeração que o pdftotext intercala no texto:
+  //  - rodapé:  "PROVA TEÓRICA - ROSA 2"
+  //  - cabeçalho: "AMIB", "TEMI 2025", "PICSIS 2025"
+  // Remoção inline (não corta até o fim) para não truncar enunciados multipágina.
+  limparRuido(s: string): string {
+    return s
+      .replace(/PROVA\s+TE[ÓO]RICA\s*-\s*(?:AMAREL[OA]|AZUL|ROSA|VERDE)\s*\d*/gi, ' ')
+      .replace(/\bAMIB\b/gi, ' ')
+      .replace(/\bTEMI\s+\d{4}\b/gi, ' ')
+      .replace(/\bPICSIS\s+\d{4}\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  },
+
   parseGabarito(text: string): GabaritoResult {
     const lines = text
       .split('\n')

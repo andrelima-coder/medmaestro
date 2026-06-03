@@ -161,10 +161,37 @@ export async function extractTextFirst(
       ? body.slice(firstAltMatch.index ?? body.length)
       : ''
 
-    const stem = stemRaw.replace(/\s+/g, ' ').trim()
-    const alternatives = altsBlock ? parseAlternatives(altsBlock, regexA) : {}
+    // Limpa "chrome" da banca (cabeçalho/rodapé/nº de página) que contamina
+    // sobretudo a última alternativa em quebras de página. Banca sem limparRuido
+    // usa apenas colapso de espaços.
+    const clean = (x: string): string =>
+      banca.limparRuido ? banca.limparRuido(x) : x.replace(/\s+/g, ' ').trim()
 
-    const confidence = scoreQuestion(stem, alternatives)
+    const stem = clean(stemRaw)
+    const alternatives = altsBlock ? parseAlternatives(altsBlock, regexA) : {}
+    for (const k of Object.keys(alternatives)) alternatives[k] = clean(alternatives[k])
+
+    let confidence = scoreQuestion(stem, alternatives)
+
+    // ── P1-4: endurecimento (só REBAIXA confiança; nunca eleva). ────────────
+    // Pior caso de um penalty indevido é a questão cair na Vision (seguro),
+    // nunca um text-first salvo com texto truncado.
+
+    // (a) Alternativas precisam ser contíguas a partir de A (A,B,C,D[,E]).
+    //     Um buraco (ex.: A,C,D sem B) indica split malfeito.
+    const letters = Object.keys(alternatives).sort()
+    const contiguous =
+      letters.length > 0 &&
+      letters.every((l, i) => l === String.fromCharCode(65 + i))
+    if (!contiguous) confidence = Math.min(confidence, 0.5)
+
+    // (b) Se o enunciado (antes do colapso de espaços) ainda contém um marcador
+    //     de alternativa em início de linha (B./C)/D-), o corte stem×alternativas
+    //     provavelmente falhou — não confie no text-first.
+    if (/(?:^|\n)\s*[B-E][\s.)\-:]\s+\S/.test(stemRaw)) {
+      confidence = Math.min(confidence, 0.5)
+    }
+
     const fullText = `${stem} ${Object.values(alternatives).join(' ')}`
     const has_medical_image_hint =
       MEDICAL_IMAGE_PATTERNS.test(fullText) || STRONG_VISUAL_HINTS.test(fullText)

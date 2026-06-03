@@ -5,11 +5,32 @@ import { join } from 'path'
 
 const execFileAsync = promisify(execFile)
 const PDFTOPPM = process.env.PDFTOPPM_PATH ?? 'pdftoppm'
+const PDFINFO = process.env.PDFINFO_PATH ?? 'pdfinfo'
 
 export type RasterizedPage = {
   pageNumber: number
   jpegBase64: string
   jpegBuffer: Buffer
+}
+
+/**
+ * Conta as páginas do PDF via `pdfinfo` (poppler — já é dependência).
+ * Usado pela rasterização preguiçosa (P2-1) para conhecer o total sem
+ * rasterizar tudo. Retorna 0 se não conseguir determinar.
+ */
+export async function pdfPageCount(pdfBuffer: Buffer): Promise<number> {
+  const id = crypto.randomUUID()
+  const pdfPath = `/tmp/mm-info-${id}.pdf`
+  await writeFile(pdfPath, pdfBuffer)
+  try {
+    const { stdout } = await execFileAsync(PDFINFO, [pdfPath])
+    const m = stdout.match(/^Pages:\s+(\d+)/m)
+    return m ? parseInt(m[1], 10) : 0
+  } catch {
+    return 0
+  } finally {
+    await unlink(pdfPath).catch(() => {})
+  }
 }
 
 export async function rasterizePdf(

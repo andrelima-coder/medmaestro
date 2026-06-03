@@ -153,11 +153,19 @@ export async function extractFromImages({
   mediaType = 'image/jpeg',
   prompt,
   system,
+  cacheSystem = false,
 }: {
   imageBase64s: string[]
   mediaType?: 'image/jpeg' | 'image/png'
   prompt: string
   system?: string
+  /**
+   * Quando true e `system` é fornecido, marca o system prompt com cache_control
+   * efêmero. Use para o prompt ESTÁTICO da banca, que se repete em todas as
+   * chamadas de extração/recovery/reextract do mesmo exame — gera cache hits
+   * (input a 0,1x). O conteúdo dinâmico deve ir em `prompt` (user). Ver P1-1.
+   */
+  cacheSystem?: boolean
 }): Promise<ClaudeResult> {
   if (imageBase64s.length > MAX_IMAGES_PER_CALL) {
     throw new Error(`Máximo ${MAX_IMAGES_PER_CALL} imagens por chamada (recebido ${imageBase64s.length})`)
@@ -167,7 +175,11 @@ export async function extractFromImages({
     client.messages.create({
       model: MODELS.sonnet,
       max_tokens: 8192,
-      ...(system && { system }),
+      ...(system && {
+        system: cacheSystem
+          ? ([{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] as Anthropic.TextBlockParam[])
+          : system,
+      }),
       messages: [
         {
           role: 'user',

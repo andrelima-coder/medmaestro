@@ -8,10 +8,16 @@ import {
   recordUsage,
 } from '@/lib/ai/claude'
 import { uploadFile } from '@/lib/storage/signed-urls'
-import { rasterizePdf } from '@/lib/pdf/rasterize'
+import { rasterizePdf, pdfPageCount, type RasterizedPage } from '@/lib/pdf/rasterize'
 import { cropPageByBbox } from '@/lib/pdf/crop'
+import {
+  extractEmbeddedImages,
+  pickEmbeddedMatch,
+  type EmbeddedByPage,
+} from '@/lib/pdf/embedded-images'
 import { extractTextFirst } from './text-first'
 import { detectarBanca, getBancaPorId } from '../bancas/registry'
+import { validateAnswerKeys } from '../gabarito/run'
 import type { BancaParser } from './types'
 
 const TEXT_FIRST_MIN_CONFIDENCE = 0.7
@@ -93,13 +99,27 @@ async function classifyQuestion(questionId: string): Promise<void> {
 
   const { data: question, error: qErr } = await supabase
     .from('questions')
-    .select('id, stem, alternatives')
+    .select('id, stem, alternatives, has_images')
     .eq('id', questionId)
     .single()
 
   if (qErr || !question) return
 
   const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+
+  // P1-2: contexto de imagem melhora tags como tipo_questao=interpretacao_imagem
+  // e recurso_visual. Custo marginal ~zero (texto curto).
+  let imageContext = 'Sem figura.'
+  if (question.has_images) {
+    const { data: imgs } = await supabase
+      .from('question_images')
+      .select('image_type, image_scope')
+      .eq('question_id', questionId)
+    const types = Array.from(new Set((imgs ?? []).map((i) => i.image_type as string).filter(Boolean)))
+    imageContext = types.length
+      ? `Contém figura(s) médica(s): ${types.join(', ')}.`
+      : 'Contém figura médica (tipo não especificado).'
+  }
 
   const { data: tags } = await supabase
     .from('tags')
@@ -130,7 +150,9 @@ A) ${alternatives['A'] ?? ''}
 B) ${alternatives['B'] ?? ''}
 C) ${alternatives['C'] ?? ''}
 D) ${alternatives['D'] ?? ''}
-E) ${alternatives['E'] ?? ''}`
+E) ${alternatives['E'] ?? ''}
+
+Recursos visuais: ${imageContext}`
 
   let result: { tags: string[] }
   try {
@@ -265,15 +287,22 @@ type PersistImagesArgs = {
   specialtySlug: string
   examMeta: { year: number; booklet_color: string | null }
   banca: BancaParser
+  // P0-1: figuras embutidas (resolução original) por nº de página do PDF.
+  // Quando presentes e correspondentes, têm prioridade sobre o recorte raster.
+  embeddedByPage?: EmbeddedByPage
 }
 
 async function persistQuestionImages(
   args: PersistImagesArgs
 ): Promise<'ok' | 'noop' | 'error'> {
-  const { exam_id, questionId, questionNumber, question, batch, specialtySlug, examMeta, banca } =
+  const { exam_id, questionId, questionNumber, question, batch, specialtySlug, examMeta, banca, embeddedByPage } =
     args
 
   if (!question.has_images) return 'noop'
+
+  // Controla quais figuras embutidas já foram atribuídas a um scope desta questão,
+  // por página, para não reusar a mesma imagem em duas alternativas.
+  const usedEmbeddedByPage = new Map<number, Set<number>>()
 
   const items = (question.images?.length ?? 0) > 0
     ? (question.images as ExtractedImage[])
@@ -326,19 +355,63 @@ async function persistQuestionImages(
     }
 
     let croppedPath: string | null = null
-    let bboxPxJson: Record<string, number> | null = null
+    let bboxPxJson: Record<string, number | string> | null = null
     const hasBbox =
       Array.isArray(item.bbox_pct) &&
       item.bbox_pct.length === 4 &&
       // Aceita só se NÃO é o fallback "página inteira" (que vem do legado).
       !(item.bbox_pct[0] === 0 && item.bbox_pct[1] === 0 && item.bbox_pct[2] === 100 && item.bbox_pct[3] === 100)
 
-    if (hasBbox) {
+    // ── P0-1: tentar a figura EMBUTIDA original (resolução cheia) ───────────
+    const embCandidates = embeddedByPage?.get(page.pageNumber)
+    if (embCandidates && embCandidates.length > 0) {
+      let used = usedEmbeddedByPage.get(page.pageNumber)
+      if (!used) {
+        used = new Set<number>()
+        usedEmbeddedByPage.set(page.pageNumber, used)
+      }
+      const matchIdx = pickEmbeddedMatch(
+        embCandidates,
+        Array.isArray(item.bbox_pct) && item.bbox_pct.length === 4 ? item.bbox_pct : undefined,
+        used
+      )
+      if (matchIdx >= 0) {
+        const emb = embCandidates[matchIdx]
+        const ext = emb.mime === 'image/png' ? 'png' : 'jpg'
+        const embPath = `${baseDir}/${scope}_p${page.pageNumber}_emb.${ext}`
+        try {
+          await uploadFile('question-images', embPath, emb.buffer, emb.mime)
+          used.add(matchIdx)
+          croppedPath = embPath
+          bboxPxJson = {
+            x: Number(emb.bbox_pct[0].toFixed(2)),
+            y: Number(emb.bbox_pct[1].toFixed(2)),
+            w: Number(emb.bbox_pct[2].toFixed(2)),
+            h: Number(emb.bbox_pct[3].toFixed(2)),
+            unit: 'pct',
+            source: 'embedded',
+            px_w: emb.width,
+            px_h: emb.height,
+          }
+        } catch (err) {
+          console.warn(
+            `[extract ${exam_id}] Q${questionNumber} ${scope}: upload embutida falhou (${
+              err instanceof Error ? err.message : String(err)
+            }) — tentando recorte raster`
+          )
+          croppedPath = null
+          bboxPxJson = null
+        }
+      }
+    }
+
+    // ── Fallback: recorte por bbox sobre a página rasterizada (150 DPI) ─────
+    if (!croppedPath && hasBbox) {
       try {
         const crop = await cropPageByBbox(page.jpegBuffer, item.bbox_pct)
         croppedPath = `${baseDir}/${scope}_p${page.pageNumber}.jpg`
         await uploadFile('question-images', croppedPath, crop.buffer, 'image/jpeg')
-        bboxPxJson = crop.bbox_px
+        bboxPxJson = { ...crop.bbox_px, source: 'raster_crop' }
       } catch (err) {
         console.warn(
           `[extract ${exam_id}] Q${questionNumber} ${scope}: crop falhou (${
@@ -386,10 +459,12 @@ async function persistQuestionImages(
 
 async function recoverMissingQuestions(
   exam_id: string,
-  pages: Awaited<ReturnType<typeof rasterizePdf>>,
+  totalPages: number,
+  getPage: (n: number) => Promise<RasterizedPage | null>,
   specialtySlug: string,
   exam: { year: number; booklet_color: string | null },
-  banca: BancaParser
+  banca: BancaParser,
+  embeddedByPage?: EmbeddedByPage
 ): Promise<void> {
   const supabase = createServiceClient()
 
@@ -414,12 +489,12 @@ async function recoverMissingQuestions(
   await setProgress(
     exam_id,
     'extracting',
-    pages.length,
-    pages.length,
+    totalPages,
+    totalPages,
     `Recuperando questões faltantes (${missing.join(', ')})`
   )
 
-  const qPerPage = max / pages.length
+  const qPerPage = max / totalPages
 
   const groups: number[][] = []
   for (const q of missing) {
@@ -432,14 +507,18 @@ async function recoverMissingQuestions(
     const startQ = group[0]
     const endQ = group[group.length - 1]
     const centerPage = Math.round((startQ + endQ) / 2 / qPerPage)
-    const startIdx = Math.max(0, centerPage - 2)
-    const targetPages = pages.slice(startIdx, startIdx + MAX_IMAGES_PER_CALL)
+    // P2-1: rasteriza sob demanda as páginas-alvo (nº 1-based), em vez de
+    // fatiar um array com todas as páginas já rasterizadas.
+    const startPage = Math.max(1, centerPage - 1)
+    const targetPages: RasterizedPage[] = []
+    for (let n = startPage; n < startPage + MAX_IMAGES_PER_CALL && n <= totalPages; n++) {
+      const pg = await getPage(n)
+      if (pg) targetPages.push(pg)
+    }
     if (targetPages.length === 0) continue
 
     const pageRange = `${targetPages[0].pageNumber}–${targetPages[targetPages.length - 1].pageNumber}`
-    const prompt = `${banca.promptVision()}
-
-CONTEXTO ADICIONAL: estas páginas podem conter questões que cruzam fronteira de página. EXTRAIA APENAS as questões com número ∈ {${group.join(', ')}}.
+    const prompt = `CONTEXTO ADICIONAL: estas páginas podem conter questões que cruzam fronteira de página. EXTRAIA APENAS as questões com número ∈ {${group.join(', ')}}.
 
 Estas questões podem ter enunciado em uma página e alternativas (ou imagens grandes como ECG, gráficos, tabelas) em outra. SEMPRE marque is_complete=true mesmo se faltar uma alternativa — preencha a alternativa ausente com "" (string vazia).
 
@@ -451,6 +530,8 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
     try {
       const raw = await extractFromImages({
         imageBase64s: targetPages.map((p) => p.jpegBase64),
+        system: banca.promptVision(),
+        cacheSystem: true,
         prompt,
       })
       await recordUsage(raw.model, raw.usage, { operation: 'extract_recovery', exam_id })
@@ -502,6 +583,7 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
         specialtySlug,
         examMeta: exam,
         banca,
+        embeddedByPage,
       })
     }
   }
@@ -560,6 +642,58 @@ async function runComments(exam_id: string, mode: string): Promise<void> {
   }
 }
 
+/**
+ * P2-2: telemetria de fechamento — distribuição por método de extração
+ * (text/vision/recovery) e origem das figuras (embutida vs recorte raster).
+ * Fecha o ciclo com o golden set: dá visibilidade do que veio de onde e do
+ * quanto a extração direta de imagem (P0-1) está cobrindo.
+ */
+async function buildExtractionTelemetry(exam_id: string): Promise<string> {
+  const supabase = createServiceClient()
+
+  const { data: qs } = await supabase
+    .from('questions')
+    .select('id, extraction_method')
+    .eq('exam_id', exam_id)
+
+  const byMethod: Record<string, number> = {}
+  for (const q of qs ?? []) {
+    const m = (q.extraction_method as string | null) ?? 'desconhecido'
+    byMethod[m] = (byMethod[m] ?? 0) + 1
+  }
+
+  let embedded = 0
+  let raster = 0
+  let other = 0
+  try {
+    const ids = (qs ?? []).map((q) => q.id as string)
+    if (ids.length > 0) {
+      const { data: imgs } = await supabase
+        .from('question_images')
+        .select('bounding_box')
+        .in('question_id', ids)
+      for (const im of imgs ?? []) {
+        const src = (im.bounding_box as Record<string, unknown> | null)?.source
+        if (src === 'embedded') embedded++
+        else if (src === 'raster_crop') raster++
+        else other++
+      }
+    }
+  } catch {
+    // telemetria não bloqueia
+  }
+
+  const methodStr =
+    Object.entries(byMethod)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, v]) => `${k}:${v}`)
+      .join(' ') || 'nenhum'
+  const imgStr = `embutidas:${embedded} recorte_raster:${raster}${other ? ` outras:${other}` : ''}`
+
+  console.log(`[extract ${exam_id}] Telemetria — métodos {${methodStr}} | figuras {${imgStr}}`)
+  return `Métodos {${methodStr}} · Figuras {${imgStr}}`
+}
+
 export async function runExtractionPipeline(exam_id: string): Promise<void> {
   const supabase = createServiceClient()
 
@@ -596,23 +730,63 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
 
   const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
 
-  await setProgress(exam_id, 'rasterizing', 0, 1, 'Convertendo PDF em imagens')
+  await setProgress(exam_id, 'rasterizing', 0, 1, 'Lendo páginas do PDF')
 
-  let pages: Awaited<ReturnType<typeof rasterizePdf>>
-  try {
-    pages = await rasterizePdf(pdfBuffer)
-  } catch (err) {
-    const msg = `Falha ao rasterizar PDF: ${err instanceof Error ? err.message : String(err)}`
-    console.error(`[extract ${exam_id}] ${msg}`)
-    await setProgress(exam_id, 'error', 0, 0, msg)
+  // ── P2-1: rasterização PREGUIÇOSA ─────────────────────────────────────────
+  // Em vez de rasterizar o PDF inteiro de cara (custo de memória/tempo em provas
+  // longas), descobrimos o nº de páginas via pdfinfo e rasterizamos só as páginas
+  // que de fato precisam de imagem (Vision + figuras + recovery), com cache.
+  let totalPages = await pdfPageCount(pdfBuffer)
+  const rasterCache = new Map<number, RasterizedPage>()
+
+  const getPage = async (n: number): Promise<RasterizedPage | null> => {
+    if (n < 1) return null
+    const cached = rasterCache.get(n)
+    if (cached) return cached
+    let arr: RasterizedPage[]
+    try {
+      arr = await rasterizePdf(pdfBuffer, { firstPage: n, lastPage: n })
+    } catch {
+      return null
+    }
+    const pg = arr[0]
+    if (!pg) return null
+    const fixed: RasterizedPage = { ...pg, pageNumber: n } // garante o nº real da página
+    rasterCache.set(n, fixed)
+    return fixed
+  }
+
+  // Fallback: se o pdfinfo falhar, rasteriza tudo de uma vez (comportamento
+  // anterior) para descobrir o total e preencher o cache.
+  if (totalPages === 0) {
+    let allPages: RasterizedPage[]
+    try {
+      allPages = await rasterizePdf(pdfBuffer)
+    } catch (err) {
+      const msg = `Falha ao rasterizar PDF: ${err instanceof Error ? err.message : String(err)}`
+      console.error(`[extract ${exam_id}] ${msg}`)
+      await setProgress(exam_id, 'error', 0, 0, msg)
+      await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
+      return
+    }
+    for (const p of allPages) rasterCache.set(p.pageNumber, p)
+    totalPages = allPages.length
+  }
+
+  if (totalPages === 0) {
+    await setProgress(exam_id, 'error', 0, 0, 'PDF sem páginas extraíveis')
     await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
     return
   }
 
-  if (pages.length === 0) {
-    await setProgress(exam_id, 'error', 0, 0, 'PDF sem páginas extraíveis')
-    await supabase.from('exams').update({ status: 'error' }).eq('id', exam_id)
-    return
+  // ── P0-1: figuras embutidas em resolução original (best-effort) ───────────
+  // Falha graciosa: Map vazio → persistência cai no recorte raster por bbox.
+  const embeddedByPage = await extractEmbeddedImages(pdfBuffer).catch(() => undefined)
+  if (embeddedByPage) {
+    const totalEmb = Array.from(embeddedByPage.values()).reduce((n, a) => n + a.length, 0)
+    console.log(
+      `[extract ${exam_id}] Imagens embutidas: ${totalEmb} em ${embeddedByPage.size} páginas`
+    )
   }
 
   // ── Detecção de banca ────────────────────────────────────────────────────
@@ -650,14 +824,15 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     exam_id,
     'extracting',
     0,
-    pages.length,
+    totalPages,
     `Banca: ${banca.nome} (${bancaSource}). Tentando extração textual…`
   )
 
   textResultPromise = extractTextFirst(pdfBuffer, banca)
   const textResult = await textResultPromise.catch(() => null)
 
-  const pagesNeedingVision = new Set<number>(pages.map((p) => p.pageNumber))
+  const pagesNeedingVision = new Set<number>()
+  for (let n = 1; n <= totalPages; n++) pagesNeedingVision.add(n)
 
   if (textResult && textResult.hasNativeText && textResult.questions.length >= 5) {
     const isAcceptedByTextFirst = (q: typeof textResult.questions[number]): boolean => {
@@ -710,19 +885,25 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
       exam_id,
       'extracting',
       0,
-      pages.length,
+      totalPages,
       `Text-first: ${savedFromText} questões sem IA. Vision para o resto…`
     )
   }
 
-  const visionPages = pages.filter((p) => pagesNeedingVision.has(p.pageNumber))
+  // P2-1: rasteriza SÓ as páginas que ainda precisam de Vision (sob demanda).
+  const neededSorted = Array.from(pagesNeedingVision).sort((a, b) => a - b)
+  const visionPages: RasterizedPage[] = []
+  for (const n of neededSorted) {
+    const pg = await getPage(n)
+    if (pg) visionPages.push(pg)
+  }
 
   await setProgress(
     exam_id,
     'extracting',
     0,
     visionPages.length || 1,
-    `Extraindo com Vision (${visionPages.length}/${pages.length} páginas com imagens médicas)`
+    `Extraindo com Vision (${visionPages.length}/${totalPages} páginas com imagens médicas)`
   )
 
   let hasErrors = false
@@ -738,7 +919,10 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     try {
       const result = await extractFromImages({
         imageBase64s,
-        prompt: banca.promptVision(),
+        system: banca.promptVision(),
+        cacheSystem: true,
+        prompt:
+          'Processe as páginas anexadas seguindo exatamente as instruções do sistema. Retorne APENAS o array JSON.',
       })
       await recordUsage(result.model, result.usage, { operation: 'extract_vision', exam_id })
       rawClaude = result.text
@@ -807,6 +991,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
         specialtySlug,
         examMeta: { year: exam.year as number, booklet_color: exam.booklet_color as string | null },
         banca,
+        embeddedByPage,
       })
       if (persistedAny === 'error') hasErrors = true
     }
@@ -817,17 +1002,19 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
       'extracting',
       pagesProcessed,
       visionPages.length || 1,
-      `Vision: ${pagesProcessed}/${visionPages.length} páginas (${pages.length - visionPages.length} já extraídas via texto)`
+      `Vision: ${pagesProcessed}/${visionPages.length} páginas (${totalPages - visionPages.length} já extraídas via texto)`
     )
   }
 
   try {
     await recoverMissingQuestions(
       exam_id,
-      pages,
+      totalPages,
+      getPage,
       specialtySlug,
       { year: exam.year as number, booklet_color: exam.booklet_color as string | null },
-      banca
+      banca,
+      embeddedByPage
     )
   } catch (err) {
     console.error(
@@ -839,6 +1026,14 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     await supabase.rpc('sync_correct_answers', { p_exam_id: exam_id })
   } catch {
     // gabarito pode não ter sido enviado ainda
+  }
+
+  // P1-3: sinaliza gabaritos inconsistentes (letra ausente nas alternativas).
+  let answerMismatches: number[] = []
+  try {
+    answerMismatches = await validateAnswerKeys(exam_id)
+  } catch {
+    // não bloqueia o pipeline
   }
 
   await supabase.from('exams').update({ status: 'classifying' }).eq('id', exam_id)
@@ -856,11 +1051,18 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     .select('*', { count: 'exact', head: true })
     .eq('exam_id', exam_id)
 
-  const errorMsg = hasErrors
+  const telemetry = await buildExtractionTelemetry(exam_id).catch(() => '')
+  const mismatchNote =
+    answerMismatches.length > 0
+      ? ` ⚠ Gabarito inconsistente em Q${answerMismatches.join(', Q')} — revisar.`
+      : ''
+
+  const baseMsg = hasErrors
     ? lastErrorMessage
       ? `Concluído com erros parciais — último: ${lastErrorMessage} (${finalCount ?? 0} questões salvas)`
       : `Concluído com erros parciais (${finalCount ?? 0} questões salvas)`
     : `Pipeline concluído — ${finalCount ?? 0} questões`
+  const errorMsg = `${baseMsg}${mismatchNote}${telemetry ? ` | ${telemetry}` : ''}`
 
   await setProgress(exam_id, hasErrors ? 'error' : 'done', 1, 1, errorMsg)
 
@@ -950,14 +1152,18 @@ export async function reextractQuestionImages(
     return { ok: false, question_number: question.question_number as number, error: 'Nenhuma página rasterizada' }
   }
 
-  const prompt = `${banca.promptVision()}
+  const embeddedByPage = await extractEmbeddedImages(pdfBuffer, { firstPage, lastPage }).catch(
+    () => undefined
+  )
 
-EXTRAIA APENAS a questão de número ${question.question_number}. Ignore as outras. Retorne array com 1 elemento.`
+  const prompt = `EXTRAIA APENAS a questão de número ${question.question_number}. Ignore as outras. Retorne array com 1 elemento.`
 
   let extracted: ExtractedQuestion[]
   try {
     const raw = await extractFromImages({
       imageBase64s: pages.map((p) => p.jpegBase64),
+      system: banca.promptVision(),
+      cacheSystem: true,
       prompt,
     })
     await recordUsage(raw.model, raw.usage, {
@@ -990,6 +1196,7 @@ EXTRAIA APENAS a questão de número ${question.question_number}. Ignore as outr
     specialtySlug,
     examMeta: { year: examRaw.year, booklet_color: examRaw.booklet_color },
     banca,
+    embeddedByPage,
   })
 
   if (result === 'error') {
