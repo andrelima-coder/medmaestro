@@ -147,9 +147,15 @@ def main():
     q_with_imgs = 0
     missing_q = 0
     touched = []
+    alvo = sum(1 for e, m in attribution.items() if e in meta and m)
+    print(f"Processando {alvo} questões com imagem (pode levar 1-2 min)...", flush=True)
+    visto = 0
     for ext, medias in attribution.items():
         if ext not in meta or not medias:
             continue
+        visto += 1
+        if visto % 10 == 0:
+            print(f"  ... {visto}/{alvo} questões ({total_imgs} imagens enviadas)", flush=True)
         qid = id_map.get(ext)
         if not qid:
             missing_q += 1

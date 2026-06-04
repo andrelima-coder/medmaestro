@@ -415,3 +415,8 @@ textarea:focus-visible {
     @apply bg-background text-foreground;
   }
 }
+
+/* Tabelas extraídas via Docling (extracted_tables) */
+.mm-doc-table table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0; }
+.mm-doc-table th, .mm-doc-table td { border: 1px solid rgba(255,255,255,0.12); padding: 4px 8px; text-align: left; vertical-align: top; }
+.mm-doc-table th { background: rgba(255,255,255,0.05); font-weight: 600; }

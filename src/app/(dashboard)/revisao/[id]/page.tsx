@@ -10,6 +10,7 @@ import { CommentList } from '@/components/revisao/comment-list'
 import { ImageModal } from '@/components/questoes/image-modal'
 import { getQuestionComments } from '@/app/(dashboard)/questoes/[id]/comment-actions'
 import { getQuestionImages } from '@/app/(dashboard)/questoes/[id]/image-actions'
+import { sanitizeRichTextHtml } from '@/lib/utils/sanitize-html'
 import {
   Card,
   CardBody,
@@ -67,7 +68,7 @@ export default async function RevisaoItemPage({
       service
         .from('questions')
         .select(
-          'id, question_number, stem, stem_html, alternatives, alternatives_html, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
+          'id, question_number, stem, stem_html, extracted_tables, alternatives, alternatives_html, status, has_images, extraction_confidence, correct_answer, exam_id, exams(year, booklet_color, specialties(name, exam_boards(name)))'
         )
         .eq('id', id)
         .single(),
@@ -276,6 +277,18 @@ export default async function RevisaoItemPage({
                 hasUndoableEdit={hasUndoableRevision}
                 scopeImageUrls={scopeImageUrls}
               />
+
+              {/* Tabelas estruturadas (Docling) — somente leitura */}
+              {Array.isArray(question.extracted_tables) &&
+                (question.extracted_tables as Array<{ html?: string }>).map((t, i) =>
+                  t?.html ? (
+                    <div
+                      key={i}
+                      className="mm-doc-table overflow-x-auto rounded-lg border border-white/5 bg-white/2 p-2"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(t.html) }}
+                    />
+                  ) : null
+                )}
 
               {images.length > 0 && <ImageModal images={images} />}
 

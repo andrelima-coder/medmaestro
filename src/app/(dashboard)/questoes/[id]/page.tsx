@@ -8,6 +8,7 @@ import { ImageModal } from '@/components/questoes/image-modal'
 import { getQuestionComments } from './comment-actions'
 import { getQuestionImages } from './image-actions'
 import { STATUS_LABELS } from '@/types'
+import { sanitizeRichTextHtml } from '@/lib/utils/sanitize-html'
 import type { QuestionStatus } from '@/types'
 import { Card, CardBody, CardHeader, CardTitle, Badge, AltCard } from '@/components/ui'
 
@@ -48,7 +49,7 @@ export default async function QuestaoDetailPage({
   const { data: question } = await service
     .from('questions')
     .select(
-      'id, question_number, stem, alternatives, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
+      'id, question_number, stem, extracted_tables, alternatives, correct_answer, status, has_images, extraction_confidence, exam_id, exams!left(year, booklet_color, exam_boards(short_name, slug), specialties(name))'
     )
     .eq('id', id)
     .single()
@@ -163,6 +164,18 @@ export default async function QuestaoDetailPage({
               <p className="whitespace-pre-wrap text-[14px] leading-[1.8] text-foreground">
                 {question.stem ?? '(sem enunciado)'}
               </p>
+
+              {/* Tabelas estruturadas (Docling) */}
+              {Array.isArray(question.extracted_tables) &&
+                (question.extracted_tables as Array<{ html?: string }>).map((t, i) =>
+                  t?.html ? (
+                    <div
+                      key={i}
+                      className="mm-doc-table overflow-x-auto"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(t.html) }}
+                    />
+                  ) : null
+                )}
 
               {/* Alternativas */}
               {Object.keys(alternatives).length > 0 && (
