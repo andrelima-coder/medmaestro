@@ -26,7 +26,7 @@ export async function createSimuladoAction(
   const service = createServiceClient()
   const { data, error } = await service
     .from('simulados')
-    .insert({ title, created_by: user.id })
+    .insert({ title, created_by: user.id, filters_used: {}, total_questions: 0 })
     .select('id')
     .single()
 
