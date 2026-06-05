@@ -7,48 +7,94 @@ export const metadata = { title: 'Questões — MedMaestro' }
 
 const PAGE_SIZE = 20
 
+// Chaves de filtro suportadas na URL. Valores multivalorados são CSV (slug,slug).
 type SearchParams = {
+  banca?: string
   modulo?: string
   tema?: string
+  tipo?: string
+  recurso?: string
   dificuldade?: string
   year?: string
-  page?: string
+  status?: string
+  classificacao?: string
   q?: string
+  page?: string
 }
+
+const URL_KEYS: (keyof SearchParams)[] = [
+  'banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade',
+  'year', 'status', 'classificacao', 'q', 'page',
+]
 
 type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
 
+// Status reais do enum question_status (com rótulos PT-BR).
 const STATUS_CONFIG: Record<string, { label: string; tone: BadgeTone }> = {
-  extracted: { label: 'Extraída', tone: 'blue' },
-  reviewing: { label: 'Em revisão', tone: 'gold' },
+  pending_extraction: { label: 'Aguardando extração', tone: 'muted' },
+  pending_review: { label: 'Aguardando revisão', tone: 'gold' },
+  in_review: { label: 'Em revisão', tone: 'blue' },
+  pending_approval: { label: 'Aguardando aprovação', tone: 'gold' },
   approved: { label: 'Aprovada', tone: 'green' },
-  rejected: { label: 'Rejeitada', tone: 'red' },
   published: { label: 'Publicada', tone: 'green' },
-  flagged: { label: 'Sinalizada', tone: 'red' },
-  commented: { label: 'Comentada', tone: 'purple' },
-  draft: { label: 'Rascunho', tone: 'muted' },
+  rejected: { label: 'Rejeitada', tone: 'red' },
+  needs_attention: { label: 'Requer atenção', tone: 'orange' },
 }
 
+const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([slug, c]) => ({
+  slug,
+  label: c.label,
+}))
+
+const CLASSIFICACAO_OPTIONS = [
+  { slug: 'classificadas', label: 'Classificadas' },
+  { slug: 'nao', label: 'Não classificadas' },
+]
+
+/* ----------------------------- URL helpers ----------------------------- */
+
+function parseList(v?: string): string[] {
+  return (v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+}
+
+// Constrói uma URL aplicando overrides. '' remove a chave.
 function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): string {
-  const p = new URLSearchParams()
   const merged = { ...params, ...overrides }
-  if (merged.q) p.set('q', merged.q)
-  if (merged.modulo) p.set('modulo', merged.modulo)
-  if (merged.tema) p.set('tema', merged.tema)
-  if (merged.dificuldade) p.set('dificuldade', merged.dificuldade)
-  if (merged.year) p.set('year', merged.year)
-  if (merged.page) p.set('page', merged.page)
+  const p = new URLSearchParams()
+  for (const k of URL_KEYS) {
+    const val = merged[k]
+    if (val) p.set(k, val)
+  }
   return `/questoes${p.toString() ? '?' + p.toString() : ''}`
 }
 
-const filterChipBase =
+// Liga/desliga um slug numa chave CSV multivalorada (e volta pra página 1).
+function buildToggleUrl(
+  params: SearchParams,
+  key: keyof SearchParams,
+  slug: string
+): string {
+  const list = parseList(params[key])
+  const i = list.indexOf(slug)
+  if (i >= 0) list.splice(i, 1)
+  else list.push(slug)
+  return buildUrl(params, { [key]: list.join(','), page: '1' })
+}
+
+/* ------------------------------- styles -------------------------------- */
+
+const chipBase =
   'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] no-underline transition-colors'
-const filterChipIdle =
+const chipIdle =
   'border-[var(--mm-border-default)] text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)]'
-const filterChipMuted =
+const chipMuted =
   'border-[var(--mm-border-default)] text-[var(--mm-muted)] hover:border-[var(--mm-border-hover)]'
-const filterChipActive =
+const chipActive =
   'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] text-[var(--mm-gold)]'
+
+/* -------------------------------- page --------------------------------- */
+
+type TagOption = { slug: string; label: string; color?: string | null }
 
 export default async function QuestoesPage({
   searchParams,
@@ -56,108 +102,102 @@ export default async function QuestoesPage({
   searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams
-  const moduloFilter = params.modulo ?? ''
-  const temaFilter = params.tema ?? ''
-  const dificuldadeFilter = params.dificuldade ?? ''
-  const yearFilter = params.year ? parseInt(params.year) : null
   const qFilter = params.q?.trim() ?? ''
-  const page = Math.max(1, parseInt(params.page ?? '1'))
+  const page = Math.max(1, parseInt(params.page ?? '1') || 1)
   const offset = (page - 1) * PAGE_SIZE
 
   const service = createServiceClient()
 
-  const [modulosRes, temasRes, dificuldadesRes, yearsRes] = await Promise.all([
-    service
-      .from('tags')
-      .select('id, label, color')
-      .eq('dimension', 'modulo')
-      .order('display_order'),
-    service
-      .from('tags')
-      .select('id, label')
-      .eq('dimension', 'topico_edital')
-      .order('label'),
-    service
-      .from('tags')
-      .select('id, label')
-      .eq('dimension', 'dificuldade')
-      .order('display_order'),
-    service.from('exams').select('year').order('year', { ascending: false }),
-  ])
+  // Opções dos filtros (apenas dimensões com tags aparecem).
+  const [modRes, temaRes, tipoRes, recRes, difRes, boardRes, yearRes] =
+    await Promise.all([
+      service.from('tags').select('slug, label, color').eq('dimension', 'modulo').order('display_order'),
+      service.from('tags').select('slug, label, color').eq('dimension', 'topico_edital').is('parent_tag_id', null).order('display_order'),
+      service.from('tags').select('slug, label, color').eq('dimension', 'tipo_questao').order('display_order'),
+      service.from('tags').select('slug, label, color').eq('dimension', 'recurso_visual').order('display_order'),
+      service.from('tags').select('slug, label, color').eq('dimension', 'dificuldade').order('display_order'),
+      service.from('exam_boards').select('slug, short_name').order('short_name'),
+      service.from('exams').select('year').order('year', { ascending: false }),
+    ])
 
-  const modulos = modulosRes.data ?? []
-  const temas = temasRes.data ?? []
-  const dificuldades = dificuldadesRes.data ?? []
-  const years = [...new Set((yearsRes.data ?? []).map((e) => e.year as number))]
+  const modulos = (modRes.data ?? []) as TagOption[]
+  const temas = (temaRes.data ?? []) as TagOption[]
+  const tipos = (tipoRes.data ?? []) as TagOption[]
+  const recursos = (recRes.data ?? []) as TagOption[]
+  const dificuldades = (difRes.data ?? []) as TagOption[]
+  const bancas = ((boardRes.data ?? []) as { slug: string; short_name: string }[]).map(
+    (b) => ({ slug: b.slug, label: b.short_name })
+  )
+  const years = [...new Set((yearRes.data ?? []).map((e) => e.year as number))]
 
-  let questionIdFilter: string[] | null = null
+  // Busca filtrada via RPC (filtragem + paginação no banco).
+  const { data: rpcData } = await service.rpc('search_questions', {
+    p_modulo: parseList(params.modulo),
+    p_tema: parseList(params.tema),
+    p_tipo: parseList(params.tipo),
+    p_recurso: parseList(params.recurso),
+    p_dificuldade: parseList(params.dificuldade),
+    p_banca: parseList(params.banca),
+    p_year: parseList(params.year).map(Number).filter((n) => !Number.isNaN(n)),
+    p_status: parseList(params.status),
+    p_classificacao: params.classificacao || null,
+    p_search: qFilter || null,
+    p_limit: PAGE_SIZE,
+    p_offset: offset,
+  })
 
-  const tagFilters: { dimension: string; label: string }[] = []
-  if (moduloFilter) tagFilters.push({ dimension: 'modulo', label: moduloFilter })
-  if (temaFilter) tagFilters.push({ dimension: 'topico_edital', label: temaFilter })
-  if (dificuldadeFilter)
-    tagFilters.push({ dimension: 'dificuldade', label: dificuldadeFilter })
-
-  if (tagFilters.length > 0) {
-    const sets: Set<string>[] = []
-    for (const tf of tagFilters) {
-      const { data: tagRow } = await service
-        .from('tags')
-        .select('id')
-        .eq('dimension', tf.dimension)
-        .eq('label', tf.label)
-        .limit(1)
-        .maybeSingle()
-      if (tagRow?.id) {
-        const { data: qtRows } = await service
-          .from('question_tags')
-          .select('question_id')
-          .eq('tag_id', tagRow.id)
-        sets.push(new Set((qtRows ?? []).map((r) => r.question_id as string)))
-      } else {
-        sets.push(new Set())
-      }
-    }
-    let intersection = sets[0] ?? new Set<string>()
-    for (let i = 1; i < sets.length; i++) {
-      intersection = new Set([...intersection].filter((id) => sets[i].has(id)))
-    }
-    questionIdFilter = [...intersection]
+  type QuestionRow = {
+    id: string
+    question_number: number
+    stem: string
+    stem_len: number
+    status: string
+    has_images: boolean
+    correct_answer: string | null
+    year: number
+    board: string | null
+    tags: { label: string; dimension: string; color: string | null }[]
   }
 
-  let query = service
-    .from('questions')
-    .select(
-      `id, question_number, stem, status, has_images, extraction_confidence, correct_answer,
-       exams!inner(id, year, booklet_color, exam_boards(short_name), specialties(name)),
-       question_tags!left(tags!inner(label, dimension, color))`,
-      { count: 'exact' }
-    )
-    .order('question_number', { ascending: true })
-
-  if (yearFilter) query = query.eq('exams.year', yearFilter)
-  if (qFilter) query = query.ilike('stem', `%${qFilter}%`)
-
-  if (questionIdFilter !== null) {
-    if (questionIdFilter.length === 0) {
-      return <EmptyState total={0} />
-    }
-    query = query.in('id', questionIdFilter)
+  const result = (rpcData?.[0] ?? { total: 0, rows: [] }) as {
+    total: number
+    rows: QuestionRow[]
   }
-
-  const { data: questions, count } = await query.range(offset, offset + PAGE_SIZE - 1)
-
-  const total = count ?? 0
+  const total = Number(result.total) || 0
+  const rows = result.rows ?? []
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  const activeFilters: { label: string; removeKey: string }[] = []
-  if (qFilter) activeFilters.push({ label: `"${qFilter}"`, removeKey: 'q' })
-  if (moduloFilter)
-    activeFilters.push({ label: `Módulo: ${moduloFilter}`, removeKey: 'modulo' })
-  if (temaFilter) activeFilters.push({ label: `Tema: ${temaFilter}`, removeKey: 'tema' })
-  if (dificuldadeFilter)
-    activeFilters.push({ label: `Dificuldade: ${dificuldadeFilter}`, removeKey: 'dificuldade' })
-  if (yearFilter) activeFilters.push({ label: `Ano: ${yearFilter}`, removeKey: 'year' })
+  // Mapa slug→label para exibir os chips de filtros ativos.
+  const labelMaps: Record<string, Record<string, string>> = {
+    banca: Object.fromEntries(bancas.map((b) => [b.slug, b.label])),
+    modulo: Object.fromEntries(modulos.map((m) => [m.slug, m.label])),
+    tema: Object.fromEntries(temas.map((t) => [t.slug, t.label])),
+    tipo: Object.fromEntries(tipos.map((t) => [t.slug, t.label])),
+    recurso: Object.fromEntries(recursos.map((r) => [r.slug, r.label])),
+    dificuldade: Object.fromEntries(dificuldades.map((d) => [d.slug, d.label])),
+    status: Object.fromEntries(STATUS_OPTIONS.map((s) => [s.slug, s.label])),
+    classificacao: Object.fromEntries(CLASSIFICACAO_OPTIONS.map((c) => [c.slug, c.label])),
+  }
+  const dimPrefix: Record<string, string> = {
+    banca: 'Banca', modulo: 'Módulo', tema: 'Tema', tipo: 'Tipo',
+    recurso: 'Imagem', dificuldade: 'Dificuldade', year: 'Ano',
+    status: 'Status', classificacao: '',
+  }
+
+  // Chips de filtros ativos (cada slug é removível).
+  const activeChips: { key: keyof SearchParams; slug: string; label: string }[] = []
+  if (qFilter) activeChips.push({ key: 'q', slug: qFilter, label: `"${qFilter}"` })
+  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status'] as const) {
+    for (const slug of parseList(params[key])) {
+      const lbl = labelMaps[key]?.[slug] ?? slug
+      activeChips.push({ key, slug, label: `${dimPrefix[key]}: ${lbl}` })
+    }
+  }
+  if (params.classificacao) {
+    const lbl = labelMaps.classificacao[params.classificacao] ?? params.classificacao
+    activeChips.push({ key: 'classificacao', slug: params.classificacao, label: lbl })
+  }
+  const hasActive = activeChips.length > 0
 
   return (
     <div className="flex flex-col gap-6">
@@ -167,131 +207,69 @@ export default async function QuestoesPage({
           Banco de Questões
         </h1>
         <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
-          {total.toLocaleString('pt-BR')} questões no banco
-          {qFilter || moduloFilter || temaFilter || dificuldadeFilter || yearFilter
-            ? ' · resultados filtrados'
-            : ''}
+          {total.toLocaleString('pt-BR')} questões{hasActive ? ' · resultados filtrados' : ' no banco'}
         </p>
       </div>
 
       {/* Card de filtros */}
       <Card>
         <CardBody>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {/* Módulo */}
-            <FilterColumn label="Módulo">
-              <Link
-                href={buildUrl(params, { modulo: '', page: '1' })}
-                className={cn(filterChipBase, !moduloFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todos
-              </Link>
-              {modulos.slice(0, 5).map((m) => {
-                const active = moduloFilter === m.label
-                return (
-                  <Link
-                    key={m.id as string}
-                    href={buildUrl(params, { modulo: m.label as string, page: '1' })}
-                    className={cn(filterChipBase, active ? filterChipActive : filterChipIdle)}
-                  >
-                    <span
-                      className="inline-block size-2 rounded-sm flex-shrink-0"
-                      style={{ background: (m.color as string | null) ?? '#5A6880' }}
-                    />
-                    <span className="truncate">{m.label as string}</span>
-                  </Link>
-                )
-              })}
-            </FilterColumn>
-
-            {/* Tema */}
-            <FilterColumn label="Tema">
-              <Link
-                href={buildUrl(params, { tema: '', page: '1' })}
-                className={cn(filterChipBase, !temaFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todos
-              </Link>
-              {temas.slice(0, 5).map((t) => (
-                <Link
-                  key={t.id as string}
-                  href={buildUrl(params, { tema: t.label as string, page: '1' })}
-                  className={cn(
-                    filterChipBase,
-                    'truncate',
-                    temaFilter === t.label ? filterChipActive : filterChipIdle
-                  )}
-                >
-                  {t.label as string}
-                </Link>
-              ))}
-            </FilterColumn>
-
-            {/* Dificuldade */}
-            <FilterColumn label="Dificuldade">
-              <Link
-                href={buildUrl(params, { dificuldade: '', page: '1' })}
-                className={cn(filterChipBase, !dificuldadeFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todas
-              </Link>
-              {dificuldades.map((d) => (
-                <Link
-                  key={d.id as string}
-                  href={buildUrl(params, { dificuldade: d.label as string, page: '1' })}
-                  className={cn(
-                    filterChipBase,
-                    dificuldadeFilter === d.label ? filterChipActive : filterChipIdle
-                  )}
-                >
-                  {d.label as string}
-                </Link>
-              ))}
-            </FilterColumn>
-
-            {/* Ano */}
-            <FilterColumn label="Ano">
-              <Link
-                href={buildUrl(params, { year: '', page: '1' })}
-                className={cn(filterChipBase, !yearFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todos
-              </Link>
-              {years.map((y) => (
-                <Link
-                  key={y}
-                  href={buildUrl(params, { year: String(y), page: '1' })}
-                  className={cn(
-                    filterChipBase,
-                    yearFilter === y ? filterChipActive : filterChipIdle
-                  )}
-                >
-                  {y}
-                </Link>
-              ))}
-            </FilterColumn>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-3 lg:grid-cols-4">
+            <MultiFilter label="Banca" urlKey="banca" options={bancas} params={params} allLabel="Todas" />
+            <MultiFilter label="Módulo" urlKey="modulo" options={modulos} params={params} allLabel="Todos" colored />
+            {temas.length > 0 && (
+              <MultiFilter label="Tema (edital)" urlKey="tema" options={temas} params={params} allLabel="Todos" colored />
+            )}
+            <MultiFilter label="Tipo de questão" urlKey="tipo" options={tipos} params={params} allLabel="Todos" />
+            <MultiFilter label="Imagem / Recurso" urlKey="recurso" options={recursos} params={params} allLabel="Todas" />
+            <MultiFilter label="Dificuldade" urlKey="dificuldade" options={dificuldades} params={params} allLabel="Todas" />
+            <MultiFilter
+              label="Ano"
+              urlKey="year"
+              options={years.map((y) => ({ slug: String(y), label: String(y) }))}
+              params={params}
+              allLabel="Todos"
+            />
+            <MultiFilter label="Status" urlKey="status" options={STATUS_OPTIONS} params={params} allLabel="Todos" />
+            <SingleFilter
+              label="Classificação"
+              urlKey="classificacao"
+              options={CLASSIFICACAO_OPTIONS}
+              params={params}
+              allLabel="Todas"
+            />
           </div>
         </CardBody>
       </Card>
 
-      {/* Filtros ativos + ações */}
+      {/* Resumo + filtros ativos + ações */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-[family-name:var(--font-syne)] text-sm font-bold text-foreground">
             {total.toLocaleString('pt-BR')} questões encontradas
           </span>
-          {activeFilters.map((f) => (
+          {activeChips.map((c) => (
             <Link
-              key={f.removeKey}
-              href={buildUrl(params, { [f.removeKey]: '', page: '1' })}
+              key={`${c.key}:${c.slug}`}
+              href={
+                c.key === 'q' || c.key === 'classificacao'
+                  ? buildUrl(params, { [c.key]: '', page: '1' })
+                  : buildToggleUrl(params, c.key, c.slug)
+              }
               className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] px-2.5 py-0.5 text-[11px] text-[var(--mm-gold)] no-underline transition-opacity hover:opacity-80"
             >
-              {f.label}
-              <span aria-hidden className="opacity-70">
-                ×
-              </span>
+              {c.label}
+              <span aria-hidden className="opacity-70">×</span>
             </Link>
           ))}
+          {hasActive && (
+            <Link
+              href="/questoes"
+              className="text-[11px] text-[var(--mm-muted)] no-underline hover:text-foreground hover:underline"
+            >
+              Limpar tudo
+            </Link>
+          )}
         </div>
         <div className="flex gap-2">
           <button
@@ -304,10 +282,8 @@ export default async function QuestoesPage({
             disabled
             className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] opacity-60"
             style={{
-              background:
-                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-              boxShadow:
-                '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+              boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}
           >
             Gerar simulado
@@ -319,93 +295,64 @@ export default async function QuestoesPage({
       {total === 0 ? (
         <Card>
           <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
-            Nenhuma questão encontrada com os filtros aplicados.
+            Nenhuma questão encontrada com os filtros aplicados.{' '}
+            {hasActive && (
+              <Link href="/questoes" className="text-[var(--mm-gold)] no-underline hover:underline">
+                Limpar filtros →
+              </Link>
+            )}
           </CardBody>
         </Card>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {(questions ?? []).map((q) => {
-            const exam = q.exams as unknown as {
-              id: string
-              year: number
-              booklet_color: string | null
-              exam_boards: { short_name: string } | null
-              specialties: { name: string } | null
-            } | null
-
-            const tags =
-              (q.question_tags as unknown as
-                | { tags: { label: string; dimension: string; color: string | null } }[]
-                | null) ?? []
-
-            const dificuldadeTag = tags.find((qt) => qt.tags?.dimension === 'dificuldade')?.tags
-            const tipoTag = tags.find((qt) => qt.tags?.dimension === 'tipo_questao')?.tags
-            const allVisibleTags = tags.filter((qt) => qt.tags).slice(0, 5)
-
-            const statusKey = (q.status as string) ?? 'extracted'
-            const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.extracted
-            const stemFull = (q.stem as string | null) ?? ''
-            const stem = stemFull.slice(0, 120)
+          {rows.map((q) => {
+            const tags = q.tags ?? []
+            const dificuldadeTag = tags.find((t) => t.dimension === 'dificuldade')
+            const tipoTag = tags.find((t) => t.dimension === 'tipo_questao')
+            const visibleTags = tags.slice(0, 5)
+            const sc = STATUS_CONFIG[q.status] ?? { label: q.status, tone: 'muted' as BadgeTone }
 
             return (
-              <Card key={q.id as string}>
+              <Card key={q.id}>
                 <CardBody className="p-4">
-                  {/* Topo */}
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">
-                      QUESTÃO {q.question_number as number}
-                      {exam ? ` · ${exam.exam_boards?.short_name ?? 'TEMI'} ${exam.year}` : ''}
+                      QUESTÃO {q.question_number}
+                      {` · ${q.board ?? 'TEMI'} ${q.year}`}
                     </span>
                     <Badge tone={sc.tone}>{sc.label}</Badge>
                   </div>
 
-                  {/* Tags chips */}
-                  {allVisibleTags.length > 0 && (
+                  {visibleTags.length > 0 && (
                     <div className="mb-2 flex flex-wrap gap-1.5">
-                      {allVisibleTags.map((qt, i) => (
-                        <TagChip
-                          key={i}
-                          style={
-                            qt.tags.color
-                              ? { background: `${qt.tags.color}15` }
-                              : undefined
-                          }
-                        >
-                          {qt.tags.label}
+                      {visibleTags.map((t, i) => (
+                        <TagChip key={i} style={t.color ? { background: `${t.color}15` } : undefined}>
+                          {t.label}
                         </TagChip>
                       ))}
                     </div>
                   )}
 
-                  {/* Enunciado */}
                   <p className="mb-2.5 text-[13px] leading-[1.6] text-[var(--mm-text2)]">
-                    {stem || '(sem enunciado)'}
-                    {stemFull.length > 120 ? '…' : ''}
+                    {q.stem || '(sem enunciado)'}
+                    {q.stem_len > 160 ? '…' : ''}
                   </p>
 
-                  {/* Rodapé */}
                   <div className="flex items-center justify-between">
                     <div className="flex flex-wrap gap-3 text-[11px] text-[var(--mm-muted)]">
                       {q.correct_answer && (
                         <span>
                           Gabarito:{' '}
-                          <strong className="text-[var(--mm-green)]">
-                            {q.correct_answer as string}
-                          </strong>
+                          <strong className="text-[var(--mm-green)]">{q.correct_answer}</strong>
                         </span>
                       )}
                       {dificuldadeTag && (
-                        <span>
-                          Dif.:{' '}
-                          <span className="text-[var(--mm-text2)]">{dificuldadeTag.label}</span>
-                        </span>
+                        <span>Dif.: <span className="text-[var(--mm-text2)]">{dificuldadeTag.label}</span></span>
                       )}
                       {tipoTag && (
-                        <span>
-                          Tipo:{' '}
-                          <span className="text-[var(--mm-text2)]">{tipoTag.label}</span>
-                        </span>
+                        <span>Tipo: <span className="text-[var(--mm-text2)]">{tipoTag.label}</span></span>
                       )}
+                      {q.has_images && <span className="text-[var(--mm-text2)]">Com imagem</span>}
                     </div>
                     <Link
                       href={`/questoes/${q.id}`}
@@ -425,7 +372,7 @@ export default async function QuestoesPage({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--mm-muted)]">
-            Página {page} de {totalPages} · {total} questões
+            Página {page} de {totalPages} · {total.toLocaleString('pt-BR')} questões
           </span>
           <div className="flex gap-2">
             {page > 1 && (
@@ -451,45 +398,97 @@ export default async function QuestoesPage({
   )
 }
 
-function FilterColumn({
+/* ----------------------------- components ------------------------------ */
+
+function MultiFilter({
   label,
-  children,
+  urlKey,
+  options,
+  params,
+  allLabel,
+  colored = false,
 }: {
   label: string
-  children: React.ReactNode
+  urlKey: keyof SearchParams
+  options: TagOption[]
+  params: SearchParams
+  allLabel: string
+  colored?: boolean
 }) {
+  const selected = parseList(params[urlKey])
+  return (
+    <FilterColumn label={label}>
+      <Link
+        href={buildUrl(params, { [urlKey]: '', page: '1' })}
+        className={cn(chipBase, selected.length === 0 ? chipActive : chipMuted)}
+      >
+        {allLabel}
+      </Link>
+      {options.map((o) => {
+        const active = selected.includes(o.slug)
+        return (
+          <Link
+            key={o.slug}
+            href={buildToggleUrl(params, urlKey, o.slug)}
+            className={cn(chipBase, active ? chipActive : chipIdle)}
+          >
+            {colored && (
+              <span
+                className="inline-block size-2 flex-shrink-0 rounded-sm"
+                style={{ background: o.color ?? '#5A6880' }}
+              />
+            )}
+            <span className="truncate">{o.label}</span>
+          </Link>
+        )
+      })}
+    </FilterColumn>
+  )
+}
+
+// Seleção única (define o valor; não acumula).
+function SingleFilter({
+  label,
+  urlKey,
+  options,
+  params,
+  allLabel,
+}: {
+  label: string
+  urlKey: keyof SearchParams
+  options: TagOption[]
+  params: SearchParams
+  allLabel: string
+}) {
+  const current = params[urlKey] ?? ''
+  return (
+    <FilterColumn label={label}>
+      <Link
+        href={buildUrl(params, { [urlKey]: '', page: '1' })}
+        className={cn(chipBase, !current ? chipActive : chipMuted)}
+      >
+        {allLabel}
+      </Link>
+      {options.map((o) => (
+        <Link
+          key={o.slug}
+          href={buildUrl(params, { [urlKey]: o.slug, page: '1' })}
+          className={cn(chipBase, current === o.slug ? chipActive : chipIdle)}
+        >
+          <span className="truncate">{o.label}</span>
+        </Link>
+      ))}
+    </FilterColumn>
+  )
+}
+
+function FilterColumn({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
         {label}
       </div>
       <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  )
-}
-
-function EmptyState({ total }: { total: number }) {
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
-          Banco de Questões
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
-          {total} questões encontradas
-        </p>
-      </div>
-      <Card>
-        <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
-          Nenhuma questão encontrada com os filtros aplicados.{' '}
-          <Link
-            href="/questoes"
-            className="text-[var(--mm-gold)] no-underline hover:underline"
-          >
-            Limpar filtros →
-          </Link>
-        </CardBody>
-      </Card>
     </div>
   )
 }
