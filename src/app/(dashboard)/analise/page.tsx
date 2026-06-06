@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
+import { FilterDropdown } from '@/components/questoes/filter-dropdown'
 import { cn } from '@/lib/utils'
 
 export const metadata = { title: 'Análise — MedMaestro' }
@@ -51,15 +52,6 @@ function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): strin
   if (merged.dificuldade) p.set('dificuldade', merged.dificuldade)
   return `/analise${p.toString() ? '?' + p.toString() : ''}`
 }
-
-const filterChipBase =
-  'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] no-underline transition-colors'
-const filterChipIdle =
-  'border-[var(--mm-border-default)] text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)]'
-const filterChipMuted =
-  'border-[var(--mm-border-default)] text-[var(--mm-muted)] hover:border-[var(--mm-border-hover)]'
-const filterChipActive =
-  'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] text-[var(--mm-gold)]'
 
 export default async function AnalisePage({
   searchParams,
@@ -336,115 +328,57 @@ export default async function AnalisePage({
       {/* Card de filtros */}
       <Card>
         <CardBody>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-            <FilterColumn label="Banca">
-              <Link
-                href={buildUrl(params, { banca: '', especialidade: '' })}
-                className={cn(filterChipBase, !bancaFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todas
-              </Link>
-              {boards.map((b) => (
-                <Link
-                  key={b.id as string}
-                  href={buildUrl(params, { banca: b.slug as string, especialidade: '' })}
-                  className={cn(
-                    filterChipBase,
-                    bancaFilter === b.slug ? filterChipActive : filterChipIdle
-                  )}
-                >
-                  {(b.short_name as string) ?? (b.name as string)}
-                </Link>
-              ))}
-            </FilterColumn>
-
-            <FilterColumn label="Especialidade">
-              <Link
-                href={buildUrl(params, { especialidade: '' })}
-                className={cn(filterChipBase, !especialidadeFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todas
-              </Link>
-              {specialties.length === 0 ? (
-                <span className="px-2.5 py-1 text-[11px] italic text-[var(--mm-muted)]">—</span>
-              ) : (
-                specialties.map((s) => (
-                  <Link
-                    key={s.id as string}
-                    href={buildUrl(params, { especialidade: s.slug as string })}
-                    className={cn(
-                      filterChipBase,
-                      'truncate',
-                      especialidadeFilter === s.slug ? filterChipActive : filterChipIdle
-                    )}
-                  >
-                    {s.name as string}
-                  </Link>
-                ))
-              )}
-            </FilterColumn>
-
-            <FilterColumn label="Ano">
-              <Link
-                href={buildUrl(params, { year: '' })}
-                className={cn(filterChipBase, !yearFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todos
-              </Link>
-              {yearsForFilter.map((y) => (
-                <Link
-                  key={y}
-                  href={buildUrl(params, { year: String(y) })}
-                  className={cn(filterChipBase, yearFilter === y ? filterChipActive : filterChipIdle)}
-                >
-                  {y}
-                </Link>
-              ))}
-            </FilterColumn>
-
-            <FilterColumn label="Cor da prova">
-              <Link
-                href={buildUrl(params, { cor: '' })}
-                className={cn(filterChipBase, !corFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todas
-              </Link>
-              {coresForFilter.map((c) => (
-                <Link
-                  key={c}
-                  href={buildUrl(params, { cor: c })}
-                  className={cn(filterChipBase, corFilter === c ? filterChipActive : filterChipIdle)}
-                >
-                  <span
-                    aria-hidden
-                    className="inline-block size-2 flex-shrink-0 rounded-full border border-white/15"
-                    style={{ background: COR_DOT[c.toLowerCase()] ?? '#5A6880' }}
-                  />
-                  <span className="capitalize">{c}</span>
-                </Link>
-              ))}
-            </FilterColumn>
-
-            <FilterColumn label="Dificuldade">
-              <Link
-                href={buildUrl(params, { dificuldade: '' })}
-                className={cn(filterChipBase, !dificuldadeFilter ? filterChipActive : filterChipMuted)}
-              >
-                Todas
-              </Link>
-              {dificuldades.map((d) => (
-                <Link
-                  key={d.id as string}
-                  href={buildUrl(params, { dificuldade: d.label as string })}
-                  className={cn(
-                    filterChipBase,
-                    dificuldadeFilter === d.label ? filterChipActive : filterChipIdle
-                  )}
-                >
-                  {d.label as string}
-                </Link>
-              ))}
-            </FilterColumn>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+            <FilterDropdown
+              label="Banca"
+              urlKey="banca"
+              basePath="/analise"
+              single
+              clearKeys={['especialidade']}
+              options={boards.map((b) => ({
+                slug: b.slug as string,
+                label: (b.short_name as string) ?? (b.name as string),
+              }))}
+            />
+            <FilterDropdown
+              label="Especialidade"
+              urlKey="especialidade"
+              basePath="/analise"
+              single
+              options={specialties.map((s) => ({
+                slug: s.slug as string,
+                label: s.name as string,
+              }))}
+            />
+            <FilterDropdown
+              label="Ano"
+              urlKey="year"
+              basePath="/analise"
+              single
+              options={yearsForFilter.map((y) => ({ slug: String(y), label: String(y) }))}
+            />
+            <FilterDropdown
+              label="Cor da prova"
+              urlKey="cor"
+              basePath="/analise"
+              single
+              colored
+              options={coresForFilter.map((c) => ({
+                slug: c,
+                label: c[0].toUpperCase() + c.slice(1),
+                color: COR_DOT[c.toLowerCase()] ?? '#5A6880',
+              }))}
+            />
+            <FilterDropdown
+              label="Dificuldade"
+              urlKey="dificuldade"
+              basePath="/analise"
+              single
+              options={dificuldades.map((d) => ({
+                slug: d.label as string,
+                label: d.label as string,
+              }))}
+            />
           </div>
 
           {hasAnyFilter && (
@@ -770,19 +704,3 @@ export default async function AnalisePage({
   )
 }
 
-function FilterColumn({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
-        {label}
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  )
-}

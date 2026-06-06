@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, Badge, TagChip } from '@/components/ui'
-import { cn } from '@/lib/utils'
+import { FilterDropdown } from '@/components/questoes/filter-dropdown'
 
 export const metadata = { title: 'Questões — MedMaestro' }
 
@@ -80,17 +80,6 @@ function buildToggleUrl(
   else list.push(slug)
   return buildUrl(params, { [key]: list.join(','), page: '1' })
 }
-
-/* ------------------------------- styles -------------------------------- */
-
-const chipBase =
-  'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] no-underline transition-colors'
-const chipIdle =
-  'border-[var(--mm-border-default)] text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)]'
-const chipMuted =
-  'border-[var(--mm-border-default)] text-[var(--mm-muted)] hover:border-[var(--mm-border-hover)]'
-const chipActive =
-  'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] text-[var(--mm-gold)]'
 
 /* -------------------------------- page --------------------------------- */
 
@@ -222,29 +211,28 @@ export default async function QuestoesPage({
       {/* Card de filtros */}
       <Card>
         <CardBody>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:grid-cols-3 lg:grid-cols-4">
-            <MultiFilter label="Banca" urlKey="banca" options={bancas} params={params} allLabel="Todas" />
-            <MultiFilter label="Módulo" urlKey="modulo" options={modulos} params={params} allLabel="Todos" colored />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            <FilterDropdown label="Banca" urlKey="banca" basePath="/questoes" options={bancas} />
+            <FilterDropdown label="Módulo" urlKey="modulo" basePath="/questoes" options={modulos} colored />
             {temas.length > 0 && (
-              <MultiFilter label="Tema (edital)" urlKey="tema" options={temas} params={params} allLabel="Todos" colored />
+              <FilterDropdown label="Tema (edital)" urlKey="tema" basePath="/questoes" options={temas} colored />
             )}
-            <MultiFilter label="Tipo de questão" urlKey="tipo" options={tipos} params={params} allLabel="Todos" />
-            <MultiFilter label="Imagem / Recurso" urlKey="recurso" options={recursos} params={params} allLabel="Todas" />
-            <MultiFilter label="Dificuldade" urlKey="dificuldade" options={dificuldades} params={params} allLabel="Todas" />
-            <MultiFilter
+            <FilterDropdown label="Tipo de questão" urlKey="tipo" basePath="/questoes" options={tipos} />
+            <FilterDropdown label="Imagem / Recurso" urlKey="recurso" basePath="/questoes" options={recursos} />
+            <FilterDropdown label="Dificuldade" urlKey="dificuldade" basePath="/questoes" options={dificuldades} />
+            <FilterDropdown
               label="Ano"
               urlKey="year"
+              basePath="/questoes"
               options={years.map((y) => ({ slug: String(y), label: String(y) }))}
-              params={params}
-              allLabel="Todos"
             />
-            <MultiFilter label="Status" urlKey="status" options={STATUS_OPTIONS} params={params} allLabel="Todos" />
-            <SingleFilter
+            <FilterDropdown label="Status" urlKey="status" basePath="/questoes" options={STATUS_OPTIONS} />
+            <FilterDropdown
               label="Classificação"
               urlKey="classificacao"
+              basePath="/questoes"
               options={CLASSIFICACAO_OPTIONS}
-              params={params}
-              allLabel="Todas"
+              single
             />
           </div>
         </CardBody>
@@ -419,97 +407,3 @@ export default async function QuestoesPage({
   )
 }
 
-/* ----------------------------- components ------------------------------ */
-
-function MultiFilter({
-  label,
-  urlKey,
-  options,
-  params,
-  allLabel,
-  colored = false,
-}: {
-  label: string
-  urlKey: keyof SearchParams
-  options: TagOption[]
-  params: SearchParams
-  allLabel: string
-  colored?: boolean
-}) {
-  const selected = parseList(params[urlKey])
-  return (
-    <FilterColumn label={label}>
-      <Link
-        href={buildUrl(params, { [urlKey]: '', page: '1' })}
-        className={cn(chipBase, selected.length === 0 ? chipActive : chipMuted)}
-      >
-        {allLabel}
-      </Link>
-      {options.map((o) => {
-        const active = selected.includes(o.slug)
-        return (
-          <Link
-            key={o.slug}
-            href={buildToggleUrl(params, urlKey, o.slug)}
-            className={cn(chipBase, active ? chipActive : chipIdle)}
-          >
-            {colored && (
-              <span
-                className="inline-block size-2 flex-shrink-0 rounded-sm"
-                style={{ background: o.color ?? '#5A6880' }}
-              />
-            )}
-            <span className="truncate">{o.label}</span>
-          </Link>
-        )
-      })}
-    </FilterColumn>
-  )
-}
-
-// Seleção única (define o valor; não acumula).
-function SingleFilter({
-  label,
-  urlKey,
-  options,
-  params,
-  allLabel,
-}: {
-  label: string
-  urlKey: keyof SearchParams
-  options: TagOption[]
-  params: SearchParams
-  allLabel: string
-}) {
-  const current = params[urlKey] ?? ''
-  return (
-    <FilterColumn label={label}>
-      <Link
-        href={buildUrl(params, { [urlKey]: '', page: '1' })}
-        className={cn(chipBase, !current ? chipActive : chipMuted)}
-      >
-        {allLabel}
-      </Link>
-      {options.map((o) => (
-        <Link
-          key={o.slug}
-          href={buildUrl(params, { [urlKey]: o.slug, page: '1' })}
-          className={cn(chipBase, current === o.slug ? chipActive : chipIdle)}
-        >
-          <span className="truncate">{o.label}</span>
-        </Link>
-      ))}
-    </FilterColumn>
-  )
-}
-
-function FilterColumn({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--mm-muted)]">
-        {label}
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  )
-}

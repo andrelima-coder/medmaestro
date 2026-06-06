@@ -12,6 +12,8 @@ interface FilterDropdownProps {
   label: string
   /** Chave na URL (ex.: 'modulo', 'year', 'status'). */
   urlKey: string
+  /** Rota base para onde os filtros são empurrados (ex.: '/questoes', '/analise'). */
+  basePath: string
   options: FilterOption[]
   /** true = seleção única (radio); false/omitido = múltipla (checkbox CSV). */
   single?: boolean
@@ -19,6 +21,8 @@ interface FilterDropdownProps {
   colored?: boolean
   /** Acima de quantas opções mostra a caixa de busca interna. */
   searchThreshold?: number
+  /** Outras chaves de URL a remover quando este filtro muda (ex.: banca limpa especialidade). */
+  clearKeys?: string[]
 }
 
 function parseList(v: string | null): string[] {
@@ -36,10 +40,12 @@ type Coords = {
 export function FilterDropdown({
   label,
   urlKey,
+  basePath,
   options,
   single = false,
   colored = false,
   searchThreshold = 8,
+  clearKeys,
 }: FilterDropdownProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -116,11 +122,12 @@ export function FilterDropdown({
       const params = new URLSearchParams(searchParams.toString())
       if (next.length > 0) params.set(urlKey, next.join(','))
       else params.delete(urlKey)
+      if (clearKeys) for (const k of clearKeys) params.delete(k)
       params.delete('page')
       const qs = params.toString()
-      router.push(`/questoes${qs ? '?' + qs : ''}`, { scroll: false })
+      router.push(`${basePath}${qs ? '?' + qs : ''}`, { scroll: false })
     },
-    [router, searchParams, urlKey]
+    [router, searchParams, urlKey, basePath, clearKeys]
   )
 
   const toggle = useCallback(
