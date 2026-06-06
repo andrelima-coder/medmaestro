@@ -4,13 +4,11 @@ import { ROLE_LABELS } from '@/types'
 import {
   Card,
   CardBody,
-  CardHeader,
-  CardTitle,
   KpiCard,
-  ParetoBar,
 } from '@/components/ui'
 import { CheckCircle2, Database, MessageSquare, ClipboardList } from 'lucide-react'
 import { LotesTableClient, type LoteRow } from './lotes-table-client'
+import { IncidenciaTema, type IncidenciaTemaRow } from './incidencia-tema-client'
 
 export const metadata = { title: 'Dashboard — MedMaestro' }
 
@@ -46,20 +44,16 @@ export default async function DashboardPage() {
     classificadasRes,
     comentadasRes,
     lotesRes,
-    modTagsRes,
     examsTableRes,
     lastExamRes,
     apiUsageMonthRes,
+    pieRowsRes,
   ] = await Promise.all([
     service.from('profiles').select('role, full_name').eq('id', user!.id).single(),
     service.from('questions').select('id', { count: 'exact', head: true }),
     service.from('question_tags').select('question_id', { count: 'exact', head: true }),
     service.from('question_comments').select('question_id', { count: 'exact', head: true }),
     service.from('exams').select('id', { count: 'exact', head: true }),
-    service
-      .from('question_tags')
-      .select('question_id, tags!inner(label, color, dimension)')
-      .eq('tags.dimension', 'modulo'),
     service
       .from('exams')
       .select(
@@ -76,6 +70,12 @@ export default async function DashboardPage() {
       .from('api_usage')
       .select('cost_usd, input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens')
       .gte('created_at', monthStartISO),
+    service
+      .from('question_tags')
+      .select(
+        'question_id, tags!inner(label, color, dimension), questions!inner(exam_id, exams!inner(year, exam_boards!inner(short_name)))'
+      )
+      .eq('tags.dimension', 'modulo'),
   ])
 
   const profile = profileRes.data
@@ -99,34 +99,6 @@ export default async function DashboardPage() {
     0
   )
 
-  const moduloCount: Record<string, number> = {}
-  for (const row of modTagsRes.data ?? []) {
-    const tag = row.tags as unknown as
-      | { label: string; color: string; dimension: string }
-      | null
-    if (!tag) continue
-    moduloCount[tag.label] = (moduloCount[tag.label] ?? 0) + 1
-  }
-
-  const totalTagged = Object.values(moduloCount).reduce((s, v) => s + v, 0)
-
-  const modulosData = MODULOS.map((m) => ({
-    ...m,
-    count: moduloCount[m.label] ?? 0,
-  }))
-
-  const maxCount = Math.max(...modulosData.map((m) => m.count), 1)
-
-  const top8 = [...modulosData].sort((a, b) => b.count - a.count).slice(0, 8)
-
-  const sorted = [...modulosData].sort((a, b) => b.count - a.count)
-  const top3Sum = sorted.slice(0, 3).reduce((s, m) => s + m.count, 0)
-  const top3Pct = totalTagged > 0 ? Math.round((top3Sum / totalTagged) * 100) : 0
-  const top3Names = sorted
-    .slice(0, 3)
-    .map((m, i) => `M${i + 1} ${m.label.split(' ')[0]}`)
-    .join(' + ')
-
   const exams: LoteRow[] = (examsTableRes.data ?? []).map((e) => {
     const board = e.exam_boards as unknown as { name: string; short_name: string } | null
     const specialty = e.specialties as unknown as { name: string } | null
@@ -145,6 +117,43 @@ export default async function DashboardPage() {
   const years = exams.map((e) => e.year).filter(Number.isFinite)
   const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear()
   const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear()
+
+  const moduleColorByLabel: Record<string, string> = Object.fromEntries(
+    MODULOS.map((m) => [m.label, m.color])
+  )
+
+  const pieRows: IncidenciaTemaRow[] = []
+  const pieYearSet = new Set<number>()
+  const pieBoardSet = new Set<string>()
+  for (const row of pieRowsRes.data ?? []) {
+    const tag = row.tags as unknown as
+      | { label: string; color: string; dimension: string }
+      | null
+    const question = row.questions as unknown as
+      | {
+          exam_id: string
+          exams: {
+            year: number
+            exam_boards: { short_name: string } | null
+          } | null
+        }
+      | null
+    if (!tag || !question?.exams) continue
+    const yr = Number(question.exams.year)
+    const board = question.exams.exam_boards?.short_name ?? '—'
+    if (!Number.isFinite(yr)) continue
+    pieRows.push({
+      question_id: row.question_id as string,
+      year: yr,
+      board,
+      module_label: tag.label,
+      module_color: moduleColorByLabel[tag.label] ?? tag.color ?? '#888',
+    })
+    pieYearSet.add(yr)
+    pieBoardSet.add(board)
+  }
+  const pieYears = Array.from(pieYearSet).sort((a, b) => b - a)
+  const pieBoards = Array.from(pieBoardSet).sort()
 
   const classifPct = totalQuestoes > 0 ? Math.round((classificadas / totalQuestoes) * 100) : 0
   const comentPct = totalQuestoes > 0 ? Math.round((comentadas / totalQuestoes) * 100) : 0
@@ -213,48 +222,8 @@ export default async function DashboardPage() {
       {/* Consumo da API Claude (mês corrente) */}
       <ApiUsageCard costUsd={apiCostUsdMonth} tokens={apiTokensMonth} />
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Incidência por tema — usa ParetoBar do design system */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Incidência por tema</CardTitle>
-            <span
-              className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
-              style={{
-                background: 'var(--mm-gold-bg)',
-                color: 'var(--mm-gold)',
-                borderColor: 'var(--mm-gold-border)',
-              }}
-            >
-              Top 8
-            </span>
-          </CardHeader>
-          <CardBody>
-            {totalTagged === 0 ? (
-              <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
-                Nenhuma questão classificada ainda
-              </p>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {top8.map((m) => {
-                  const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
-                  return (
-                    <ParetoBar
-                      key={m.label}
-                      module={m.label}
-                      count={m.count}
-                      widthPct={pct}
-                      percentLabel={`${pct}%`}
-                      color={m.color}
-                    />
-                  )
-                })}
-              </div>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+      {/* Incidência por tema — barras / pizza / rosca, com filtros banca + intervalo de anos */}
+      <IncidenciaTema rows={pieRows} years={pieYears} boards={pieBoards} />
 
       {/* Lotes importados (preserva client com filtros + paginação) */}
       <LotesTableClient exams={exams} />
