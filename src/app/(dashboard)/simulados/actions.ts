@@ -14,6 +14,28 @@ async function getUser() {
   return user
 }
 
+type ModuloDistribution = Record<string, number>
+
+type SimuladoFilters = {
+  total: number
+  originalsPct: number
+  variationsPct: number
+  moduloDistribution: ModuloDistribution
+  statuses: string[]
+}
+
+const ALLOWED_STATUSES = ['pending_review', 'in_review', 'pending_approval', 'approved', 'published']
+
+function pickN<T>(arr: T[], n: number): T[] {
+  if (n >= arr.length) return [...arr]
+  const copy = [...arr]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy.slice(0, n)
+}
+
 export async function createSimuladoAction(
   formData: FormData
 ): Promise<{ error?: string }> {
@@ -23,16 +45,142 @@ export async function createSimuladoAction(
   const title = (formData.get('title') as string)?.trim()
   if (!title) return { error: 'Título obrigatório' }
 
+  const total = Math.max(0, parseInt((formData.get('total') as string) ?? '0', 10) || 0)
+  const originalsPct = Math.max(
+    0,
+    Math.min(100, parseInt((formData.get('originalsPct') as string) ?? '100', 10) || 0)
+  )
+  const variationsPct = 100 - originalsPct
+
+  const moduloRaw = (formData.get('moduloDistribution') as string) ?? '{}'
+  let moduloDistribution: ModuloDistribution = {}
+  try {
+    const parsed = JSON.parse(moduloRaw)
+    if (parsed && typeof parsed === 'object') {
+      for (const [k, v] of Object.entries(parsed)) {
+        const n = typeof v === 'number' ? v : parseInt(String(v), 10)
+        if (Number.isFinite(n) && n > 0) moduloDistribution[k] = n
+      }
+    }
+  } catch {
+    moduloDistribution = {}
+  }
+
+  const filters: SimuladoFilters = {
+    total,
+    originalsPct,
+    variationsPct,
+    moduloDistribution,
+    statuses: ALLOWED_STATUSES,
+  }
+
   const service = createServiceClient()
+
+  const selectedQuestionIds: string[] = []
+
+  if (total > 0) {
+    const originalsCount = Math.round((total * originalsPct) / 100)
+
+    const moduloEntries = Object.entries(moduloDistribution)
+    const sumModulo = moduloEntries.reduce((s, [, v]) => s + v, 0)
+
+    const targetByModulo: Record<string, number> = {}
+    if (sumModulo > 0) {
+      let assigned = 0
+      const sorted = [...moduloEntries].sort((a, b) => b[1] - a[1])
+      sorted.forEach(([slug, weight], i) => {
+        if (i === sorted.length - 1) {
+          targetByModulo[slug] = Math.max(0, originalsCount - assigned)
+        } else {
+          const n = Math.round((originalsCount * weight) / sumModulo)
+          targetByModulo[slug] = n
+          assigned += n
+        }
+      })
+    }
+
+    const { data: moduloTags } = await service
+      .from('tags')
+      .select('id, slug')
+      .eq('dimension', 'modulo')
+
+    const slugToTagId = new Map((moduloTags ?? []).map((t) => [t.slug as string, t.id as string]))
+
+    const usedIds = new Set<string>()
+
+    if (sumModulo > 0) {
+      for (const [slug, target] of Object.entries(targetByModulo)) {
+        if (target <= 0) continue
+        const tagId = slugToTagId.get(slug)
+        if (!tagId) continue
+
+        const { data: tagged } = await service
+          .from('question_tags')
+          .select('question_id, questions!inner(id, status)')
+          .eq('tag_id', tagId)
+          .in('questions.status', ALLOWED_STATUSES)
+
+        const candidateIds = (tagged ?? [])
+          .map((r) => r.question_id as string)
+          .filter((id) => !usedIds.has(id))
+
+        const picked = pickN(candidateIds, target)
+        picked.forEach((id) => {
+          usedIds.add(id)
+          selectedQuestionIds.push(id)
+        })
+      }
+    }
+
+    const remaining = originalsCount - selectedQuestionIds.length
+    if (remaining > 0) {
+      const { data: pool } = await service
+        .from('questions')
+        .select('id')
+        .in('status', ALLOWED_STATUSES)
+
+      const candidateIds = (pool ?? [])
+        .map((r) => r.id as string)
+        .filter((id) => !usedIds.has(id))
+
+      const picked = pickN(candidateIds, remaining)
+      picked.forEach((id) => {
+        usedIds.add(id)
+        selectedQuestionIds.push(id)
+      })
+    }
+  }
+
   const { data, error } = await service
     .from('simulados')
-    .insert({ title, created_by: user.id, filters_used: {}, total_questions: 0 })
+    .insert({
+      title,
+      created_by: user.id,
+      filters_used: filters,
+      total_questions: selectedQuestionIds.length,
+    })
     .select('id')
     .single()
 
   if (error || !data) return { error: error?.message ?? 'Falha ao criar' }
 
-  await logAudit(user.id, 'simulado', data.id, 'simulado_created', null, { title })
+  if (selectedQuestionIds.length > 0) {
+    const rows = selectedQuestionIds.map((qid, i) => ({
+      simulado_id: data.id,
+      question_id: qid,
+      position: i + 1,
+    }))
+    const { error: insertErr } = await service.from('simulado_questions').insert(rows)
+    if (insertErr) {
+      return { error: `Simulado criado mas falhou ao adicionar questões: ${insertErr.message}` }
+    }
+  }
+
+  await logAudit(user.id, 'simulado', data.id, 'simulado_created', null, {
+    title,
+    filters,
+    selected_count: selectedQuestionIds.length,
+  })
 
   redirect(`/simulados/${data.id}`)
 }
@@ -297,7 +445,7 @@ export async function searchQuestionsForSimulado(
         .select(
           'id, question_number, stem, exams!left(year, booklet_color, exam_boards(short_name))'
         )
-        .in('status', ['approved', 'published'])
+        .in('status', ALLOWED_STATUSES)
         .limit(30)
 
       if (q.trim()) {
