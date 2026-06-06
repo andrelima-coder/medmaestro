@@ -69,11 +69,15 @@ const CONTENT_FIELDS: Array<{ key: keyof ContentFlags; label: string; emphasis?:
   { key: 'referencias', label: 'Referências bibliográficas' },
 ]
 
+type CadernoFormat = 'questoes' | 'comentarios' | 'ambos'
+
 type Props = {
   simuladoId: string
   filtersSummary?: string | null
   previewSubtitle?: string | null
   totalQuestions?: number
+  /** Pré-seleção vinda do workflow "Gerar simulado": com/sem comentários. */
+  initialFormat?: CadernoFormat
 }
 
 export function ExportForm({
@@ -81,18 +85,21 @@ export function ExportForm({
   filtersSummary,
   previewSubtitle,
   totalQuestions = 0,
+  initialFormat,
 }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [format, setFormat] = useState<ExportFormat>('pdf')
+  // Comentários ligados por padrão; desligados quando o formato pedido é "só questões".
+  const withComments = initialFormat !== 'questoes'
   const [content, setContent] = useState<ContentFlags>({
     enunciado: true,
     alternativas: true,
     figuras: true,
     gabarito: true,
-    coment_alt: true,
-    coment_compilado: true,
+    coment_alt: withComments,
+    coment_compilado: withComments,
     taxonomia: false,
     referencias: false,
   })
@@ -105,7 +112,46 @@ export function ExportForm({
     setContent((c) => ({ ...c, [key]: !c[key] }))
   }
 
-  async function handleExport() {
+  // Executa uma exportação para um conjunto de flags; baixa o arquivo gerado.
+  async function runExport(flags: ContentFlags, filenameSuffix?: string) {
+    const params = new URLSearchParams({ format })
+    for (const [k, v] of Object.entries(flags)) {
+      params.set(k, v ? '1' : '0')
+    }
+    const res = await fetch(`/api/simulados/${simuladoId}/export?${params.toString()}`, {
+      method: 'GET',
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      let message = text || `Falha na exportação (${res.status})`
+      try {
+        const parsed = JSON.parse(text)
+        if (parsed?.error) message = parsed.error
+      } catch {
+        // texto livre
+      }
+      throw new Error(message)
+    }
+
+    const cd = res.headers.get('content-disposition') ?? ''
+    const match = cd.match(/filename="([^"]+)"/)
+    let filename = match?.[1] ?? `simulado.${format}`
+    if (filenameSuffix) {
+      filename = filename.replace(/(\.[^.]+)$/, `${filenameSuffix}$1`)
+    }
+    const blob = await res.blob()
+
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  function handleExport() {
     setError(null)
     if (noQuestions) {
       setError('Nenhuma questão para exportar.')
@@ -115,42 +161,32 @@ export function ExportForm({
       setError('Selecione pelo menos um campo em "Conteúdo a incluir".')
       return
     }
-
-    const params = new URLSearchParams({ format })
-    for (const [k, v] of Object.entries(content)) {
-      params.set(k, v ? '1' : '0')
-    }
-
     start(async () => {
       try {
-        const res = await fetch(`/api/simulados/${simuladoId}/export?${params.toString()}`, {
-          method: 'GET',
-        })
-        if (!res.ok) {
-          const text = await res.text().catch(() => '')
-          let message = text || `Falha na exportação (${res.status})`
-          try {
-            const parsed = JSON.parse(text)
-            if (parsed?.error) message = parsed.error
-          } catch {
-            // texto livre
-          }
-          throw new Error(message)
-        }
+        await runExport(content)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Erro ao exportar')
+      }
+    })
+  }
 
-        const cd = res.headers.get('content-disposition') ?? ''
-        const match = cd.match(/filename="([^"]+)"/)
-        const filename = match?.[1] ?? `simulado.${format}`
-        const blob = await res.blob()
-
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 0)
+  // Gera dois cadernos: com e sem comentários (usado quando o formato é "ambos").
+  function handleExportBoth() {
+    setError(null)
+    if (noQuestions) {
+      setError('Nenhuma questão para exportar.')
+      return
+    }
+    start(async () => {
+      try {
+        await runExport(
+          { ...content, coment_alt: true, coment_compilado: true },
+          '-comentado'
+        )
+        await runExport(
+          { ...content, coment_alt: false, coment_compilado: false },
+          '-sem-comentarios'
+        )
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao exportar')
       }
@@ -434,6 +470,22 @@ export function ExportForm({
             </>
           )}
         </button>
+        {initialFormat === 'ambos' && (
+          <button
+            type="button"
+            onClick={handleExportBoth}
+            disabled={blocked}
+            className={cn(
+              'inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors',
+              blocked
+                ? 'cursor-not-allowed border-[var(--mm-border-default)] text-[var(--mm-muted)]'
+                : 'border-[var(--mm-border-active)] text-[var(--mm-gold)] hover:bg-[var(--mm-gold-bg)]'
+            )}
+          >
+            <Download className="size-3.5" />
+            Baixar ambos (com e sem comentários)
+          </button>
+        )}
         <button
           type="button"
           onClick={() => router.push(`/simulados/${simuladoId}`)}

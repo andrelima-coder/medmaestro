@@ -185,6 +185,152 @@ export async function createSimuladoAction(
   redirect(`/simulados/${data.id}`)
 }
 
+/* ----------------------------------------------------------------------- *
+ * Gerar simulado a partir dos filtros da tela de Questões.
+ * Pool = RPC search_questions(mesmos filtros). Seleção respeita quantidade
+ * e proporção (aleatória / por dificuldade / por tema-módulo). O formato do
+ * caderno (questoes | comentarios | ambos) é repassado ao passo de export.
+ * ----------------------------------------------------------------------- */
+
+type ProportionMode = 'random' | 'dificuldade' | 'tema'
+
+function parseCsvField(v: FormDataEntryValue | null): string[] {
+  return ((v as string) ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+}
+
+export async function createSimuladoFromFiltersAction(
+  formData: FormData
+): Promise<{ error?: string }> {
+  const user = await getUser()
+  if (!user) return { error: 'Não autenticado' }
+
+  const title = (formData.get('title') as string)?.trim()
+  if (!title) return { error: 'Título obrigatório' }
+
+  const total = Math.max(1, parseInt((formData.get('total') as string) ?? '0', 10) || 0)
+  const proportion = ((formData.get('proportion') as string) || 'random') as ProportionMode
+  const format = (formData.get('format') as string) || 'comentarios' // questoes | comentarios | ambos
+
+  // Filtros vindos da tela de Questões (CSV multivalorado).
+  const modulo = parseCsvField(formData.get('modulo'))
+  const tema = parseCsvField(formData.get('tema'))
+  const tipo = parseCsvField(formData.get('tipo'))
+  const recurso = parseCsvField(formData.get('recurso'))
+  const dificuldade = parseCsvField(formData.get('dificuldade'))
+  const banca = parseCsvField(formData.get('banca'))
+  const year = parseCsvField(formData.get('year')).map(Number).filter((n) => !Number.isNaN(n))
+  const status = parseCsvField(formData.get('status'))
+  const classificacao = (formData.get('classificacao') as string) || null
+  const search = ((formData.get('q') as string) || '').trim() || null
+
+  const service = createServiceClient()
+
+  // Busca o pool inteiro (com tags) via RPC — mesma usada na tela de Questões.
+  const { data: rpcData, error: rpcErr } = await service.rpc('search_questions', {
+    p_modulo: modulo,
+    p_tema: tema,
+    p_tipo: tipo,
+    p_recurso: recurso,
+    p_dificuldade: dificuldade,
+    p_banca: banca,
+    p_year: year,
+    p_status: status,
+    p_classificacao: classificacao,
+    p_search: search,
+    p_limit: 5000,
+    p_offset: 0,
+  })
+  if (rpcErr) return { error: rpcErr.message }
+
+  type PoolRow = { id: string; tags?: { label: string; dimension: string }[] }
+  const result = (rpcData?.[0] ?? { rows: [] }) as { rows: PoolRow[] }
+  const pool = result.rows ?? []
+  if (pool.length === 0) return { error: 'Nenhuma questão corresponde aos filtros.' }
+
+  const take = Math.min(total, pool.length)
+  let selectedIds: string[] = []
+
+  if (proportion === 'random') {
+    selectedIds = pickN(pool, take).map((q) => q.id)
+  } else {
+    const dim = proportion === 'dificuldade' ? 'dificuldade' : 'modulo'
+    const buckets = new Map<string, PoolRow[]>()
+    for (const q of pool) {
+      const tag = (q.tags ?? []).find((t) => t.dimension === dim)
+      const key = tag?.label ?? '—'
+      const arr = buckets.get(key)
+      if (arr) arr.push(q)
+      else buckets.set(key, [q])
+    }
+    const entries = [...buckets.entries()]
+    const used = new Set<string>()
+    let assigned = 0
+    entries.forEach(([, qs], i) => {
+      const quota =
+        i === entries.length - 1
+          ? take - assigned
+          : Math.round((take * qs.length) / pool.length)
+      const picked = pickN(qs, Math.max(0, quota))
+      picked.forEach((q) => {
+        used.add(q.id)
+        selectedIds.push(q.id)
+      })
+      assigned += picked.length
+    })
+    // Completa eventuais faltas por arredondamento.
+    if (selectedIds.length < take) {
+      const rest = pickN(
+        pool.filter((q) => !used.has(q.id)),
+        take - selectedIds.length
+      )
+      rest.forEach((q) => selectedIds.push(q.id))
+    }
+    selectedIds = selectedIds.slice(0, take)
+  }
+
+  const filters_used = {
+    source: 'questoes_filtros',
+    filters: { modulo, tema, tipo, recurso, dificuldade, banca, year, status, classificacao, search },
+    total: take,
+    proportion,
+    format,
+    poolSize: pool.length,
+  }
+
+  const { data, error } = await service
+    .from('simulados')
+    .insert({
+      title,
+      created_by: user.id,
+      filters_used,
+      total_questions: selectedIds.length,
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) return { error: error?.message ?? 'Falha ao criar' }
+
+  if (selectedIds.length > 0) {
+    const rows = selectedIds.map((qid, i) => ({
+      simulado_id: data.id,
+      question_id: qid,
+      position: i + 1,
+    }))
+    const { error: insertErr } = await service.from('simulado_questions').insert(rows)
+    if (insertErr) {
+      return { error: `Simulado criado mas falhou ao adicionar questões: ${insertErr.message}` }
+    }
+  }
+
+  await logAudit(user.id, 'simulado', data.id, 'simulado_created', null, {
+    title,
+    filters_used,
+    selected_count: selectedIds.length,
+  })
+
+  redirect(`/simulados/${data.id}/exportar?fmt=${format}`)
+}
+
 export async function updateSimuladoTitle(
   simuladoId: string,
   title: string

@@ -62,10 +62,15 @@ function previewSubtitle(parts: FilterParts, total: number): string {
 
 export default async function ExportarSimuladoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ fmt?: string }>
 }) {
   const { id } = await params
+  const { fmt } = await searchParams
+  const initialFormat =
+    fmt === 'questoes' || fmt === 'comentarios' || fmt === 'ambos' ? fmt : undefined
 
   const supabase = await createClient()
   const {
@@ -116,6 +121,7 @@ export default async function ExportarSimuladoPage({
         filtersSummary={summary}
         previewSubtitle={previewLine}
         totalQuestions={total}
+        initialFormat={initialFormat}
       />
     </div>
   )

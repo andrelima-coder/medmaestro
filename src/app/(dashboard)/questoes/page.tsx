@@ -188,6 +188,14 @@ export default async function QuestoesPage({
   }
   const hasActive = activeChips.length > 0
 
+  // Link para o workflow "Gerar simulado", carregando os filtros atuais.
+  const gerarParams = new URLSearchParams()
+  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status', 'classificacao', 'q'] as const) {
+    const v = params[key]
+    if (v) gerarParams.set(key, v)
+  }
+  const gerarHref = `/simulados/gerar${gerarParams.toString() ? '?' + gerarParams.toString() : ''}`
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
@@ -264,16 +272,29 @@ export default async function QuestoesPage({
           >
             Exportar seleção →
           </button>
-          <button
-            disabled
-            className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] opacity-60"
-            style={{
-              background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-              boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
-            }}
-          >
-            Gerar simulado
-          </button>
+          {total > 0 ? (
+            <Link
+              href={gerarHref}
+              className="rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] no-underline transition-all hover:-translate-y-px"
+              style={{
+                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}
+            >
+              Gerar simulado
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] opacity-60"
+              style={{
+                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+              }}
+            >
+              Gerar simulado
+            </button>
+          )}
         </div>
       </div>
 
