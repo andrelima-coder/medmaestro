@@ -1090,9 +1090,9 @@ export async function reextractQuestionImages(
   if (qErr || !question) {
     return { ok: false, question_number: null, error: `Questão não encontrada: ${qErr?.message ?? 'no row'}` }
   }
-  // Nota: NÃO bloqueamos has_images=false. A re-extração também serve para
-  // recuperar figuras que a extração original perdeu (a página é descoberta
-  // via questões vizinhas abaixo).
+  if (!question.has_images) {
+    return { ok: false, question_number: question.question_number as number, error: 'has_images=false (nada a re-extrair)' }
+  }
 
   const examRaw = question.exams as unknown as {
     source_pdf_path: string | null
@@ -1122,26 +1122,7 @@ export async function reextractQuestionImages(
     .map((r) => r.page_number as number | null)
     .filter((n): n is number => n != null && n > 0)
 
-  let centerPage = knownPages.length > 0 ? Math.min(...knownPages) : null
-
-  // has_images=false (sem página conhecida): descobre a página pela questão
-  // vizinha mais próxima (por question_number) que tenha figura no mesmo caderno.
-  if (centerPage == null) {
-    const { data: siblings } = await supabase
-      .from('question_images')
-      .select('page_number, questions!inner(question_number, exam_id)')
-      .eq('questions.exam_id', question.exam_id as string)
-      .not('page_number', 'is', null)
-    const targetQn = question.question_number as number
-    const pairs = (siblings ?? [])
-      .map((r) => {
-        const rel = r.questions as unknown as { question_number: number } | null
-        return { qn: rel?.question_number ?? null, page: r.page_number as number | null }
-      })
-      .filter((p): p is { qn: number; page: number } => p.qn != null && p.page != null && p.page > 0)
-      .sort((a, b) => Math.abs(a.qn - targetQn) - Math.abs(b.qn - targetQn))
-    if (pairs.length > 0) centerPage = pairs[0].page
-  }
+  const centerPage = knownPages.length > 0 ? Math.min(...knownPages) : null
 
   const { data: fileData, error: dlErr } = await supabase.storage
     .from('exam-pdfs')
@@ -1153,8 +1134,8 @@ export async function reextractQuestionImages(
 
   const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
 
-  const firstPage = centerPage ? Math.max(1, centerPage - 2) : 1
-  const lastPage = centerPage ? centerPage + 2 : 3
+  const firstPage = centerPage ? Math.max(1, centerPage - 1) : 1
+  const lastPage = centerPage ? centerPage + 1 : 3
 
   let pages: Awaited<ReturnType<typeof rasterizePdf>>
   try {
@@ -1224,11 +1205,6 @@ export async function reextractQuestionImages(
       question_number: question.question_number as number,
       error: 'Persistência parcial — checar logs',
     }
-  }
-
-  // Recuperou figura numa questão antes marcada sem imagem: corrige a flag.
-  if (result === 'ok' && imagesCount > 0 && !question.has_images) {
-    await supabase.from('questions').update({ has_images: true }).eq('id', questionId)
   }
 
   return { ok: true, question_number: question.question_number as number, images_added: imagesCount }
