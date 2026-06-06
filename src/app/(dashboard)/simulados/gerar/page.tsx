@@ -94,8 +94,8 @@ export default async function GerarSimuladoPage({
   if (params.classificacao) activeChips.push(CLASSIF_LABELS[params.classificacao] ?? params.classificacao)
   if (params.q) activeChips.push(`"${params.q}"`)
 
-  // Pool completo (com tags) via RPC para contar e montar breakdowns.
-  const { data: rpcData } = await service.rpc('search_questions', {
+  // Contagem + breakdowns no banco (sem carregar enunciados).
+  const { data: facetData } = await service.rpc('search_questions_facets', {
     p_modulo: parseList(params.modulo),
     p_tema: parseList(params.tema),
     p_tipo: parseList(params.tipo),
@@ -106,27 +106,16 @@ export default async function GerarSimuladoPage({
     p_status: parseList(params.status),
     p_classificacao: params.classificacao || null,
     p_search: params.q?.trim() || null,
-    p_limit: 5000,
-    p_offset: 0,
   })
 
-  type PoolRow = { id: string; tags?: { label: string; dimension: string }[] }
-  const result = (rpcData?.[0] ?? { total: 0, rows: [] }) as { total: number; rows: PoolRow[] }
-  const pool = result.rows ?? []
-  const poolCount = Number(result.total) || pool.length
-
-  const countBy = (dim: string) => {
-    const m = new Map<string, number>()
-    for (const q of pool) {
-      const tag = (q.tags ?? []).find((t) => t.dimension === dim)
-      if (!tag) continue
-      m.set(tag.label, (m.get(tag.label) ?? 0) + 1)
-    }
-    return [...m.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count)
+  type Facet = { label: string; count: number }
+  const facet = (facetData?.[0] ?? { total: 0, facets: {} }) as {
+    total: number
+    facets: { dificuldade?: Facet[]; modulo?: Facet[] }
   }
-
-  const difBreakdown = countBy('dificuldade')
-  const modBreakdown = countBy('modulo')
+  const poolCount = Number(facet.total) || 0
+  const difBreakdown = facet.facets?.dificuldade ?? []
+  const modBreakdown = facet.facets?.modulo ?? []
 
   const filters: GerarFilters = {
     banca: params.banca ?? '',

@@ -225,8 +225,11 @@ export async function createSimuladoFromFiltersAction(
 
   const service = createServiceClient()
 
-  // Busca o pool inteiro (com tags) via RPC — mesma usada na tela de Questões.
-  const { data: rpcData, error: rpcErr } = await service.rpc('search_questions', {
+  // Amostragem feita no Postgres (sample_questions): contagem + sorteio
+  // estratificado no banco, retornando apenas os IDs selecionados.
+  // 'tema' mapeia para a dimensão 'modulo' (área temática reliably tagged).
+  const mode = proportion === 'tema' ? 'modulo' : proportion // random | dificuldade | modulo
+  const { data: sampleData, error: rpcErr } = await service.rpc('sample_questions', {
     p_modulo: modulo,
     p_tema: tema,
     p_tipo: tipo,
@@ -237,64 +240,20 @@ export async function createSimuladoFromFiltersAction(
     p_status: status,
     p_classificacao: classificacao,
     p_search: search,
-    p_limit: 5000,
-    p_offset: 0,
+    p_total: total,
+    p_mode: mode,
   })
   if (rpcErr) return { error: rpcErr.message }
 
-  type PoolRow = { id: string; tags?: { label: string; dimension: string }[] }
-  const result = (rpcData?.[0] ?? { rows: [] }) as { rows: PoolRow[] }
-  const pool = result.rows ?? []
-  if (pool.length === 0) return { error: 'Nenhuma questão corresponde aos filtros.' }
-
-  const take = Math.min(total, pool.length)
-  let selectedIds: string[] = []
-
-  if (proportion === 'random') {
-    selectedIds = pickN(pool, take).map((q) => q.id)
-  } else {
-    const dim = proportion === 'dificuldade' ? 'dificuldade' : 'modulo'
-    const buckets = new Map<string, PoolRow[]>()
-    for (const q of pool) {
-      const tag = (q.tags ?? []).find((t) => t.dimension === dim)
-      const key = tag?.label ?? '—'
-      const arr = buckets.get(key)
-      if (arr) arr.push(q)
-      else buckets.set(key, [q])
-    }
-    const entries = [...buckets.entries()]
-    const used = new Set<string>()
-    let assigned = 0
-    entries.forEach(([, qs], i) => {
-      const quota =
-        i === entries.length - 1
-          ? take - assigned
-          : Math.round((take * qs.length) / pool.length)
-      const picked = pickN(qs, Math.max(0, quota))
-      picked.forEach((q) => {
-        used.add(q.id)
-        selectedIds.push(q.id)
-      })
-      assigned += picked.length
-    })
-    // Completa eventuais faltas por arredondamento.
-    if (selectedIds.length < take) {
-      const rest = pickN(
-        pool.filter((q) => !used.has(q.id)),
-        take - selectedIds.length
-      )
-      rest.forEach((q) => selectedIds.push(q.id))
-    }
-    selectedIds = selectedIds.slice(0, take)
-  }
+  const selectedIds = ((sampleData ?? []) as { id: string }[]).map((r) => r.id)
+  if (selectedIds.length === 0) return { error: 'Nenhuma questão corresponde aos filtros.' }
 
   const filters_used = {
     source: 'questoes_filtros',
     filters: { modulo, tema, tipo, recurso, dificuldade, banca, year, status, classificacao, search },
-    total: take,
+    total: selectedIds.length,
     proportion,
     format,
-    poolSize: pool.length,
   }
 
   const { data, error } = await service
