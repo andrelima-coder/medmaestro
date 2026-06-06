@@ -1,8 +1,19 @@
 # Deploy automático (CI → VPS)
 
-Pipeline: a cada `git push` na branch **main**, o GitHub Actions
-(`.github/workflows/deploy.yml`) conecta via SSH na VPS Hostinger, atualiza o
-código, reconstrói a imagem Docker do Next.js e reinicia o container, com
+> **Estado atual (confirmado em 2026-06-06): o mecanismo ATIVO é o Coolify, com
+> deploy disparado MANUALMENTE pelo botão "Redeploy" no painel.** O pipeline do
+> GitHub Actions descrito abaixo (`.github/workflows/deploy.yml`) foi preparado
+> mas **NÃO está ativo** (o arquivo nunca foi pushado por falta do escopo
+> `workflow` no token). Ou seja, hoje: `git push` em `main` **não** dispara
+> deploy sozinho — é preciso clicar em **Redeploy** no Coolify. Mantenha esta
+> seção como referência caso se opte por migrar para CI no futuro.
+>
+> Para o estado de produção confirmado (chaves Supabase novas, regras
+> Buildtime/Runtime, verificação `/api/health`), ver `../../DEPLOY_VPS_HOSTINGER.md`.
+
+Pipeline (planejado, inativo): a cada `git push` na branch **main**, o GitHub
+Actions (`.github/workflows/deploy.yml`) conecta via SSH na VPS Hostinger, atualiza
+o código, reconstrói a imagem Docker do Next.js e reinicia o container, com
 health check em `/api/health`.
 
 > Importante: o app depende de binários de sistema (poppler-utils, tesseract)
@@ -37,8 +48,13 @@ health check em `/api/health`.
 | `VPS_APP_DIR` | `/opt/medmaestro` | diretório do repo na VPS |
 | `VPS_ENV_FILE` | `/opt/medmaestro/.env.production` | env de runtime do container |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://ibavtxzlejizsbtztyvl.supabase.co` | build arg |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJ...` | build arg |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_...` | build arg |
 | `NEXT_PUBLIC_APP_URL` | `https://medmaestro.SEUDOMINIO.com.br` | build arg |
+
+> Atenção (sistema de chaves Supabase, desde 2026-06): as chaves legadas (JWT
+> `eyJ...` anon/service_role) foram **desativadas**. Use as novas:
+> `NEXT_PUBLIC_SUPABASE_ANON_KEY` = chave **publishable** (`sb_publishable_...`)
+> e `SUPABASE_SERVICE_ROLE_KEY` = chave **secret** (`sb_secret_...`).
 
 Para o cron já existente (`worker-tick.yml`) também são necessários:
 `APP_URL` e `WORKER_SECRET`.

@@ -30,12 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (commit only .env.local.example)
+# env files (commit only .env.local.example / .env.coolify.example)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.coolify
 
 # vercel
 .vercel
