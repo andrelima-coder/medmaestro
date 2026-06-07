@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
 import { FilterDropdown } from '@/components/questoes/filter-dropdown'
+import { AnaliseAdvancedCharts } from '@/components/analise/analise-advanced-charts'
 import { cn } from '@/lib/utils'
 
 export const metadata = { title: 'Análise — MedMaestro' }
@@ -101,6 +102,8 @@ export default async function AnalisePage({
     dificuldadesRes,
     modTagsRes,
     temasTagsRes,
+    tipoTagsRes,
+    difTagsRes,
   ] = await Promise.all([
     service.from('exam_boards').select('id, slug, short_name, name').order('short_name'),
     service.from('specialties').select('id, slug, name, exam_board_id').order('name'),
@@ -117,6 +120,14 @@ export default async function AnalisePage({
       .from('question_tags')
       .select('question_id, tags!inner(label, dimension)')
       .eq('tags.dimension', 'topico_edital'),
+    service
+      .from('question_tags')
+      .select('question_id, tags!inner(label, color, dimension)')
+      .eq('tags.dimension', 'tipo_questao'),
+    service
+      .from('question_tags')
+      .select('question_id, tags!inner(label, color, dimension)')
+      .eq('tags.dimension', 'dificuldade'),
   ])
 
   const boards = boardsRes.data ?? []
@@ -216,10 +227,14 @@ export default async function AnalisePage({
 
   let modTags = modTagsRes.data ?? []
   let temasTags = temasTagsRes.data ?? []
+  let tipoTags = tipoTagsRes.data ?? []
+  let difTags = difTagsRes.data ?? []
   if (allowedQuestionIds !== null) {
     const allow = allowedQuestionIds
     modTags = modTags.filter((t) => allow.has(t.question_id as string))
     temasTags = temasTags.filter((t) => allow.has(t.question_id as string))
+    tipoTags = tipoTags.filter((t) => allow.has(t.question_id as string))
+    difTags = difTags.filter((t) => allow.has(t.question_id as string))
   }
 
   const totalTagged = modTags.length
@@ -313,6 +328,158 @@ export default async function AnalisePage({
       ...m,
       maxYearCount: Math.max(...yearsForChart.map((y) => m.countByYear[y] ?? 0), 1),
     }))
+
+  // =========================================================================
+  // Gráficos avançados (Recharts) — janela "era atual" 2019–2025
+  // =========================================================================
+  const ERA_MIN = 2019
+  const ERA_MAX = 2025
+
+  const DIF_COLOR: Record<string, string> = {
+    Fácil: '#66BB6A',
+    Médio: '#FFA726',
+    Difícil: '#EF5350',
+  }
+  const DIF_ORDER = ['Fácil', 'Médio', 'Difícil']
+  const TIPO_PALETTE = ['#C9A84C', '#7C6FD8', '#4CAF8A', '#E07B54', '#5B9BD8', '#D85B8A']
+
+  const labelOf = (row: { tags: unknown }): string | null => {
+    const tag = row.tags as unknown as { label: string } | null
+    return tag?.label ?? null
+  }
+
+  // --- Pizzas: dificuldade e tipo ---
+  const difAgg: Record<string, number> = {}
+  for (const r of difTags) {
+    const l = labelOf(r)
+    if (l) difAgg[l] = (difAgg[l] ?? 0) + 1
+  }
+  const pieDif = DIF_ORDER.filter((l) => difAgg[l]).map((label) => ({
+    label,
+    count: difAgg[label],
+    color: DIF_COLOR[label] ?? '#5A6880',
+  }))
+
+  const tipoAgg: Record<string, number> = {}
+  for (const r of tipoTags) {
+    const l = labelOf(r)
+    if (l) tipoAgg[l] = (tipoAgg[l] ?? 0) + 1
+  }
+  const pieTipo = Object.entries(tipoAgg)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count], i) => ({ label, count, color: TIPO_PALETTE[i % TIPO_PALETTE.length] }))
+
+  // --- Heatmap Dificuldade × Módulo (sobre o conjunto filtrado) ---
+  const qMod = new Map<string, string>()
+  for (const r of modTags) {
+    const l = labelOf(r)
+    if (l) qMod.set(r.question_id as string, l)
+  }
+  const qDif = new Map<string, string>()
+  for (const r of difTags) {
+    const l = labelOf(r)
+    if (l) qDif.set(r.question_id as string, l)
+  }
+  const heatAgg: Record<string, number> = {}
+  let heatMax = 0
+  for (const [qid, mod] of qMod) {
+    const dif = qDif.get(qid)
+    if (!dif) continue
+    const key = `${mod}__${dif}`
+    heatAgg[key] = (heatAgg[key] ?? 0) + 1
+    if (heatAgg[key] > heatMax) heatMax = heatAgg[key]
+  }
+  const heatmapModulos = modulosData.map((m) => m.label) // já ordenado por total desc
+  const heatmap = {
+    modulos: heatmapModulos,
+    dificuldades: DIF_ORDER.filter((d) => pieDif.some((p) => p.label === d)),
+    cells: heatmapModulos.flatMap((mod) =>
+      DIF_ORDER.map((dif) => ({ modulo: mod, dificuldade: dif, count: heatAgg[`${mod}__${dif}`] ?? 0 }))
+    ),
+    max: heatMax,
+  }
+
+  // --- Série temporal 2019–2025: área 100%, bump, quadrante ---
+  // Mapa questão→ano (independente do bloco do gráfico legado).
+  const examYearAll: Record<string, number> = {}
+  for (const e of allExams) examYearAll[e.id as string] = e.year as number
+  const { data: qExamAll } = await service.from('questions').select('id, exam_id')
+  const qYear = new Map<string, number>()
+  for (const q of qExamAll ?? []) {
+    const y = examYearAll[q.exam_id as string]
+    if (y != null) qYear.set(q.id as string, y)
+  }
+
+  // Contagem por ano × módulo dentro da janela.
+  const yearModCount: Record<number, Record<string, number>> = {}
+  const yearTotal: Record<number, number> = {}
+  const moduloEraTotal: Record<string, number> = {}
+  for (const r of modTags) {
+    const mod = labelOf(r)
+    if (!mod) continue
+    const y = qYear.get(r.question_id as string)
+    if (y == null || y < ERA_MIN || y > ERA_MAX) continue
+    if (!yearModCount[y]) yearModCount[y] = {}
+    yearModCount[y][mod] = (yearModCount[y][mod] ?? 0) + 1
+    yearTotal[y] = (yearTotal[y] ?? 0) + 1
+    moduloEraTotal[mod] = (moduloEraTotal[mod] ?? 0) + 1
+  }
+
+  const eraYears = Object.keys(yearModCount)
+    .map(Number)
+    .sort((a, b) => a - b)
+  const eraModulos = Object.entries(moduloEraTotal)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label]) => ({ label, color: MODULO_COLORS[label] ?? '#5A6880' }))
+
+  // Área 100% — contagens (normalizadas no chart via stackOffset="expand").
+  const areaRows = eraYears.map((y) => {
+    const row: Record<string, number> = { year: y }
+    for (const m of eraModulos) row[m.label] = yearModCount[y]?.[m.label] ?? 0
+    return row
+  })
+
+  // Bump — ranking por ano (1 = mais incidente).
+  const bumpRows = eraYears.map((y) => {
+    const ranked = [...eraModulos]
+      .map((m) => ({ label: m.label, count: yearModCount[y]?.[m.label] ?? 0 }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    const row: Record<string, number> = { year: y }
+    ranked.forEach((m, i) => {
+      row[m.label] = i + 1
+    })
+    return row
+  })
+
+  // Quadrante — incidência média × tendência (pp recentes − iniciais).
+  const recentYears = eraYears.slice(-2)
+  const earlyYears = eraYears.slice(0, -2)
+  const shareIn = (years: number[], mod: string): number => {
+    const vals = years.map((y) => {
+      const tot = yearTotal[y] ?? 0
+      return tot > 0 ? ((yearModCount[y]?.[mod] ?? 0) / tot) * 100 : 0
+    })
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0
+  }
+  const quadrant = eraModulos.map((m) => ({
+    modulo: m.label,
+    color: m.color,
+    shareAvg: Number(shareIn(eraYears, m.label).toFixed(1)),
+    trend: Number(
+      (earlyYears.length ? shareIn(recentYears, m.label) - shareIn(earlyYears, m.label) : 0).toFixed(1)
+    ),
+    total: moduloEraTotal[m.label] ?? 0,
+  }))
+
+  const advancedCharts = {
+    pieDif,
+    pieTipo,
+    area: { years: eraYears, modulos: eraModulos, rows: areaRows },
+    bump: { years: eraYears, modulos: eraModulos, rows: bumpRows },
+    quadrant,
+    heatmap,
+    windowLabel: eraYears.length ? `${eraYears[0]}–${eraYears[eraYears.length - 1]}` : 'Era atual',
+  }
 
   const activeFilters: { label: string; removeKey: keyof SearchParams }[] = []
   if (bancaFilter) {
@@ -747,6 +914,18 @@ export default async function AnalisePage({
               )}
             </CardBody>
           </Card>
+
+          {/* Gráficos avançados — predição e tendências (Recharts) */}
+          <div>
+            <h2 className="mb-1 font-[family-name:var(--font-syne)] text-base font-bold text-foreground">
+              Tendências & Predição
+            </h2>
+            <p className="mb-3 text-[12px] text-[var(--mm-muted)]">
+              Análise data-driven da banca na era atual {advancedCharts.windowLabel} — composição,
+              evolução e priorização.
+            </p>
+            <AnaliseAdvancedCharts {...advancedCharts} />
+          </div>
         </>
       )}
     </div>

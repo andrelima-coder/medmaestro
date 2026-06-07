@@ -11,6 +11,7 @@ import {
 import { logAudit } from '@/lib/audit'
 import { sanitizeHtml } from '@/lib/sanitize-html'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
+import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 const BATCH_CONCURRENCY = 3
 
@@ -127,6 +128,8 @@ export async function listQuestionsForFlashcards(
   },
   pagination: { page: number; pageSize?: number }
 ): Promise<FlashcardsListPage> {
+  const auth = await requireUser()
+  if (!auth.ok) return { rows: [], total: 0 }
   const supabase = createServiceClient()
   const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
   const page = Math.max(1, pagination.page)
@@ -205,6 +208,8 @@ export async function listFilteredFlashcardQuestionIds(filter: {
   withoutFlashcardOnly?: boolean
   lowConfidenceOnly?: boolean
 }): Promise<string[]> {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
 
   let query = supabase
@@ -234,6 +239,8 @@ export async function listFilteredFlashcardQuestionIds(filter: {
 export async function listExamsForFlashcardsFilter(): Promise<
   { id: string; label: string }[]
 > {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('exams')
@@ -262,6 +269,8 @@ export type PendingCard = {
 }
 
 export async function listPendingFlashcards(): Promise<PendingCard[]> {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('flashcards')
@@ -298,6 +307,8 @@ export async function listPendingFlashcards(): Promise<PendingCard[]> {
 }
 
 export async function approveFlashcardAction(id: string): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },
@@ -318,6 +329,8 @@ export async function approveFlashcardAction(id: string): Promise<{ ok: boolean 
 }
 
 export async function rejectFlashcardAction(id: string): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },
@@ -333,6 +346,8 @@ export async function editFlashcardAction(
   id: string,
   patch: { front?: string; back?: string; difficulty?: number }
 ): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },

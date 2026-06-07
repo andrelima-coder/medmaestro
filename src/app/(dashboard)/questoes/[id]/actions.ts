@@ -3,11 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireReviewer } from '@/lib/auth/guards'
 
 export async function saveQuestionTags(
   questionId: string,
   newTagIds: string[]
 ): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },
@@ -74,6 +77,8 @@ export async function saveQuestionTags(
 export async function undoLastTagEdit(
   questionId: string
 ): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },
