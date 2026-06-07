@@ -8,11 +8,12 @@
 -- Decisão (forward, requirements RN-01/RN-02): novo papel `aluno`; unicidade
 -- do aluno é POR E-MAIL (já único no auth). Campos de marketing em profiles.
 --
--- ATENÇÃO: ADD VALUE de enum NÃO pode ser usado na mesma transação em que é
--- criado. Por isso o valor `aluno` é adicionado AQUI e só é referenciado por
--- políticas RLS na migração 027 (arquivo/transação separados).
-
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'aluno';
+-- DRIFT CONFIRMADO (via Supabase MCP, 2026-06-08): em produção `profiles.role`
+-- é **text** (não o enum `user_role` da migração 001). Portanto `'aluno'` já é
+-- um valor válido e NÃO há ALTER TYPE aqui. Caso reconstrua de um banco onde
+-- `role` ainda seja o enum `user_role`, adicione antes:
+--   ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'aluno';
+-- As políticas RLS (027) comparam `role <> 'aluno'` como texto — funciona em ambos.
 
 -- Campos de lead/segmentação no perfil (PII tratada sob LGPD).
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS phone text;            -- WhatsApp/celular
