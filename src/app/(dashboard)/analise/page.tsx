@@ -39,7 +39,17 @@ type SearchParams = {
   banca?: string
   especialidade?: string
   cor?: string
+  formato?: string
   dificuldade?: string
+}
+
+// Sentinela para filtrar cadernos sem cor (especialidades sem padrão de cor).
+const COR_NONE = '__none__'
+
+const FORMATO_LABELS: Record<string, string> = {
+  pdf: 'PDF',
+  docx: 'Word (DOCX)',
+  pptx: 'PowerPoint (PPTX)',
 }
 
 function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): string {
@@ -49,8 +59,16 @@ function buildUrl(params: SearchParams, overrides: Partial<SearchParams>): strin
   if (merged.especialidade) p.set('especialidade', merged.especialidade)
   if (merged.year) p.set('year', merged.year)
   if (merged.cor) p.set('cor', merged.cor)
+  if (merged.formato) p.set('formato', merged.formato)
   if (merged.dificuldade) p.set('dificuldade', merged.dificuldade)
   return `/analise${p.toString() ? '?' + p.toString() : ''}`
+}
+
+/** Casa um exame com o filtro de cor, tratando o sentinela "sem cor". */
+function matchCor(bookletColor: string | null, corFilter: string | null): boolean {
+  if (!corFilter) return true
+  if (corFilter === COR_NONE) return !bookletColor
+  return bookletColor === corFilter
 }
 
 export default async function AnalisePage({
@@ -63,6 +81,7 @@ export default async function AnalisePage({
   const bancaFilter = params.banca?.trim() || null
   const especialidadeFilter = params.especialidade?.trim() || null
   const corFilter = params.cor?.trim() || null
+  const formatoFilter = params.formato?.trim() || null
   const dificuldadeFilter = params.dificuldade?.trim() || null
 
   const supabase = await createClient()
@@ -87,7 +106,7 @@ export default async function AnalisePage({
     service.from('specialties').select('id, slug, name, exam_board_id').order('name'),
     service
       .from('exams')
-      .select('id, year, booklet_color, board_id, specialty_id')
+      .select('id, year, booklet_color, source_format, board_id, specialty_id')
       .order('year', { ascending: false }),
     service.from('tags').select('id, label').eq('dimension', 'dificuldade').order('display_order'),
     service
@@ -120,7 +139,8 @@ export default async function AnalisePage({
     )
       return false
     if (yearFilter && (e.year as number) !== yearFilter) return false
-    if (corFilter && (e.booklet_color as string | null) !== corFilter) return false
+    if (!matchCor(e.booklet_color as string | null, corFilter)) return false
+    if (formatoFilter && (e.source_format as string | null ?? 'pdf') !== formatoFilter) return false
     return true
   })
 
@@ -138,7 +158,8 @@ export default async function AnalisePage({
             specialtySlugById.get(e.specialty_id as string) !== especialidadeFilter
           )
             return false
-          if (corFilter && (e.booklet_color as string | null) !== corFilter) return false
+          if (!matchCor(e.booklet_color as string | null, corFilter)) return false
+          if (formatoFilter && (e.source_format as string | null ?? 'pdf') !== formatoFilter) return false
           return true
         })
         .map((e) => e.year as number)
@@ -150,9 +171,15 @@ export default async function AnalisePage({
       allExams.map((e) => e.booklet_color as string | null).filter((c): c is string => !!c)
     ),
   ].sort()
+  // Há cadernos sem cor? então oferece a opção "Sem cor" no filtro.
+  const hasColorlessExam = allExams.some((e) => !e.booklet_color)
+
+  const formatosForFilter = [
+    ...new Set(allExams.map((e) => (e.source_format as string | null) ?? 'pdf')),
+  ].sort()
 
   let allowedQuestionIds: Set<string> | null = null
-  const hasExamFilter = !!(bancaFilter || especialidadeFilter || yearFilter || corFilter)
+  const hasExamFilter = !!(bancaFilter || especialidadeFilter || yearFilter || corFilter || formatoFilter)
   if (hasExamFilter) {
     if (filteredExamIds.size === 0) {
       allowedQuestionIds = new Set()
@@ -305,8 +332,13 @@ export default async function AnalisePage({
   if (yearFilter) activeFilters.push({ label: `Ano: ${yearFilter}`, removeKey: 'year' })
   if (corFilter)
     activeFilters.push({
-      label: `Cor: ${corFilter[0].toUpperCase() + corFilter.slice(1)}`,
+      label: corFilter === COR_NONE ? 'Cor: Sem cor' : `Cor: ${corFilter[0].toUpperCase() + corFilter.slice(1)}`,
       removeKey: 'cor',
+    })
+  if (formatoFilter)
+    activeFilters.push({
+      label: `Formato: ${FORMATO_LABELS[formatoFilter] ?? formatoFilter.toUpperCase()}`,
+      removeKey: 'formato',
     })
   if (dificuldadeFilter)
     activeFilters.push({ label: `Dificuldade: ${dificuldadeFilter}`, removeKey: 'dificuldade' })
@@ -363,12 +395,29 @@ export default async function AnalisePage({
               basePath="/analise"
               single
               colored
-              options={coresForFilter.map((c) => ({
-                slug: c,
-                label: c[0].toUpperCase() + c.slice(1),
-                color: COR_DOT[c.toLowerCase()] ?? '#5A6880',
-              }))}
+              options={[
+                ...coresForFilter.map((c) => ({
+                  slug: c,
+                  label: c[0].toUpperCase() + c.slice(1),
+                  color: COR_DOT[c.toLowerCase()] ?? '#5A6880',
+                })),
+                ...(hasColorlessExam
+                  ? [{ slug: COR_NONE, label: 'Sem cor', color: '#5A6880' }]
+                  : []),
+              ]}
             />
+            {formatosForFilter.length > 1 && (
+              <FilterDropdown
+                label="Formato"
+                urlKey="formato"
+                basePath="/analise"
+                single
+                options={formatosForFilter.map((f) => ({
+                  slug: f,
+                  label: FORMATO_LABELS[f] ?? f.toUpperCase(),
+                }))}
+              />
+            )}
             <FilterDropdown
               label="Dificuldade"
               urlKey="dificuldade"

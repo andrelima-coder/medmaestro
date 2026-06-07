@@ -6,6 +6,7 @@ import {
   deleteQuestionAttachment,
   type QuestionAttachment,
 } from '@/app/(dashboard)/revisao/[id]/attachment-actions'
+import { ATTACHMENT_ACCEPT } from '@/lib/uploads/file-types'
 
 interface AttachmentsPanelProps {
   questionId: string
@@ -82,7 +83,7 @@ export function AttachmentsPanel({
             <input
               ref={fileRef}
               type="file"
-              accept="image/png,image/jpeg,image/webp,application/pdf"
+              accept={ATTACHMENT_ACCEPT}
               className="hidden"
               onChange={handleChange}
             />

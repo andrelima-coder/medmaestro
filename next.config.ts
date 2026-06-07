@@ -34,7 +34,8 @@ const nextConfig: NextConfig = {
     : {}),
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
+      // Caderno aceita até 100MB (PDF/DOCX/PPTX); folga para overhead multipart.
+      bodySizeLimit: '110mb',
     },
   },
   async headers() {

@@ -76,6 +76,7 @@ export async function GET(req: NextRequest) {
       .filter((n) => !Number.isNaN(n)),
     status: csv(sp.get('status')),
     classificacao: sp.get('classificacao') || null,
+    formato: csv(sp.get('formato')),
     search: (sp.get('q') || '').trim() || null,
   }
 
@@ -90,6 +91,7 @@ export async function GET(req: NextRequest) {
     p_year: filters.year,
     p_status: filters.status,
     p_classificacao: filters.classificacao,
+    p_formato: filters.formato,
     p_search: filters.search,
     p_total: total,
     p_mode: mode,

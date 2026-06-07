@@ -19,6 +19,7 @@ type Body = {
     year?: number[]
     status?: string[]
     classificacao?: string | null
+    formato?: string[]
     search?: string | null
   }
   total?: number
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
       p_year: f.year ?? [],
       p_status: f.status ?? [],
       p_classificacao: f.classificacao ?? null,
+      p_formato: f.formato ?? [],
       p_search: f.search ?? null,
       p_total: total,
       p_mode: mode,

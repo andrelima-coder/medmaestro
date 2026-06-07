@@ -73,6 +73,7 @@ export async function createSimuladoFromFiltersAction(
   const year = parseCsvField(formData.get('year')).map(Number).filter((n) => !Number.isNaN(n))
   const status = parseCsvField(formData.get('status'))
   const classificacao = (formData.get('classificacao') as string) || null
+  const formato = parseCsvField(formData.get('formato'))
   const search = ((formData.get('q') as string) || '').trim() || null
 
   const service = createServiceClient()
@@ -91,6 +92,7 @@ export async function createSimuladoFromFiltersAction(
     p_year: year,
     p_status: status,
     p_classificacao: classificacao,
+    p_formato: formato,
     p_search: search,
     p_total: total,
     p_mode: mode,

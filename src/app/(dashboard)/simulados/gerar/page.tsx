@@ -16,6 +16,7 @@ type SearchParams = {
   year?: string
   status?: string
   classificacao?: string
+  formato?: string
   q?: string
 }
 
@@ -105,6 +106,7 @@ export default async function GerarSimuladoPage({
     p_year: parseList(params.year).map(Number).filter((n) => !Number.isNaN(n)),
     p_status: parseList(params.status),
     p_classificacao: params.classificacao || null,
+    p_formato: parseList(params.formato),
     p_search: params.q?.trim() || null,
   })
 
@@ -127,6 +129,7 @@ export default async function GerarSimuladoPage({
     year: params.year ?? '',
     status: params.status ?? '',
     classificacao: params.classificacao ?? '',
+    formato: params.formato ?? '',
     q: params.q ?? '',
   }
 

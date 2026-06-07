@@ -6,6 +6,16 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { uploadFile } from '@/lib/storage/signed-urls'
 import { logAudit } from '@/lib/audit'
 import { parseGabaritoForExam } from '@/lib/gabarito/run'
+import { convertToPdf, OfficeConversionError } from '@/lib/office/convert'
+import {
+  CADERNO_EXTS,
+  CADERNO_MAX_BYTES,
+  GABARITO_MAX_BYTES,
+  extOf,
+  isOfficeExt,
+  mimeForExt,
+  sourceFormatForExt,
+} from '@/lib/uploads/file-types'
 
 export type CreateExamState = {
   error?: string
@@ -36,7 +46,18 @@ export async function createExamAction(
   }
 
   if (!pdfProva || pdfProva.size === 0) {
-    return { error: 'PDF da prova é obrigatório.' }
+    return { error: 'O caderno da prova é obrigatório.' }
+  }
+
+  const provaExt = extOf(pdfProva.name)
+  if (!CADERNO_EXTS.includes(provaExt)) {
+    return { error: 'Formato do caderno inválido. Use PDF, DOCX ou PPTX.' }
+  }
+  if (pdfProva.size > CADERNO_MAX_BYTES) {
+    return { error: `Caderno maior que ${Math.round(CADERNO_MAX_BYTES / 1024 / 1024)} MB.` }
+  }
+  if (pdfGabarito && pdfGabarito.size > GABARITO_MAX_BYTES) {
+    return { error: `Gabarito maior que ${Math.round(GABARITO_MAX_BYTES / 1024 / 1024)} MB.` }
   }
 
   // Autentica usuário
@@ -80,28 +101,43 @@ export async function createExamAction(
     ? `${slug}/${year}/${bookletColor}`
     : `${slug}/${year}`
 
-  // Upload PDF da prova
+  // Upload do caderno. PDF entra direto; DOCX/PPTX são convertidos para PDF
+  // (Gotenberg) para reusar todo o pipeline de extração, mas o original é
+  // preservado em storage para reprocessamento/auditoria.
+  const sourceFormat = sourceFormatForExt(provaExt)
   let pdfPath: string
+  let sourceOriginalPath: string | null = null
   try {
     const provaBuffer = Buffer.from(await pdfProva.arrayBuffer())
-    pdfPath = await uploadFile('exam-pdfs', `${basePath}/prova.pdf`, provaBuffer, 'application/pdf')
+
+    if (isOfficeExt(provaExt)) {
+      // Preserva o original (…/prova.docx | …/prova.pptx)
+      sourceOriginalPath = await uploadFile(
+        'exam-pdfs',
+        `${basePath}/prova.${provaExt}`,
+        provaBuffer,
+        mimeForExt(provaExt)
+      )
+      // Converte e grava o PDF derivado que o pipeline vai consumir
+      const convertedPdf = await convertToPdf(provaBuffer, pdfProva.name, provaExt)
+      pdfPath = await uploadFile('exam-pdfs', `${basePath}/prova.pdf`, convertedPdf, 'application/pdf')
+    } else {
+      pdfPath = await uploadFile('exam-pdfs', `${basePath}/prova.pdf`, provaBuffer, 'application/pdf')
+    }
   } catch (err) {
+    if (err instanceof OfficeConversionError) {
+      return { error: err.message }
+    }
     return {
-      error: `Falha ao enviar PDF da prova: ${err instanceof Error ? err.message : String(err)}`,
+      error: `Falha ao enviar o caderno: ${err instanceof Error ? err.message : String(err)}`,
     }
   }
 
   // Upload do gabarito (opcional, aceita múltiplos formatos)
   let gabaritoPath: string | null = null
   if (pdfGabarito && pdfGabarito.size > 0) {
-    const ext = pdfGabarito.name.split('.').pop()?.toLowerCase() ?? 'pdf'
-    const mimeMap: Record<string, string> = {
-      pdf: 'application/pdf',
-      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      txt: 'text/plain',
-      md: 'text/markdown',
-    }
-    const mime = mimeMap[ext] ?? 'application/octet-stream'
+    const ext = extOf(pdfGabarito.name) || 'pdf'
+    const mime = mimeForExt(ext)
     try {
       const gabaritoBuffer = Buffer.from(await pdfGabarito.arrayBuffer())
       gabaritoPath = await uploadFile(
@@ -126,6 +162,8 @@ export async function createExamAction(
         year,
         booklet_color: bookletColor,
         source_pdf_path: pdfPath,
+        source_format: sourceFormat,
+        source_original_path: sourceOriginalPath,
         answer_key_pdf_path: gabaritoPath,
         answer_key_color: answerKeyColorRaw,
         auto_comments: autoComments,
@@ -146,6 +184,8 @@ export async function createExamAction(
     booklet_color: bookletColor,
     answer_key_color: answerKeyColorRaw,
     pdf_path: pdfPath,
+    source_format: sourceFormat,
+    source_original_path: sourceOriginalPath,
     has_gabarito: !!gabaritoPath,
     auto_comments: autoComments,
   })

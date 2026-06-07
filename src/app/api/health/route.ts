@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { createServiceClient } from '@/lib/supabase/service'
+import { probeGotenberg } from '@/lib/office/convert'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -95,15 +96,18 @@ function probeEnv(): Check {
 export async function GET() {
   const start = Date.now()
 
-  const [database, storage, claude, pdftoppm, pdftotext] = await Promise.all([
+  const [database, storage, claude, pdftoppm, pdftotext, gotenbergRes] = await Promise.all([
     probeDatabase(),
     probeStorage(),
     probeClaude(),
     probeBinary(process.env.PDFTOPPM_PATH ?? 'pdftoppm'),
     probeBinary(process.env.PDFTOTEXT_PATH ?? 'pdftotext'),
+    probeGotenberg(),
   ])
   const env = probeEnv()
 
+  // gotenberg é opcional (só afeta upload DOCX/PPTX); informativo, não derruba o status.
+  const gotenberg = { ok: gotenbergRes.ok, detail: gotenbergRes.detail }
   const checks = { env, database, storage, claude, pdftoppm, pdftotext }
   const allOk = Object.values(checks).every((c) => c.ok)
 
@@ -118,6 +122,7 @@ export async function GET() {
         platform: `${process.platform}/${process.arch}`,
       },
       checks,
+      optional: { gotenberg },
     },
     { status: allOk ? 200 : 503 }
   )

@@ -4,6 +4,14 @@ import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState, useCallback } from 'react'
 import { createExamAction, type CreateExamState } from '@/app/(dashboard)/lotes/novo/actions'
 import { InlineProgress } from '@/components/lotes/inline-progress'
+import {
+  CADERNO_ACCEPT,
+  CADERNO_ACCEPT_DISPLAY,
+  CADERNO_MAX_BYTES,
+  GABARITO_ACCEPT,
+  GABARITO_ACCEPT_DISPLAY,
+  GABARITO_MAX_BYTES,
+} from '@/lib/uploads/file-types'
 
 type Board = {
   id: string
@@ -316,6 +324,7 @@ function DropZone({
   subtitle,
   accept,
   acceptDisplay,
+  maxBytes,
   required,
   optional,
 }: {
@@ -325,11 +334,13 @@ function DropZone({
   subtitle?: string
   accept: string
   acceptDisplay: string
+  maxBytes?: number
   required?: boolean
   optional?: boolean
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const isAccepted = useCallback(
@@ -337,18 +348,43 @@ function DropZone({
     [accept]
   )
 
+  const tooBig = useCallback((f: File) => !!maxBytes && f.size > maxBytes, [maxBytes])
+
+  const accept_ = useCallback(
+    (f: File | null | undefined): boolean => {
+      if (!f) {
+        setFile(null)
+        return false
+      }
+      if (!isAccepted(f)) {
+        setError('Formato não suportado.')
+        return false
+      }
+      if (tooBig(f)) {
+        setError(`Arquivo maior que ${Math.round((maxBytes ?? 0) / 1024 / 1024)} MB.`)
+        return false
+      }
+      setError(null)
+      setFile(f)
+      return true
+    },
+    [isAccepted, tooBig, maxBytes]
+  )
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       setDragging(false)
       const f = e.dataTransfer.files[0]
-      if (!f || !isAccepted(f)) return
-      setFile(f)
+      if (!accept_(f)) {
+        if (inputRef.current) inputRef.current.value = ''
+        return
+      }
       const dt = new DataTransfer()
       dt.items.add(f)
       if (inputRef.current) inputRef.current.files = dt.files
     },
-    [isAccepted]
+    [accept_]
   )
 
   return (
@@ -416,7 +452,9 @@ function DropZone({
           accept={accept}
           required={required}
           style={{ display: 'none' }}
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            if (!accept_(e.target.files?.[0]) && inputRef.current) inputRef.current.value = ''
+          }}
         />
 
         {file ? (
@@ -463,6 +501,10 @@ function DropZone({
           </>
         )}
       </div>
+
+      {error && (
+        <p style={{ fontSize: 11, color: 'var(--mm-red, #ff6b6b)', marginTop: 8 }}>{error}</p>
+      )}
     </div>
   )
 }
@@ -744,10 +786,11 @@ export function UploadForm({ boards }: { boards: Board[] }) {
             <DropZone
               id="pdf_prova"
               name="pdf_prova"
-              label="Caderno da prova (PDF)"
-              subtitle="Arraste o PDF aqui ou clique para selecionar"
-              accept="application/pdf,.pdf"
-              acceptDisplay="PDF (até 20MB)"
+              label="Caderno da prova"
+              subtitle="Arraste o arquivo aqui ou clique para selecionar"
+              accept={CADERNO_ACCEPT}
+              acceptDisplay={CADERNO_ACCEPT_DISPLAY}
+              maxBytes={CADERNO_MAX_BYTES}
               required
             />
           </div>
@@ -766,8 +809,9 @@ export function UploadForm({ boards }: { boards: Board[] }) {
               name="pdf_gabarito"
               label="Gabarito correspondente"
               subtitle="Arraste o gabarito aqui ou clique para selecionar"
-              accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,.txt,text/markdown,.md"
-              acceptDisplay="PDF, DOCX, TXT, MD"
+              accept={GABARITO_ACCEPT}
+              acceptDisplay={GABARITO_ACCEPT_DISPLAY}
+              maxBytes={GABARITO_MAX_BYTES}
               optional
             />
           </div>

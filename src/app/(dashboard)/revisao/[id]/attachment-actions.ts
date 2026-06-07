@@ -4,14 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getQuestionAttachmentUrl, uploadFile } from '@/lib/storage/signed-urls'
+import { ATTACHMENT_MAX_BYTES, ATTACHMENT_ALLOWED_MIME } from '@/lib/uploads/file-types'
 
-const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
-const ALLOWED_MIME = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-  'application/pdf',
-])
+const MAX_BYTES = ATTACHMENT_MAX_BYTES
+const ALLOWED_MIME = new Set(ATTACHMENT_ALLOWED_MIME)
 
 export interface QuestionAttachment {
   id: string
@@ -86,7 +82,8 @@ export async function uploadQuestionAttachment(
 
   if (!(file instanceof File)) return { ok: false, error: 'Arquivo inválido' }
   if (file.size <= 0) return { ok: false, error: 'Arquivo vazio' }
-  if (file.size > MAX_BYTES) return { ok: false, error: 'Arquivo maior que 10 MB' }
+  if (file.size > MAX_BYTES)
+    return { ok: false, error: `Arquivo maior que ${Math.round(MAX_BYTES / 1024 / 1024)} MB` }
   if (!ALLOWED_MIME.has(file.type))
     return { ok: false, error: `Tipo não suportado: ${file.type || '?'}` }
 

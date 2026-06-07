@@ -19,13 +19,14 @@ type SearchParams = {
   year?: string
   status?: string
   classificacao?: string
+  formato?: string
   q?: string
   page?: string
 }
 
 const URL_KEYS: (keyof SearchParams)[] = [
   'banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade',
-  'year', 'status', 'classificacao', 'q', 'page',
+  'year', 'status', 'classificacao', 'formato', 'q', 'page',
 ]
 
 type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
@@ -50,6 +51,13 @@ const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([slug, c]) => ({
 const CLASSIFICACAO_OPTIONS = [
   { slug: 'classificadas', label: 'Classificadas' },
   { slug: 'nao', label: 'Não classificadas' },
+]
+
+// Formato de origem do caderno (exams.source_format).
+const FORMATO_OPTIONS = [
+  { slug: 'pdf', label: 'PDF' },
+  { slug: 'docx', label: 'Word (DOCX)' },
+  { slug: 'pptx', label: 'PowerPoint (PPTX)' },
 ]
 
 /* ----------------------------- URL helpers ----------------------------- */
@@ -131,6 +139,7 @@ export default async function QuestoesPage({
     p_year: parseList(params.year).map(Number).filter((n) => !Number.isNaN(n)),
     p_status: parseList(params.status),
     p_classificacao: params.classificacao || null,
+    p_formato: parseList(params.formato),
     p_search: qFilter || null,
     p_limit: PAGE_SIZE,
     p_offset: offset,
@@ -167,17 +176,18 @@ export default async function QuestoesPage({
     dificuldade: Object.fromEntries(dificuldades.map((d) => [d.slug, d.label])),
     status: Object.fromEntries(STATUS_OPTIONS.map((s) => [s.slug, s.label])),
     classificacao: Object.fromEntries(CLASSIFICACAO_OPTIONS.map((c) => [c.slug, c.label])),
+    formato: Object.fromEntries(FORMATO_OPTIONS.map((f) => [f.slug, f.label])),
   }
   const dimPrefix: Record<string, string> = {
     banca: 'Banca', modulo: 'Módulo', tema: 'Tema', tipo: 'Tipo',
     recurso: 'Imagem', dificuldade: 'Dificuldade', year: 'Ano',
-    status: 'Status', classificacao: '',
+    status: 'Status', classificacao: '', formato: 'Formato',
   }
 
   // Chips de filtros ativos (cada slug é removível).
   const activeChips: { key: keyof SearchParams; slug: string; label: string }[] = []
   if (qFilter) activeChips.push({ key: 'q', slug: qFilter, label: `"${qFilter}"` })
-  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status'] as const) {
+  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status', 'formato'] as const) {
     for (const slug of parseList(params[key])) {
       const lbl = labelMaps[key]?.[slug] ?? slug
       activeChips.push({ key, slug, label: `${dimPrefix[key]}: ${lbl}` })
@@ -191,7 +201,7 @@ export default async function QuestoesPage({
 
   // Link para o workflow "Gerar simulado", carregando os filtros atuais.
   const gerarParams = new URLSearchParams()
-  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status', 'classificacao', 'q'] as const) {
+  for (const key of ['banca', 'modulo', 'tema', 'tipo', 'recurso', 'dificuldade', 'year', 'status', 'classificacao', 'formato', 'q'] as const) {
     const v = params[key]
     if (v) gerarParams.set(key, v)
   }
@@ -229,6 +239,7 @@ export default async function QuestoesPage({
               options={years.map((y) => ({ slug: String(y), label: String(y) }))}
             />
             <FilterDropdown label="Status" urlKey="status" basePath="/questoes" options={STATUS_OPTIONS} />
+            <FilterDropdown label="Formato" urlKey="formato" basePath="/questoes" options={FORMATO_OPTIONS} />
             <FilterDropdown
               label="Classificação"
               urlKey="classificacao"
