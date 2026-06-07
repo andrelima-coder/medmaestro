@@ -10,8 +10,9 @@ Rode DEPOIS de import_questions.py (as questões precisam existir).
 - Sobe cada imagem ao Storage (bucket question-images) e cria a linha em
   question_images, marcando questions.has_images = true.
 - Idempotente: re-executar substitui as imagens 'compilado/...' da questão.
-- image_scope = 'statement' para todas (revisão futura pode reclassificar
-  alternativas-imagem). image_type = 'outro'.
+- image_scope: 'statement' por padrão; quando a questão é de alternativas-imagem
+  (alternativas "Imagem."/vazias no compilado) e há >= 2 figuras, cada figura
+  vira uma alternativa (a, b, c, ...) na ordem do documento. image_type = 'outro'.
 
 Uso:
     python3 import_images.py
@@ -48,6 +49,18 @@ R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 HDR = re.compile(r'^([0-9a-f]{24})\s*-\s*(\d{4})\s*-')
 EXCLUDE = {("AMIB", 2024), ("AMIB", 2025)}
 MIN_PX = 60  # ignora ícones/filetes
+ALT_PLACEHOLDERS = {"imagem", "imagem.", "figura", "figura.", "imagens", "ver imagem"}
+ALT_LETTERS = "abcde"
+
+
+def is_image_alternatives(meta_row):
+    """True quando as alternativas da questão são figuras (placeholder/vazias).
+    Sinal vindo do compilado: todas as alternativas são "Imagem." ou vazias."""
+    alts = (meta_row.get("alternatives") or {})
+    vals = [str(v).strip() for v in alts.values()]
+    if not vals:
+        return False
+    return all((not v) or v.lower() in ALT_PLACEHOLDERS for v in vals)
 
 
 def load_env():
@@ -164,8 +177,9 @@ def main():
         # limpa imagens anteriores desta importação
         http("DELETE", f"{REST}/question_images?question_id=eq.{qid}&full_page_path=like.compilado/*",
              headers={"Prefer": "return=minimal"})
-        fig = 0
-        rows = []
+
+        # 1ª passada: coleta as figuras válidas (acima do tamanho mínimo).
+        valid = []
         for name in medias:
             try:
                 blob = z.read(name)
@@ -174,11 +188,29 @@ def main():
             w, h = img_size(blob)
             if w < MIN_PX or h < MIN_PX:
                 continue
-            fig += 1
             ext_file = os.path.splitext(name)[1].lstrip(".").lower() or "png"
             ctype = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
                      "gif": "image/gif", "bmp": "image/bmp", "emf": "image/emf",
                      "wmf": "image/wmf", "tiff": "image/tiff"}.get(ext_file, "application/octet-stream")
+            valid.append((blob, ext_file, ctype))
+
+        # Decide o escopo: quando a questão é de alternativas-imagem e há >= 2
+        # figuras, cada figura (em ordem do documento) vira uma alternativa
+        # (a, b, c, ...). Caso contrário, vai pro enunciado (statement).
+        img_alts = is_image_alternatives(r) and len(valid) >= 2
+
+        fig = 0
+        stmt_n = 0
+        rows = []
+        for blob, ext_file, ctype in valid:
+            fig += 1
+            if img_alts and fig <= len(ALT_LETTERS):
+                scope = f"alternative_{ALT_LETTERS[fig - 1]}"
+                fig_number = 1
+            else:
+                scope = "statement"
+                stmt_n += 1
+                fig_number = stmt_n
             path = f"compilado/{r['source']}/{r['year']}/{ext}/fig_{fig}.{ext_file}"
             # A URL de upload precisa do bucket; full_page_path guarda só o caminho interno.
             st, err = http("POST", f"{STORAGE}/object/question-images/{path}", body=blob, raw=True,
@@ -186,10 +218,12 @@ def main():
             if st >= 300:
                 print(f"  [aviso] upload falhou {path}: {st} {str(err)[:160]}")
                 fig -= 1
+                if scope == "statement":
+                    stmt_n -= 1
                 continue
             rows.append({
-                "question_id": qid, "image_scope": "statement", "image_type": "outro",
-                "figure_number": fig, "full_page_path": path, "cropped_path": path,
+                "question_id": qid, "image_scope": scope, "image_type": "outro",
+                "figure_number": fig_number, "full_page_path": path, "cropped_path": path,
                 "use_cropped": True,
             })
         if rows:

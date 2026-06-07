@@ -100,8 +100,14 @@ def get_or_create_exam(board, year):
     return rows[0]["id"]
 
 
+# Placeholders de "alternativa em imagem" no compilado — tratados como vazios.
+# A figura correspondente é atribuída ao escopo da alternativa em import_images.py.
+ALT_PLACEHOLDERS = {"imagem", "imagem.", "figura", "figura.", "imagens", "ver imagem"}
+
+
 def nonempty(alts):
-    return {k: v.strip() for k, v in alts.items() if v and v.strip()}
+    return {k: v.strip() for k, v in alts.items()
+            if v and v.strip() and v.strip().lower() not in ALT_PLACEHOLDERS}
 
 
 def chunks(lst, n):
