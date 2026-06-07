@@ -36,7 +36,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "/tmp/medmaestro-next/types/**/*.ts",
-    "/tmp/medmaestro-next/dev/types/**/*.ts"
+    "/tmp/medmaestro-next/dev/types/**/*.ts",
+    "/tmp/mm-next-dev/types/**/*.ts",
+    "/tmp/mm-next-dev/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

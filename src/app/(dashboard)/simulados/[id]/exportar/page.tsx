@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ExportForm } from '@/components/simulados/export-form'
+import { BackButton } from '@/components/ui'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -100,13 +101,14 @@ export default async function ExportarSimuladoPage({
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href={`/simulados/${id}`}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← {simulado.title}
         </Link>
+        <BackButton href={`/simulados/${id}`} />
       </div>
 
       <header className="flex flex-col gap-1">

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ExamProgress } from '@/components/lotes/exam-progress'
+import { BackButton } from '@/components/ui'
 
 export const metadata = { title: 'Lote — MedMaestro' }
 
@@ -164,19 +165,22 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
             {board?.short_name ?? ''} · Progresso da extração
           </p>
         </div>
-        <span
-          style={{
-            background: ss.bg,
-            color: ss.color,
-            border: `1px solid ${ss.border}`,
-            fontSize: 10,
-            fontWeight: 600,
-            padding: '4px 12px',
-            borderRadius: 20,
-          }}
-        >
-          {STATUS_LABELS[statusKey] ?? statusKey}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span
+            style={{
+              background: ss.bg,
+              color: ss.color,
+              border: `1px solid ${ss.border}`,
+              fontSize: 10,
+              fontWeight: 600,
+              padding: '4px 12px',
+              borderRadius: 20,
+            }}
+          >
+            {STATUS_LABELS[statusKey] ?? statusKey}
+          </span>
+          <BackButton href="/lotes" />
+        </div>
       </div>
 
       {/* Stat cards */}

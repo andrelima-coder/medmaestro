@@ -6,6 +6,7 @@ import { SimuladoTitle } from '@/components/simulados/simulado-title'
 import { SimuladoDelete } from '@/components/simulados/simulado-delete'
 import { QuestionPicker } from '@/components/simulados/question-picker'
 import { SimuladoQuestionList } from '@/components/simulados/question-list'
+import { BackButton } from '@/components/ui'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -89,13 +90,14 @@ export default async function SimuladoDetailPage({
   return (
     <div className="flex flex-col gap-6">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href="/simulados"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Simulados
         </Link>
+        <BackButton href="/simulados" />
       </div>
 
       {/* Header */}

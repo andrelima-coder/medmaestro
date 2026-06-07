@@ -11,7 +11,7 @@ import { getQuestionImages } from './image-actions'
 import { STATUS_LABELS } from '@/types'
 import { sanitizeRichTextHtml } from '@/lib/utils/sanitize-html'
 import type { QuestionStatus } from '@/types'
-import { Card, CardBody, CardHeader, CardTitle, Badge, AltCard } from '@/components/ui'
+import { Card, CardBody, CardHeader, CardTitle, Badge, AltCard, BackButton } from '@/components/ui'
 
 type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
 
@@ -113,7 +113,7 @@ export default async function QuestaoDetailPage({
     if (signed?.signedUrl) previewByImageId[img.id] = signed.signedUrl
   }
 
-  const figureSlot = (scope: string): ReactNode => {
+  const figureSlot = (scope: string, align: 'left' | 'center' = 'left'): ReactNode => {
     const scopeImages = images.filter((img) => img.image_scope === scope)
     if (scopeImages.length === 0) return null
     return (
@@ -121,17 +121,19 @@ export default async function QuestaoDetailPage({
         images={scopeImages}
         previewUrls={scopeImages.map((img) => previewByImageId[img.id] ?? null)}
         hideScopeLabel
+        align={align}
       />
     )
   }
 
-  const statementSlot = figureSlot('statement')
+  // Enunciado: figura centralizada. Alternativas: figura à esquerda.
+  const statementSlot = figureSlot('statement', 'center')
   const alternativeSlots: Partial<Record<(typeof LETTERS)[number], ReactNode>> = {
-    A: figureSlot('alternative_a'),
-    B: figureSlot('alternative_b'),
-    C: figureSlot('alternative_c'),
-    D: figureSlot('alternative_d'),
-    E: figureSlot('alternative_e'),
+    A: figureSlot('alternative_a', 'left'),
+    B: figureSlot('alternative_b', 'left'),
+    C: figureSlot('alternative_c', 'left'),
+    D: figureSlot('alternative_d', 'left'),
+    E: figureSlot('alternative_e', 'left'),
   }
   const hasAnyAlternative = LETTERS.some((l) => (alternatives[l] ?? '').trim() || alternativeSlots[l])
 
@@ -149,8 +151,9 @@ export default async function QuestaoDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Breadcrumb */}
-      <div className="flex flex-wrap items-center gap-2 text-[13px]">
+      {/* Cabeçalho: voltar + breadcrumb */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <Link
           href="/questoes"
           className="text-[var(--mm-muted)] no-underline transition-colors hover:text-foreground"
@@ -167,6 +170,8 @@ export default async function QuestaoDetailPage({
             <span className="text-[var(--mm-muted)]">{examParts.join(' · ')}</span>
           </>
         )}
+        </div>
+        <BackButton href="/questoes" />
       </div>
 
       {/* Layout side-by-side */}

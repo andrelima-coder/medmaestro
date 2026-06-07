@@ -1,4 +1,5 @@
 export { Button, buttonVariants } from "./button"
+export { BackButton } from "./back-button"
 export { Card, CardHeader, CardTitle, CardBody, cardVariants } from "./card"
 export { Badge, badgeVariants } from "./badge"
 export { KpiCard, kpiCardVariants } from "./kpi-card"

@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { createSimuladoAction } from '../actions'
+import { BackButton } from '@/components/ui'
 
 export default function NovoSimuladoPage() {
   const [state, formAction, isPending] = useActionState(
@@ -14,13 +15,14 @@ export default function NovoSimuladoPage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href="/simulados"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Simulados
         </Link>
+        <BackButton href="/simulados" />
       </div>
 
       <div>

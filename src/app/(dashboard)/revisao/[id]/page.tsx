@@ -19,6 +19,7 @@ import {
   CardTitle,
   Badge,
   LockBanner,
+  BackButton,
 } from '@/components/ui'
 
 export const metadata = { title: 'Revisão — MedMaestro' }
@@ -138,7 +139,7 @@ export default async function RevisaoItemPage({
     if (signed?.signedUrl) previewByImageId[img.id] = signed.signedUrl
   }
 
-  const figureSlot = (scope: string) => {
+  const figureSlot = (scope: string, align: 'left' | 'center' = 'left') => {
     const scopeImages = images.filter((img) => img.image_scope === scope)
     if (scopeImages.length === 0) return null
     return (
@@ -146,17 +147,19 @@ export default async function RevisaoItemPage({
         images={scopeImages}
         previewUrls={scopeImages.map((img) => previewByImageId[img.id] ?? null)}
         hideScopeLabel
+        align={align}
       />
     )
   }
 
-  const statementSlot = figureSlot('statement')
+  // Enunciado: figura centralizada. Alternativas: figura à esquerda.
+  const statementSlot = figureSlot('statement', 'center')
   const alternativeSlots: Partial<Record<'A' | 'B' | 'C' | 'D' | 'E', ReactNode>> = {
-    A: figureSlot('alternative_a'),
-    B: figureSlot('alternative_b'),
-    C: figureSlot('alternative_c'),
-    D: figureSlot('alternative_d'),
-    E: figureSlot('alternative_e'),
+    A: figureSlot('alternative_a', 'left'),
+    B: figureSlot('alternative_b', 'left'),
+    C: figureSlot('alternative_c', 'left'),
+    D: figureSlot('alternative_d', 'left'),
+    E: figureSlot('alternative_e', 'left'),
   }
 
   const now = new Date()
@@ -224,23 +227,26 @@ export default async function RevisaoItemPage({
     .join(' · ')
 
   const Breadcrumb = (
-    <div className="flex flex-wrap items-center gap-2 text-[13px]">
-      <Link
-        href="/revisao"
-        className="text-[var(--mm-muted)] no-underline transition-colors hover:text-foreground"
-      >
-        ← Fila
-      </Link>
-      <span className="text-[var(--mm-muted)]">/</span>
-      <span className="font-medium text-foreground">
-        Q{question.question_number as number}
-      </span>
-      {examLabel && (
-        <>
-          <span className="text-[var(--mm-muted)]">·</span>
-          <span className="text-[var(--mm-muted)]">{examLabel}</span>
-        </>
-      )}
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-[13px]">
+        <Link
+          href="/revisao"
+          className="text-[var(--mm-muted)] no-underline transition-colors hover:text-foreground"
+        >
+          ← Fila
+        </Link>
+        <span className="text-[var(--mm-muted)]">/</span>
+        <span className="font-medium text-foreground">
+          Q{question.question_number as number}
+        </span>
+        {examLabel && (
+          <>
+            <span className="text-[var(--mm-muted)]">·</span>
+            <span className="text-[var(--mm-muted)]">{examLabel}</span>
+          </>
+        )}
+      </div>
+      <BackButton href="/revisao" label="Voltar" />
     </div>
   )
 

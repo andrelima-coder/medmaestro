@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { GerarSimuladoForm, type GerarFilters } from '@/components/simulados/gerar-simulado-form'
+import { BackButton } from '@/components/ui'
 
 export const metadata = { title: 'Gerar simulado — MedMaestro' }
 
@@ -142,10 +143,11 @@ export default async function GerarSimuladoPage({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <Link href="/questoes" className="text-sm text-[var(--mm-muted)] transition-colors hover:text-foreground">
           ← Voltar às questões
         </Link>
+        <BackButton href="/questoes" />
       </div>
 
       <header className="flex flex-col gap-1">

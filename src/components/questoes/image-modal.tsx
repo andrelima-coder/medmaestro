@@ -24,9 +24,20 @@ interface ImageModalProps {
   previewUrls?: (string | null)[]
   /** Esconde o rótulo do escopo no preview (já está ancorado no box certo). */
   hideScopeLabel?: boolean
+  /** Alinhamento do preview inline. Enunciado → 'center'; alternativas → 'left'. */
+  align?: 'left' | 'center'
 }
 
-export function ImageModal({ images, previewUrls, hideScopeLabel = false }: ImageModalProps) {
+/** Dimensões mínimas/iniciais da janela de zoom (px). */
+const MODAL_MIN_W = 360
+const MODAL_MIN_H = 320
+
+export function ImageModal({
+  images,
+  previewUrls,
+  hideScopeLabel = false,
+  align = 'left',
+}: ImageModalProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
@@ -38,6 +49,18 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  // Tamanho da janela de zoom (null = tamanho padrão responsivo). Ao arrastar
+  // qualquer canto, passamos a controlar largura/altura em pixels.
+  const [modalSize, setModalSize] = useState<{ w: number; h: number } | null>(null)
+  const resizeRef = useRef<{
+    startX: number
+    startY: number
+    baseW: number
+    baseH: number
+    dirX: 1 | -1
+    dirY: 1 | -1
+  } | null>(null)
+  const [isResizing, setIsResizing] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const activeImage = images[activeIndex]
@@ -86,12 +109,52 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
     setIsDragging(false)
   }
 
+  // ---- Redimensionamento da janela arrastando os cantos ----
+  function startResize(dirX: 1 | -1, dirY: 1 | -1) {
+    return (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      e.stopPropagation()
+      ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+      const box = e.currentTarget.closest('[data-modal-box]') as HTMLElement | null
+      const rect = box?.getBoundingClientRect()
+      resizeRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        baseW: rect?.width ?? MODAL_MIN_W,
+        baseH: rect?.height ?? MODAL_MIN_H,
+        dirX,
+        dirY,
+      }
+      setIsResizing(true)
+    }
+  }
+
+  function onResizeMove(e: React.PointerEvent<HTMLDivElement>) {
+    const r = resizeRef.current
+    if (!r) return
+    const maxW = window.innerWidth - 32
+    const maxH = window.innerHeight - 32
+    const w = Math.min(maxW, Math.max(MODAL_MIN_W, r.baseW + r.dirX * (e.clientX - r.startX) * 2))
+    const h = Math.min(maxH, Math.max(MODAL_MIN_H, r.baseH + r.dirY * (e.clientY - r.startY) * 2))
+    setModalSize({ w, h })
+  }
+
+  function endResize(e: React.PointerEvent<HTMLDivElement>) {
+    if (!resizeRef.current) return
+    try {
+      ;(e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId)
+    } catch {}
+    resizeRef.current = null
+    setIsResizing(false)
+  }
+
   const openModal = useCallback(
     async (index: number) => {
       setActiveIndex(index)
       setSignedUrl(null)
       setOpen(true)
       setLoadingUrl(true)
+      setModalSize(null)
       resetZoom()
       const img = images[index]
       const path = useCropped[index] && img.cropped_path ? img.cropped_path : img.full_page_path
@@ -140,8 +203,13 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
 
   return (
     <>
-      {/* Preview inline da figura (clicável → zoom). Fallback: chip. */}
-      <div className="flex flex-wrap gap-2 mt-2">
+      {/* Preview inline da figura (clicável → zoom). Fallback: chip.
+          Enunciado → centralizado; alternativas → alinhado à esquerda. */}
+      <div
+        className={`flex flex-wrap gap-2 mt-2 ${
+          align === 'center' ? 'justify-center' : 'justify-start'
+        }`}
+      >
         {images.map((img, i) => {
           const preview = previewUrls?.[i]
           if (preview) {
@@ -185,7 +253,15 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
           onClick={() => setOpen(false)}
         >
           <div
-            className="relative flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--mm-surface)] p-4 max-w-3xl w-full mx-4 max-h-[90vh]"
+            data-modal-box
+            className={`relative flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--mm-surface)] p-4 mx-4 ${
+              modalSize ? '' : 'max-w-3xl w-full max-h-[90vh]'
+            }`}
+            style={
+              modalSize
+                ? { width: modalSize.w, height: modalSize.h }
+                : undefined
+            }
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -283,7 +359,7 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
                     transition: isDragging ? 'none' : 'transform 120ms ease-out',
                     pointerEvents: 'none',
                   }}
-                  className="max-w-full max-h-[70vh] object-contain"
+                  className="max-w-full max-h-full object-contain"
                   draggable={false}
                 />
               ) : (
@@ -292,8 +368,32 @@ export function ImageModal({ images, previewUrls, hideScopeLabel = false }: Imag
             </div>
 
             <p className="text-[11px] text-muted-foreground/60 text-center">
-              + / − zoom · 0 reset · Esc fechar · scroll para zoom · arraste para mover
+              + / − zoom · 0 reset · Esc fechar · scroll para zoom · arraste para mover ·
+              cantos para redimensionar
             </p>
+
+            {/* Alças de redimensionamento nos 4 cantos */}
+            {(
+              [
+                ['nw', -1, -1, 'top-0 left-0 cursor-nwse-resize'],
+                ['ne', 1, -1, 'top-0 right-0 cursor-nesw-resize'],
+                ['sw', -1, 1, 'bottom-0 left-0 cursor-nesw-resize'],
+                ['se', 1, 1, 'bottom-0 right-0 cursor-nwse-resize'],
+              ] as const
+            ).map(([key, dx, dy, pos]) => (
+              <div
+                key={key}
+                onPointerDown={startResize(dx, dy)}
+                onPointerMove={onResizeMove}
+                onPointerUp={endResize}
+                onPointerCancel={endResize}
+                className={`absolute z-10 h-5 w-5 ${pos}`}
+                style={{ touchAction: 'none' }}
+                aria-hidden
+              >
+                <span className="pointer-events-none absolute inset-1 rounded-sm border border-white/40" />
+              </div>
+            ))}
           </div>
         </div>
       )}
