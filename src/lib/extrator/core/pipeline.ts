@@ -1322,8 +1322,27 @@ export async function reextractQuestionImages(
 
   const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
 
-  const firstPage = centerPage ? Math.max(1, centerPage - 2) : 1
-  const lastPage = centerPage ? centerPage + 2 : 3
+  // Caderno inteiro sem âncora de página (a extração original falhou em TODAS
+  // as questões, então nem as vizinhas têm figura): estima a página pela posição
+  // relativa da questão no PDF (question_number / total × nº de páginas).
+  let estimatedWindow = false
+  if (centerPage == null) {
+    const totalPages = await pdfPageCount(pdfBuffer).catch(() => 0)
+    const { count: totalQ } = await supabase
+      .from('questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('exam_id', question.exam_id as string)
+    if (totalPages > 0 && totalQ && totalQ > 0) {
+      const qn = question.question_number as number
+      centerPage = Math.min(totalPages, Math.max(1, Math.round((qn / totalQ) * totalPages)))
+      estimatedWindow = true
+    }
+  }
+
+  // Janela maior quando a página foi só estimada (tolera erro do palpite).
+  const pad = estimatedWindow ? 3 : 2
+  const firstPage = centerPage ? Math.max(1, centerPage - pad) : 1
+  const lastPage = centerPage ? centerPage + pad : 3
 
   let pages: Awaited<ReturnType<typeof rasterizePdf>>
   try {
