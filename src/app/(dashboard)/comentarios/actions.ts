@@ -133,6 +133,41 @@ export async function listQuestionsForComments(
   return { rows: result, total: count ?? 0 }
 }
 
+/**
+ * Retorna apenas os IDs das questões que batem no filtro atual (todas as
+ * páginas). Usado para "selecionar todas as N filtradas" sem baixar as linhas.
+ */
+export async function listFilteredCommentQuestionIds(filter: {
+  examId?: string
+  withoutCommentOnly?: boolean
+  lowConfidenceOnly?: boolean
+}): Promise<string[]> {
+  const supabase = createServiceClient()
+
+  let query = supabase
+    .from('questions')
+    .select('id, exams!inner(year)')
+    .order('exam_id', { ascending: false })
+    .order('question_number', { ascending: true })
+    .limit(5000)
+
+  if (filter.examId) query = query.eq('exam_id', filter.examId)
+  if (filter.lowConfidenceOnly) query = query.lte('extraction_confidence', 2)
+
+  if (filter.withoutCommentOnly) {
+    const { data: commented } = await supabase
+      .from('question_comments')
+      .select('question_id')
+    const commentedIds = [...new Set((commented ?? []).map((c) => c.question_id as string))]
+    if (commentedIds.length > 0) {
+      query = query.not('id', 'in', `(${commentedIds.join(',')})`)
+    }
+  }
+
+  const { data } = await query
+  return (data ?? []).map((r) => r.id as string)
+}
+
 export async function listExamsForFilter(): Promise<
   { id: string; label: string }[]
 > {

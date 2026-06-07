@@ -196,6 +196,41 @@ export async function listQuestionsForFlashcards(
   return { rows: result, total: count ?? 0 }
 }
 
+/**
+ * Retorna apenas os IDs das questões que batem no filtro atual (todas as
+ * páginas). Usado para "selecionar todas as N filtradas" sem baixar as linhas.
+ */
+export async function listFilteredFlashcardQuestionIds(filter: {
+  examId?: string
+  withoutFlashcardOnly?: boolean
+  lowConfidenceOnly?: boolean
+}): Promise<string[]> {
+  const supabase = createServiceClient()
+
+  let query = supabase
+    .from('questions')
+    .select('id, exams!inner(year)')
+    .order('exam_id', { ascending: false })
+    .order('question_number', { ascending: true })
+    .limit(5000)
+
+  if (filter.examId) query = query.eq('exam_id', filter.examId)
+  if (filter.lowConfidenceOnly) query = query.lte('extraction_confidence', 2)
+
+  if (filter.withoutFlashcardOnly) {
+    const { data: cards } = await supabase
+      .from('flashcards')
+      .select('source_question_id')
+    const withCardIds = [...new Set((cards ?? []).map((c) => c.source_question_id as string))]
+    if (withCardIds.length > 0) {
+      query = query.not('id', 'in', `(${withCardIds.join(',')})`)
+    }
+  }
+
+  const { data } = await query
+  return (data ?? []).map((r) => r.id as string)
+}
+
 export async function listExamsForFlashcardsFilter(): Promise<
   { id: string; label: string }[]
 > {

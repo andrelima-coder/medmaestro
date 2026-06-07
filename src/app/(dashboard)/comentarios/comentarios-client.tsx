@@ -4,7 +4,11 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
-import { generateCommentsBatchAction, type CommentRow } from './actions'
+import {
+  generateCommentsBatchAction,
+  listFilteredCommentQuestionIds,
+  type CommentRow,
+} from './actions'
 import { Card, CardBody, Badge, Pagination } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
@@ -29,10 +33,31 @@ export function ComentariosClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [pending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [selectingAll, setSelectingAll] = useState(false)
 
   const allSelected = rows.length > 0 && selected.size === rows.length
   const totalSel = selected.size
+  const allFilteredSelected = total > 0 && totalSel >= total
+  const hasMorePages = total > rows.length
   const estCost = (totalSel * COST_PER_COMMENT_USD).toFixed(2)
+
+  async function selectAllFiltered() {
+    setSelectingAll(true)
+    try {
+      const ids = await listFilteredCommentQuestionIds({
+        examId: initialFilter.examId || undefined,
+        withoutCommentOnly: initialFilter.onlyPending,
+        lowConfidenceOnly: initialFilter.lowConf,
+      })
+      setSelected(new Set(ids))
+    } finally {
+      setSelectingAll(false)
+    }
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+  }
 
   // Mudar filtro reseta para a página 1; paginar preserva os filtros.
   const buildUrl = useMemo(
@@ -190,6 +215,40 @@ export function ComentariosClient({
           )}
         </CardBody>
       </Card>
+
+      {/* Seleção entre páginas */}
+      {hasMorePages && (allSelected || allFilteredSelected) && (
+        <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.06)] px-4 py-2.5 text-[12px] text-[var(--mm-text2)]">
+          {allFilteredSelected ? (
+            <>
+              <span>
+                Todas as <strong>{total}</strong> questões filtradas estão selecionadas.
+              </span>
+              <button
+                onClick={clearSelection}
+                className="font-semibold text-[var(--mm-gold)] underline-offset-2 hover:underline"
+              >
+                Limpar seleção
+              </button>
+            </>
+          ) : (
+            <>
+              <span>
+                As <strong>{rows.length}</strong> desta página estão selecionadas.
+              </span>
+              <button
+                onClick={selectAllFiltered}
+                disabled={selectingAll}
+                className="font-semibold text-[var(--mm-gold)] underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                {selectingAll
+                  ? 'Selecionando…'
+                  : `Selecionar todas as ${total} filtradas`}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Tabela */}
       <Card>

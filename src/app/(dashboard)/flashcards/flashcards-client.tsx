@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   suggestCountsAction,
   generateFlashcardsInlineAction,
+  listFilteredFlashcardQuestionIds,
   type FlashcardsListRow,
 } from './actions'
 import type { CardType } from '@/lib/flashcards/generate'
@@ -42,8 +43,12 @@ export function FlashcardsClient({
   const [includeCloze, setIncludeCloze] = useState(true)
   const [inheritTags, setInheritTags] = useState(true)
 
+  const [selectingAll, setSelectingAll] = useState(false)
+
   const allSelected = rows.length > 0 && selected.size === rows.length
   const totalSel = selected.size
+  const allFilteredSelected = total > 0 && totalSel >= total
+  const hasMorePages = total > rows.length
 
   const rowById = useMemo(() => {
     const m = new Map<string, FlashcardsListRow>()
@@ -51,12 +56,16 @@ export function FlashcardsClient({
     return m
   }, [rows])
 
+  // Linhas selecionadas que existem na página atual (têm enunciado p/ exibir).
   const selectedRows = useMemo(
     () => Array.from(selected).map((id) => rowById.get(id)).filter(Boolean) as FlashcardsListRow[],
     [selected, rowById]
   )
+  // Selecionadas em outras páginas (via "selecionar todas"): sem metadado local.
+  const offPageCount = totalSel - selectedRows.length
 
-  const totalCards = selectedRows.reduce((s, r) => s + (counts[r.id] ?? 2), 0)
+  const totalCards =
+    selectedRows.reduce((s, r) => s + (counts[r.id] ?? 2), 0) + offPageCount * 2
   const estCost = (totalCards * COST_PER_CARD_USD).toFixed(2)
 
   const buildUrl = useMemo(
@@ -87,25 +96,46 @@ export function FlashcardsClient({
     })
   }
 
+  async function selectAllFiltered() {
+    setSelectingAll(true)
+    try {
+      const ids = await listFilteredFlashcardQuestionIds({
+        examId: initialFilter.examId || undefined,
+        withoutFlashcardOnly: initialFilter.onlyPending,
+        lowConfidenceOnly: initialFilter.lowConf,
+      })
+      setSelected(new Set(ids))
+    } finally {
+      setSelectingAll(false)
+    }
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
+  }
+
   async function openModal() {
-    const ids = Array.from(selected)
-    if (ids.length === 0) return
+    if (selected.size === 0) return
     setFeedback(null)
     setModalOpen(true)
-    // Pré-preenche com a sugestão da IA (mantém valores já ajustados).
+    // Sugestão da IA só para as questões visíveis na página (custo limitado);
+    // selecionadas de outras páginas usam o padrão (2 cards) e podem ser
+    // ajustadas ao navegar até elas.
+    const pageIds = selectedRows.map((r) => r.id)
+    if (pageIds.length === 0) return
     setSuggesting(true)
-    const res = await suggestCountsAction(ids)
+    const res = await suggestCountsAction(pageIds)
     setSuggesting(false)
     if (res.ok && res.counts) {
       setCounts((prev) => {
         const next = { ...prev }
-        for (const id of ids) next[id] = prev[id] ?? res.counts![id] ?? 2
+        for (const id of pageIds) next[id] = prev[id] ?? res.counts![id] ?? 2
         return next
       })
     } else {
       setCounts((prev) => {
         const next = { ...prev }
-        for (const id of ids) next[id] = prev[id] ?? 2
+        for (const id of pageIds) next[id] = prev[id] ?? 2
         return next
       })
     }
@@ -126,7 +156,12 @@ export function FlashcardsClient({
       return
     }
 
-    const items = selectedRows.map((r) => ({ questionId: r.id, count: counts[r.id] ?? 2 }))
+    // Inclui todas as selecionadas (inclusive de outras páginas), não só as
+    // visíveis: off-page usam o padrão de 2 cards.
+    const items = Array.from(selected).map((id) => ({
+      questionId: id,
+      count: counts[id] ?? 2,
+    }))
 
     startTransition(async () => {
       const res = await generateFlashcardsInlineAction(items, { types, inheritTags })
@@ -335,6 +370,19 @@ export function FlashcardsClient({
                   </tbody>
                 </table>
               )}
+              {!suggesting && offPageCount > 0 && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 11,
+                    color: 'var(--mm-muted)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  + {offPageCount} questão(ões) selecionada(s) de outras páginas usarão 2 cards
+                  cada (padrão).
+                </div>
+              )}
             </div>
 
             <div style={{ padding: '12px 20px', borderTop: '1px solid var(--mm-line)', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -365,6 +413,66 @@ export function FlashcardsClient({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Seleção entre páginas */}
+      {hasMorePages && (allSelected || allFilteredSelected) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            border: '1px solid rgba(201,168,76,0.25)',
+            background: 'rgba(201,168,76,0.06)',
+            borderRadius: 10,
+            padding: '10px 16px',
+            fontSize: 12,
+            color: 'var(--mm-text2)',
+          }}
+        >
+          {allFilteredSelected ? (
+            <>
+              <span>
+                Todas as <strong>{total}</strong> questões filtradas estão selecionadas.
+              </span>
+              <button
+                onClick={clearSelection}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--mm-gold)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                Limpar seleção
+              </button>
+            </>
+          ) : (
+            <>
+              <span>
+                As <strong>{rows.length}</strong> desta página estão selecionadas.
+              </span>
+              <button
+                onClick={selectAllFiltered}
+                disabled={selectingAll}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--mm-gold)',
+                  fontWeight: 600,
+                  cursor: selectingAll ? 'default' : 'pointer',
+                  opacity: selectingAll ? 0.6 : 1,
+                  padding: 0,
+                }}
+              >
+                {selectingAll ? 'Selecionando…' : `Selecionar todas as ${total} filtradas`}
+              </button>
+            </>
+          )}
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
 import {
   generateVariationsBatchAction,
+  listFilteredVariationQuestionIds,
   type VariationListRow,
 } from './actions'
 import type { DifficultyDelta } from '@/lib/variations/generate'
@@ -47,8 +48,12 @@ export function VariacoesClient({
   const [model, setModel] = useState<'sonnet' | 'opus'>('sonnet')
   const [inheritTags, setInheritTags] = useState(true)
 
+  const [selectingAll, setSelectingAll] = useState(false)
+
   const allSelected = rows.length > 0 && selected.size === rows.length
   const totalSel = selected.size
+  const allFilteredSelected = total > 0 && totalSel >= total
+  const hasMorePages = total > rows.length
   const totalVars = totalSel * count
   const unitCost = model === 'opus' ? COST_OPUS : COST_SONNET
   const estCost = (totalVars * unitCost).toFixed(2)
@@ -78,6 +83,23 @@ export function VariacoesClient({
       else next.add(id)
       return next
     })
+  }
+
+  async function selectAllFiltered() {
+    setSelectingAll(true)
+    try {
+      const ids = await listFilteredVariationQuestionIds({
+        examId: initialFilter.examId || undefined,
+        withoutVariationOnly: initialFilter.onlyPending,
+      })
+      setSelected(new Set(ids))
+    } finally {
+      setSelectingAll(false)
+    }
+  }
+
+  function clearSelection() {
+    setSelected(new Set())
   }
 
   async function dispatch() {
@@ -296,6 +318,40 @@ export function VariacoesClient({
             </div>
           </CardBody>
         </Card>
+      )}
+
+      {/* Seleção entre páginas */}
+      {hasMorePages && (allSelected || allFilteredSelected) && (
+        <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.06)] px-4 py-2.5 text-[12px] text-[var(--mm-text2)]">
+          {allFilteredSelected ? (
+            <>
+              <span>
+                Todas as <strong>{total}</strong> questões filtradas estão selecionadas.
+              </span>
+              <button
+                onClick={clearSelection}
+                className="font-semibold text-[var(--mm-gold)] underline-offset-2 hover:underline"
+              >
+                Limpar seleção
+              </button>
+            </>
+          ) : (
+            <>
+              <span>
+                As <strong>{rows.length}</strong> desta página estão selecionadas.
+              </span>
+              <button
+                onClick={selectAllFiltered}
+                disabled={selectingAll}
+                className="font-semibold text-[var(--mm-gold)] underline-offset-2 hover:underline disabled:opacity-60"
+              >
+                {selectingAll
+                  ? 'Selecionando…'
+                  : `Selecionar todas as ${total} filtradas`}
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       {/* Tabela */}
