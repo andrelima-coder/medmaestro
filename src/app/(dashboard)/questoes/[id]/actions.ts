@@ -61,7 +61,7 @@ export async function saveQuestionTags(
       newTagIds.map((tagId) => ({
         question_id: questionId,
         tag_id: tagId,
-        added_by_type: 'human',
+        added_by_type: 'human_review',
         added_by: user.id,
       }))
     )
@@ -105,7 +105,7 @@ export async function undoLastTagEdit(
       restoredTagIds.map((tagId) => ({
         question_id: questionId,
         tag_id: tagId,
-        added_by_type: 'human',
+        added_by_type: 'human_review',
         added_by: user.id,
       }))
     )

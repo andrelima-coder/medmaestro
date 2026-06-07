@@ -113,7 +113,7 @@ E) ${alternatives['E'] ?? ''}`
   const rows = validTagIds.map((tag_id) => ({
     question_id,
     tag_id,
-    added_by_type: 'ai',
+    added_by_type: 'ai_auto',
   }))
 
   const { error: upsertErr } = await supabase
