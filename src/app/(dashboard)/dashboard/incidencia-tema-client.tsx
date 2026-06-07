@@ -28,19 +28,35 @@ export function IncidenciaTemaClient({
     () => Array.from(new Set(rows.map((r) => r.board))).sort(),
     [rows]
   )
-  const allYears = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.year))).sort((a, b) => b - a),
-    [rows]
+
+  // Anos disponíveis dependem da banca selecionada: cada banca tem cadernos de
+  // anos diferentes. Sem banca, mostra todos os anos do banco.
+  const availableYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows.filter((r) => !board || r.board === board).map((r) => r.year)
+        )
+      ).sort((a, b) => b - a),
+    [rows, board]
+  )
+
+  // Garante que só anos válidos para a banca atual contam (evita seleção órfã
+  // ao trocar de banca).
+  const effectiveYears = useMemo(
+    () => years.filter((y) => availableYears.includes(y)),
+    [years, availableYears]
   )
 
   const filtered = useMemo(
     () =>
       rows.filter((r) => {
         if (board && r.board !== board) return false
-        if (years.length > 0 && !years.includes(r.year)) return false
+        if (effectiveYears.length > 0 && !effectiveYears.includes(r.year))
+          return false
         return true
       }),
-    [rows, board, years]
+    [rows, board, effectiveYears]
   )
 
   const { top8, total } = useMemo(() => {
@@ -61,13 +77,13 @@ export function IncidenciaTemaClient({
     )
   }
 
-  const hasFilters = Boolean(board) || years.length > 0
+  const hasFilters = Boolean(board) || effectiveYears.length > 0
 
   // Resumo do escopo atual (banca + anos)
   const yearsLabel =
-    years.length === 0
+    effectiveYears.length === 0
       ? 'todos os anos'
-      : [...years].sort((a, b) => a - b).join(', ')
+      : [...effectiveYears].sort((a, b) => a - b).join(', ')
   const boardLabel = board || 'todas as bancas'
 
   return (
@@ -92,7 +108,10 @@ export function IncidenciaTemaClient({
             <div className="flex flex-wrap items-center gap-2">
               <select
                 value={board}
-                onChange={(e) => setBoard(e.target.value)}
+                onChange={(e) => {
+                  setBoard(e.target.value)
+                  setYears([]) // troca de banca reseta os anos disponíveis
+                }}
                 style={selectStyle}
                 aria-label="Filtrar por banca"
               >
@@ -105,8 +124,8 @@ export function IncidenciaTemaClient({
               </select>
 
               <div className="flex flex-wrap items-center gap-1.5">
-                {allYears.map((y) => {
-                  const active = years.includes(y)
+                {availableYears.map((y) => {
+                  const active = effectiveYears.includes(y)
                   return (
                     <button
                       key={y}

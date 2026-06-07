@@ -315,6 +315,124 @@ function ColorSelectWithCustom({
   )
 }
 
+/* ── Year Select com "Outro ano..." ───────────────────────────────────────── */
+
+function YearSelectWithCustom({
+  name,
+  value,
+  onChange,
+  options,
+}: {
+  name: string
+  value: string
+  onChange: (v: string) => void
+  options: Option[]
+}) {
+  const isPreset = options.some((o) => o.value === value)
+  const [customMode, setCustomMode] = useState(!isPreset && value !== '')
+  const customRef = useRef<HTMLInputElement>(null)
+
+  const selectValue = customMode ? OTHER_SENTINEL : value
+  const selectOptions = [...options, { value: OTHER_SENTINEL, label: 'Outro ano…' }]
+
+  function handleSelectChange(v: string) {
+    if (v === OTHER_SENTINEL) {
+      setCustomMode(true)
+      onChange('')
+      setTimeout(() => customRef.current?.focus(), 50)
+    } else {
+      setCustomMode(false)
+      onChange(v)
+    }
+  }
+
+  function handleCustomChange(e: React.ChangeEvent<HTMLInputElement>) {
+    // só dígitos, no máximo 4
+    const v = e.target.value.replace(/\D/g, '').slice(0, 4)
+    onChange(v)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {!customMode && <input type="hidden" name={name} value={value} />}
+
+      <SelectField
+        name=""
+        options={selectOptions}
+        placeholder="Selecione o ano..."
+        value={selectValue}
+        onChange={handleSelectChange}
+      />
+
+      {customMode && (
+        <div style={{ position: 'relative' }}>
+          <input
+            ref={customRef}
+            name={name}
+            type="text"
+            inputMode="numeric"
+            value={value}
+            onChange={handleCustomChange}
+            placeholder="Ex: 2019"
+            maxLength={4}
+            style={{
+              width: '100%',
+              height: 44,
+              padding: '0 14px 0 40px',
+              borderRadius: 10,
+              border: '1px solid rgba(212,168,67,0.4)',
+              background: 'rgba(212,168,67,0.04)',
+              color: 'var(--mm-text)',
+              fontSize: 13,
+              boxSizing: 'border-box',
+              outline: 'none',
+            }}
+          />
+          {/* pencil icon */}
+          <svg
+            style={{
+              position: 'absolute',
+              left: 13,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 14,
+              height: 14,
+              color: 'var(--mm-gold)',
+              pointerEvents: 'none',
+            }}
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M11.5 2.5a1.414 1.414 0 0 1 2 2L5 13H3v-2L11.5 2.5z" strokeLinejoin="round" />
+          </svg>
+          <button
+            type="button"
+            onClick={() => { setCustomMode(false); onChange(String(new Date().getFullYear())) }}
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--mm-muted)',
+              fontSize: 16,
+              lineHeight: 1,
+              padding: '2px 4px',
+            }}
+            title="Voltar para a lista de anos"
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── Drop Zone ─────────────────────────────────────────────────────────────── */
 
 function DropZone({
@@ -670,13 +788,15 @@ export function UploadForm({ boards }: { boards: Board[] }) {
           {/* Ano */}
           <div>
             <FieldLabel>Ano da prova</FieldLabel>
-            <SelectField
+            <YearSelectWithCustom
               name="year"
               options={yearOptions}
-              placeholder="Selecione o ano..."
               value={year}
               onChange={setYear}
             />
+            <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 6 }}>
+              Escolha na lista ou use &ldquo;Outro ano…&rdquo; para digitar manualmente
+            </p>
           </div>
 
           {/* Banca */}
@@ -725,26 +845,43 @@ export function UploadForm({ boards }: { boards: Board[] }) {
             </div>
           )}
 
-          {/* Nome do lote */}
+          {/* Nome do lote — gerado automaticamente, não editável */}
           <div>
-            <FieldLabel>Nome do lote</FieldLabel>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <FieldLabel>Nome do lote</FieldLabel>
+              <span style={{ fontSize: 11, color: 'var(--mm-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {/* lock icon */}
+                <svg style={{ width: 11, height: 11 }} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="3" y="7" width="10" height="7" rx="1.5" strokeLinejoin="round" />
+                  <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" strokeLinecap="round" />
+                </svg>
+                automático
+              </span>
+            </div>
             <input
               name="name"
               type="text"
               value={autoName}
               readOnly
+              tabIndex={-1}
+              aria-readonly="true"
               style={{
                 width: '100%',
                 height: 44,
                 padding: '0 14px',
                 borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgba(255,255,255,0.03)',
-                color: 'var(--mm-text2)',
+                border: '1px dashed rgba(255,255,255,0.10)',
+                background: 'rgba(255,255,255,0.015)',
+                color: 'var(--mm-muted)',
                 fontSize: 13,
                 boxSizing: 'border-box',
+                cursor: 'not-allowed',
+                outline: 'none',
               }}
             />
+            <p style={{ fontSize: 11, color: 'var(--mm-muted)', marginTop: 6 }}>
+              Gerado a partir de banca, ano e cor — não editável
+            </p>
           </div>
 
           {/* Divider */}
