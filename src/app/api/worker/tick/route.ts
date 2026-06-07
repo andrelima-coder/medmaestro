@@ -16,6 +16,7 @@ function safeBearerCheck(authHeader: string, secret: string): boolean {
 // import '@/lib/queue/handlers/classify'
 // import '@/lib/queue/handlers/comments'
 // import '@/lib/queue/handlers/generate'
+import '@/lib/queue/handlers/teacher-tips'
 
 const CONCURRENCY = 5 // D12
 

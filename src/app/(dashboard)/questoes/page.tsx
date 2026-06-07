@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, Badge, TagChip } from '@/components/ui'
 import { FilterDropdown } from '@/components/questoes/filter-dropdown'
+import { ExportProfessoresButton } from '@/components/questoes/export-professores-button'
 
 export const metadata = { title: 'Questões — MedMaestro' }
 
@@ -195,6 +196,7 @@ export default async function QuestoesPage({
     if (v) gerarParams.set(key, v)
   }
   const gerarHref = `/simulados/gerar${gerarParams.toString() ? '?' + gerarParams.toString() : ''}`
+  const exportFilters = Object.fromEntries(gerarParams.entries())
 
   return (
     <div className="flex flex-col gap-6">
@@ -268,12 +270,7 @@ export default async function QuestoesPage({
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            disabled
-            className="cursor-not-allowed rounded-lg border border-[var(--mm-border-default)] bg-transparent px-4 py-2 text-xs font-semibold text-[var(--mm-muted)]"
-          >
-            Exportar seleção →
-          </button>
+          <ExportProfessoresButton filters={exportFilters} poolCount={total} />
           {total > 0 ? (
             <Link
               href={gerarHref}

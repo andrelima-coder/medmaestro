@@ -7,7 +7,7 @@ import { Download } from 'lucide-react'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
-export type ExportFormat = 'pdf' | 'docx' | 'xlsx'
+export type ExportFormat = 'pdf' | 'docx' | 'xlsx' | 'pptx'
 
 export type ContentFlags = {
   enunciado: boolean
@@ -18,6 +18,7 @@ export type ContentFlags = {
   coment_compilado: boolean
   taxonomia: boolean
   referencias: boolean
+  dica_professor: boolean
 }
 
 const FORMATS: Array<{
@@ -56,6 +57,15 @@ const FORMATS: Array<{
     iconBg: 'rgba(21,128,61,0.25)',
     iconBorder: 'rgba(21,128,61,0.4)',
   },
+  {
+    value: 'pptx',
+    label: 'PPTX',
+    description: 'Slides para aula (1 questão/slide)',
+    iconLetter: 'P',
+    iconColor: '#FF8A4C',
+    iconBg: 'rgba(255,107,53,0.18)',
+    iconBorder: 'rgba(255,107,53,0.45)',
+  },
 ]
 
 const CONTENT_FIELDS: Array<{ key: keyof ContentFlags; label: string; emphasis?: boolean }> = [
@@ -65,6 +75,7 @@ const CONTENT_FIELDS: Array<{ key: keyof ContentFlags; label: string; emphasis?:
   { key: 'gabarito', label: 'Gabarito' },
   { key: 'coment_alt', label: 'Comentário por alternativa', emphasis: true },
   { key: 'coment_compilado', label: 'Comentário compilado', emphasis: true },
+  { key: 'dica_professor', label: 'Dica para o professor (IA)', emphasis: true },
   { key: 'taxonomia', label: 'Classificação curricular' },
   { key: 'referencias', label: 'Referências bibliográficas' },
 ]
@@ -100,6 +111,7 @@ export function ExportForm({
     gabarito: true,
     coment_alt: withComments,
     coment_compilado: withComments,
+    dica_professor: false,
     taxonomia: false,
     referencias: false,
   })
@@ -375,6 +387,17 @@ export function ExportForm({
                   ✓ Comentário compilado da banca
                 </p>
               )}
+              {content.dica_professor && (
+                <div className="mt-1 rounded border-l-2 border-[var(--mm-gold)] bg-[rgba(201,168,76,0.06)] px-3 py-2">
+                  <p className="text-[11px] font-semibold text-[var(--mm-gold)]">
+                    🎓 Para o professor
+                  </p>
+                  <p className="text-[11px] text-[var(--mm-muted)]">
+                    Objetivo de aprendizado · erros comuns dos alunos · o que enfatizar · como
+                    conduzir a discussão (gerado por IA)
+                  </p>
+                </div>
+              )}
               {content.taxonomia && (
                 <p className="text-[11px] text-[var(--mm-muted)]">
                   ✓ Tags de classificação curricular
@@ -389,6 +412,13 @@ export function ExportForm({
           </div>
         </CardBody>
       </Card>
+
+      {content.dica_professor && (
+        <div className="rounded-lg border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.06)] p-3 text-xs text-[var(--mm-muted)]">
+          As dicas para o professor são geradas por IA na primeira exportação e ficam salvas
+          (reuso instantâneo depois). A primeira geração pode levar alguns segundos por questão.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] p-3 text-sm text-[var(--mm-red)]">

@@ -278,6 +278,175 @@ Retorne APENAS o texto do comentário seguindo a estrutura acima.`
   }
 }
 
+/**
+ * Gera a "Dica para o professor": uma nota pedagógica voltada a QUEM VAI DAR A
+ * AULA (não ao aluno). Foca em objetivo de aprendizado, erros comuns dos alunos,
+ * o que enfatizar, ganchos para discussão e perguntas para fazer em sala.
+ *
+ * Grava como question_comments.comment_type = 'dica_professor'.
+ * Por padrão é idempotente: não regera se já existir uma dica para a questão
+ * (passe { force: true } para sobrescrever conceitualmente — insere nova linha).
+ */
+export async function generateTeacherTips(
+  questionId: string,
+  opts: { force?: boolean } = {}
+): Promise<{ status: 'created' | 'skipped' | 'error'; content?: string }> {
+  const supabase = createServiceClient()
+
+  // Idempotência: já existe dica?
+  if (!opts.force) {
+    const { data: existing } = await supabase
+      .from('question_comments')
+      .select('id')
+      .eq('question_id', questionId)
+      .eq('comment_type', 'dica_professor')
+      .limit(1)
+    if (existing && existing.length > 0) return { status: 'skipped' }
+  }
+
+  const { data: question, error: qErr } = await supabase
+    .from('questions')
+    .select('id, question_number, exam_id, stem, alternatives, correct_answer')
+    .eq('id', questionId)
+    .single()
+
+  if (qErr || !question) return { status: 'error' }
+
+  const alternatives = (question.alternatives as Record<string, string> | null) ?? {}
+
+  let correctAnswer: string = (question.correct_answer as string | null) ?? ''
+  if (!correctAnswer) {
+    const { data: ak } = await supabase
+      .from('answer_keys')
+      .select('correct_answer')
+      .eq('exam_id', question.exam_id)
+      .eq('question_number', question.question_number)
+      .single()
+    correctAnswer = (ak?.correct_answer as string | null) ?? ''
+  }
+
+  const presentLetters = (['A', 'B', 'C', 'D', 'E'] as const).filter(
+    (l) => (alternatives[l] ?? '').trim().length > 0
+  )
+  const altsBlock = presentLetters.map((l) => `${l}) ${alternatives[l]}`).join('\n')
+
+  // Aterramos a dica no comentário didático já existente (quando houver), para
+  // que professor e aluno vejam a mesma linha de raciocínio.
+  const { data: explica } = await supabase
+    .from('question_comments')
+    .select('content')
+    .eq('question_id', questionId)
+    .eq('comment_type', 'explicacao')
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const explicacaoText = (explica?.[0]?.content as string | undefined)?.trim()
+
+  const prompt = `Você está preparando material de apoio para um PROFESSOR de Medicina Intensiva que vai usar a questão abaixo para preparar e conduzir uma aula. O leitor é o professor — NÃO o aluno. Não resolva a questão para o aluno: oriente o professor sobre como ensinar o tema a partir dela.
+
+Questão ${question.question_number as number}: ${question.stem as string}
+${altsBlock}
+Gabarito: ${correctAnswer || '?'}
+${explicacaoText ? `\nComentário didático já disponível para os alunos (use como base, NÃO repita literalmente):\n${explicacaoText}\n` : ''}
+Escreva a "Dica para o professor" usando EXATAMENTE estes cabeçalhos, cada um em sua própria linha, sem markdown (sem **, sem ##):
+
+Objetivo de aprendizado
+Uma frase única e direta: o que o aluno deve dominar ao final da discussão desta questão.
+
+Conceito central
+2–3 frases com o ponto fisiopatológico/clínico-chave que sustenta o gabarito e que o professor deve ancorar na lousa.
+
+Erros comuns dos alunos
+3 a 4 bullets (use "- "): em quais alternativas/raciocínios os alunos costumam tropeçar e POR QUÊ. Para cada distrator relevante, diga o equívoco conceitual que ele explora.
+
+O que enfatizar em aula
+2 a 3 bullets (use "- ") com os pontos que merecem mais tempo/destaque, incluindo números, cutoffs ou diretrizes que valem memorizar.
+
+Como conduzir a discussão
+2 a 3 bullets (use "- ") com ganchos práticos: perguntas socráticas para lançar à turma, uma analogia ou caso-âncora, ou um mini-passo-a-passo de raciocínio à beira-leito.
+
+Regras de estilo:
+- Português técnico, direto, tom de quem fala com um colega professor.
+- Use nomes próprios de condutas/diretrizes/escores.
+- Sem floreio, sem introdução, sem encerramento. Comece direto em "Objetivo de aprendizado".
+- Tamanho-alvo: 250–450 palavras.
+
+Retorne APENAS o texto da dica, seguindo a estrutura acima.`
+
+  let tipText: string
+  try {
+    const raw = await complete({
+      model: MODELS.opus,
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: 2048,
+    })
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'generate_teacher_tips',
+      question_id: questionId,
+      exam_id: question.exam_id as string,
+    })
+    tipText = raw.text.trim()
+  } catch {
+    return { status: 'error' }
+  }
+
+  const { error: insertError } = await supabase.from('question_comments').insert({
+    question_id: questionId,
+    comment_type: 'dica_professor',
+    content: tipText,
+    ai_model: MODELS.opus,
+    created_by_ai: true,
+  })
+
+  if (insertError) {
+    console.error(`[teacher-tips ${questionId}] Insert falhou: ${insertError.message}`)
+    return { status: 'error' }
+  }
+
+  return { status: 'created', content: tipText }
+}
+
+const TEACHER_TIPS_CONCURRENCY = 4
+
+/**
+ * Garante que cada questão da lista tenha uma "Dica para o professor",
+ * gerando sob demanda as que faltam (concorrência limitada). Idempotente.
+ * Usado como fallback no export quando o usuário pede dicas e elas ainda não
+ * foram pré-geradas pela fila. Retorna quantas foram criadas/já existiam/falharam.
+ */
+export async function ensureTeacherTips(
+  questionIds: string[]
+): Promise<{ created: number; existing: number; errors: number }> {
+  const supabase = createServiceClient()
+  let created = 0
+  let existing = 0
+  let errors = 0
+
+  if (questionIds.length === 0) return { created, existing, errors }
+
+  // Quais já têm dica? (evita N selects dentro do gerador)
+  const { data: have } = await supabase
+    .from('question_comments')
+    .select('question_id')
+    .eq('comment_type', 'dica_professor')
+    .in('question_id', questionIds)
+  const haveSet = new Set((have ?? []).map((r) => r.question_id as string))
+  existing = haveSet.size
+
+  const missing = questionIds.filter((id) => !haveSet.has(id))
+
+  for (let i = 0; i < missing.length; i += TEACHER_TIPS_CONCURRENCY) {
+    const batch = missing.slice(i, i + TEACHER_TIPS_CONCURRENCY)
+    const results = await Promise.allSettled(batch.map((id) => generateTeacherTips(id)))
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.status === 'created') created++
+      else if (r.status === 'fulfilled' && r.value.status === 'skipped') existing++
+      else errors++
+    }
+  }
+
+  return { created, existing, errors }
+}
+
 type PersistImagesArgs = {
   exam_id: string
   questionId: string

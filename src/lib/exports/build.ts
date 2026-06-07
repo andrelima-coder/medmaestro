@@ -25,6 +25,8 @@ export type ContentFlags = {
   coment_compilado: boolean
   taxonomia: boolean
   referencias: boolean
+  /** Dicas pedagógicas para o professor (geradas por IA). */
+  dica_professor: boolean
 }
 
 export type CommentRow = {
@@ -45,6 +47,8 @@ export type QuestionData = {
   figures: Array<{ data: Uint8Array; contentType: string; figureNumber: number | null }>
   comments: CommentRow[]
   referencias: CommentRow[]
+  /** Dicas para o professor (comment_type='dica_professor'). */
+  teacherTips: CommentRow[]
   tags: Array<{ label: string; dimension: string }>
 }
 
@@ -62,7 +66,17 @@ const COMMENT_TYPE_LABEL: Record<string, string> = {
   mnemonico: 'Mnemônico',
   atualizacao_conduta: 'Atualização de conduta',
   referencia: 'Referência',
+  dica_professor: 'Para o professor',
 }
+
+// Cabeçalhos internos da "Dica para o professor" — destacados no render.
+const TEACHER_TIP_HEADERS = new Set([
+  'Objetivo de aprendizado',
+  'Conceito central',
+  'Erros comuns dos alunos',
+  'O que enfatizar em aula',
+  'Como conduzir a discussão',
+])
 
 // ============================================================
 // DOCX
@@ -267,6 +281,37 @@ export async function buildDocxBuffer(data: ExportData): Promise<Buffer> {
             spacing: { after: 40 },
           })
         )
+      }
+    }
+
+    if (data.content.dica_professor && q.teacherTips.length > 0) {
+      sectionChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: '🎓 Para o professor', bold: true, size: 20, color: 'B8860B' })],
+          spacing: { before: 180, after: 80 },
+          shading: { type: 'clear', fill: 'FBF6E6' },
+        })
+      )
+      for (const tip of q.teacherTips) {
+        for (const line of tip.content.split('\n')) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          const isHeader = TEACHER_TIP_HEADERS.has(trimmed)
+          sectionChildren.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: trimmed,
+                  size: 19,
+                  bold: isHeader,
+                  color: isHeader ? '7A5C00' : '333333',
+                }),
+              ],
+              indent: { left: isHeader ? 240 : 360 },
+              spacing: { before: isHeader ? 80 : 0, after: 40 },
+            })
+          )
+        }
       }
     }
 
@@ -565,6 +610,24 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
       }
     }
 
+    if (data.content.dica_professor && q.teacherTips.length > 0) {
+      drawText('Para o professor', { size: 10, bold: true, color: [0.62, 0.45, 0.03], after: 2 })
+      for (const tip of q.teacherTips) {
+        for (const line of tip.content.split('\n')) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          const isHeader = TEACHER_TIP_HEADERS.has(trimmed)
+          drawText(trimmed, {
+            size: isHeader ? 9.5 : 9,
+            bold: isHeader,
+            indent: isHeader ? 10 : 18,
+            color: isHeader ? [0.48, 0.36, 0] : [0.2, 0.2, 0.22],
+            after: isHeader ? 1 : 1,
+          })
+        }
+      }
+    }
+
     if (q.note) {
       drawText(`Nota: ${q.note}`, { size: 9, italic: true, color: [0.4, 0.4, 0.45], after: 4 })
     }
@@ -665,6 +728,9 @@ export async function buildXlsxBuffer(data: ExportData): Promise<Buffer> {
     cols.push({ header: 'Comentários', key: 'comments', width: 80 })
   }
   if (data.content.referencias) cols.push({ header: 'Referências', key: 'refs', width: 60 })
+  if (data.content.dica_professor) {
+    cols.push({ header: 'Dicas para o professor', key: 'teacher_tips', width: 90 })
+  }
 
   ws.columns = cols
 
@@ -699,6 +765,9 @@ export async function buildXlsxBuffer(data: ExportData): Promise<Buffer> {
     }
     if (data.content.referencias) {
       row.refs = q.referencias.map((r) => r.content).join('\n')
+    }
+    if (data.content.dica_professor) {
+      row.teacher_tips = q.teacherTips.map((t) => t.content).join('\n\n')
     }
     const r = ws.addRow(row)
     r.alignment = { vertical: 'top', wrapText: true }
