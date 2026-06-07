@@ -18,10 +18,15 @@ export function ExportFlashcardsButton({
   examId,
   approvedOnly = true,
   label = 'Exportar',
+  ids,
+  disabled = false,
 }: {
   examId?: string
   approvedOnly?: boolean
   label?: string
+  /** Quando informado, exporta apenas estes flashcards (seleção via checkbox). */
+  ids?: string[]
+  disabled?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -47,6 +52,7 @@ export function ExportFlashcardsButton({
     const params = new URLSearchParams({ format })
     if (examId) params.set('exam_id', examId)
     if (!approvedOnly) params.set('approved_only', '0')
+    if (ids && ids.length > 0) params.set('ids', ids.join(','))
     return `/api/flashcards/export?${params.toString()}`
   }
 
@@ -55,16 +61,18 @@ export function ExportFlashcardsButton({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
         style={{
           background: 'var(--mm-bg2)',
           border: '1px solid var(--mm-line2)',
-          color: 'var(--mm-text)',
+          color: disabled ? 'var(--mm-muted)' : 'var(--mm-text)',
           fontFamily: 'var(--font-syne)',
           fontSize: 12,
           fontWeight: 700,
           padding: '8px 14px',
           borderRadius: 8,
-          cursor: 'pointer',
+          cursor: disabled ? 'default' : 'pointer',
+          opacity: disabled ? 0.6 : 1,
         }}
       >
         {label} ▾
@@ -111,8 +119,12 @@ export function ExportFlashcardsButton({
               lineHeight: 1.4,
             }}
           >
-            {approvedOnly ? 'Apenas aprovados' : 'Todos (incluindo pendentes)'}
-            {examId ? ' · exame filtrado' : ''}
+            {ids && ids.length > 0
+              ? `${ids.length} selecionado${ids.length === 1 ? '' : 's'}`
+              : approvedOnly
+                ? 'Apenas aprovados'
+                : 'Todos (incluindo pendentes)'}
+            {examId && !(ids && ids.length > 0) ? ' · exame filtrado' : ''}
           </div>
         </div>
       )}

@@ -7,8 +7,10 @@ import {
   updateBancoFlashcardAction,
   type BancoFlashcard,
   type BancoListResult,
+  type TemaOption,
 } from './actions'
 import { RichEditor } from '@/components/ui/rich-editor'
+import { ExportFlashcardsButton } from '@/components/flashcards/export-button'
 import { sanitizeHtml, isHtml, htmlToPlainText } from '@/lib/sanitize-html'
 
 type Filter = {
@@ -17,16 +19,22 @@ type Filter = {
   status: 'all' | 'approved' | 'pending'
   query: string
   difficulty: number | null
+  modulo: string
+  tema: string
   page: number
 }
 
 export function BancoFlashcardsClient({
   result,
   exams,
+  modulos,
+  temas,
   initialFilter,
 }: {
   result: BancoListResult
   exams: { id: string; label: string }[]
+  modulos: TemaOption[]
+  temas: TemaOption[]
   initialFilter: Filter
 }) {
   const router = useRouter()
@@ -37,6 +45,7 @@ export function BancoFlashcardsClient({
   const [searchInput, setSearchInput] = useState(initialFilter.query)
   const [pending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize))
 
@@ -49,11 +58,38 @@ export function BancoFlashcardsClient({
       if (f.status && f.status !== 'all') params.set('status', f.status)
       if (f.query) params.set('q', f.query)
       if (f.difficulty != null) params.set('diff', String(f.difficulty))
+      if (f.modulo) params.set('modulo', f.modulo)
+      if (f.tema) params.set('tema', f.tema)
       if (f.page && f.page !== 1) params.set('page', String(f.page))
       return `/banco-flashcards${params.toString() ? `?${params.toString()}` : ''}`
     },
     [initialFilter]
   )
+
+  const allSelected =
+    result.rows.length > 0 && result.rows.every((c) => selectedIds.has(c.id))
+  const someSelected = selectedIds.size > 0 && !allSelected
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (result.rows.every((c) => next.has(c.id))) {
+        for (const c of result.rows) next.delete(c.id)
+      } else {
+        for (const c of result.rows) next.add(c.id)
+      }
+      return next
+    })
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   function startEdit(c: BancoFlashcard) {
     setEditingId(c.id)
@@ -173,6 +209,32 @@ export function BancoFlashcardsClient({
             </option>
           ))}
         </select>
+        <select
+          value={initialFilter.modulo}
+          onChange={(e) => router.push(buildUrl({ modulo: e.target.value, page: 1 }))}
+          style={selectStyle}
+        >
+          <option value="">Todos os módulos</option>
+          {modulos.map((m) => (
+            <option key={m.slug} value={m.slug}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+        {temas.length > 0 && (
+          <select
+            value={initialFilter.tema}
+            onChange={(e) => router.push(buildUrl({ tema: e.target.value, page: 1 }))}
+            style={selectStyle}
+          >
+            <option value="">Todos os temas</option>
+            {temas.map((t) => (
+              <option key={t.slug} value={t.slug}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        )}
         <form onSubmit={submitSearch} style={{ display: 'flex', gap: 6, flex: 1 }}>
           <input
             type="search"
@@ -198,6 +260,41 @@ export function BancoFlashcardsClient({
         </div>
       )}
 
+      {/* Barra de seleção / exportação */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          minHeight: 32,
+        }}
+      >
+        <span style={{ fontSize: 12, color: 'var(--mm-muted)' }}>
+          {selectedIds.size > 0
+            ? `${selectedIds.size} flashcard${selectedIds.size === 1 ? '' : 's'} selecionado${selectedIds.size === 1 ? '' : 's'}`
+            : 'Selecione flashcards para exportar somente eles'}
+        </span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {selectedIds.size > 0 && (
+            <button onClick={() => setSelectedIds(new Set())} style={btnGhost}>
+              Limpar seleção
+            </button>
+          )}
+          <ExportFlashcardsButton
+            ids={[...selectedIds]}
+            approvedOnly={false}
+            disabled={selectedIds.size === 0}
+            label={
+              selectedIds.size > 0
+                ? `Exportar ${selectedIds.size} selecionado${selectedIds.size === 1 ? '' : 's'}`
+                : 'Exportar selecionados'
+            }
+          />
+        </div>
+      </div>
+
       {/* Tabela */}
       <div
         style={{
@@ -222,6 +319,18 @@ export function BancoFlashcardsClient({
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
+                <th style={{ ...th(), width: 36, paddingRight: 0 }}>
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todos"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected
+                    }}
+                    onChange={toggleSelectAll}
+                    style={checkboxStyle}
+                  />
+                </th>
                 <th style={th()}>STATUS</th>
                 <th style={th()}>EXAME</th>
                 <th style={th()}>TIPO</th>
@@ -236,6 +345,15 @@ export function BancoFlashcardsClient({
                 const isEditing = editingId === c.id
                 return (
                   <tr key={c.id} style={{ borderBottom: '1px solid var(--mm-line)' }}>
+                    <td style={{ ...td(), width: 36, paddingRight: 0, verticalAlign: 'top' }}>
+                      <input
+                        type="checkbox"
+                        aria-label="Selecionar flashcard"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleSelectOne(c.id)}
+                        style={checkboxStyle}
+                      />
+                    </td>
                     <td style={td()}>
                       <span
                         style={{
@@ -451,6 +569,13 @@ function toEditableHtml(text: string): string {
     .split(/\n{2,}/)
     .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
     .join('')
+}
+
+const checkboxStyle: React.CSSProperties = {
+  width: 15,
+  height: 15,
+  accentColor: 'var(--mm-gold)',
+  cursor: 'pointer',
 }
 
 const selectStyle: React.CSSProperties = {

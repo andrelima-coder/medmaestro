@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   listBancoExams,
   listBancoFlashcards,
+  listBancoTemas,
   type BancoFilter,
 } from './actions'
 import { BancoFlashcardsClient } from './banco-flashcards-client'
@@ -25,6 +26,8 @@ export default async function BancoFlashcardsPage({
     status?: string
     q?: string
     diff?: string
+    modulo?: string
+    tema?: string
     page?: string
   }>
 }) {
@@ -41,11 +44,14 @@ export default async function BancoFlashcardsPage({
     status: parseStatus(sp.status),
     query: sp.q || undefined,
     difficulty: sp.diff ? Number(sp.diff) : null,
+    modulo: sp.modulo || undefined,
+    tema: sp.tema || undefined,
     page: sp.page ? Math.max(1, Number(sp.page)) : 1,
   }
 
-  const [exams, result] = await Promise.all([
+  const [exams, temaOptions, result] = await Promise.all([
     listBancoExams(),
+    listBancoTemas(),
     listBancoFlashcards(filter),
   ])
 
@@ -80,12 +86,16 @@ export default async function BancoFlashcardsPage({
       <BancoFlashcardsClient
         result={result}
         exams={exams}
+        modulos={temaOptions.modulos}
+        temas={temaOptions.temas}
         initialFilter={{
           examId: filter.examId ?? '',
           cardType: filter.cardType ?? 'all',
           status: filter.status ?? 'all',
           query: filter.query ?? '',
           difficulty: filter.difficulty ?? null,
+          modulo: filter.modulo ?? '',
+          tema: filter.tema ?? '',
           page: filter.page ?? 1,
         }}
       />

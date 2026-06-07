@@ -11,9 +11,13 @@ export type BancoFilter = {
   status?: 'all' | 'approved' | 'pending'
   query?: string
   difficulty?: number | null
+  modulo?: string
+  tema?: string
   page?: number
   pageSize?: number
 }
+
+export type TemaOption = { slug: string; label: string }
 
 export type BancoFlashcard = {
   id: string
@@ -56,6 +60,27 @@ export async function listBancoFlashcards(
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
+  // Filtro por tema (tags herdadas do enunciado): Módulo e/ou Tema (edital).
+  // Semântica AND quando ambos preenchidos — o flashcard precisa ter as duas tags.
+  let tagFilterIds: string[] | null = null
+  const wantedSlugs = [filter.modulo, filter.tema].filter(Boolean) as string[]
+  if (wantedSlugs.length) {
+    let acc: Set<string> | null = null
+    for (const slug of wantedSlugs) {
+      const ids = await flashcardIdsForTagSlug(service, slug)
+      if (acc === null) {
+        acc = ids
+      } else {
+        const prev: Set<string> = acc
+        acc = new Set([...prev].filter((x) => ids.has(x)))
+      }
+    }
+    tagFilterIds = acc === null ? [] : [...acc]
+    if (tagFilterIds.length === 0) {
+      return { rows: [], total: 0, page, pageSize }
+    }
+  }
+
   let allowedQuestionIds: string[] | null = null
   if (filter.examId) {
     const { data: qs } = await service
@@ -88,6 +113,9 @@ export async function listBancoFlashcards(
   }
   if (allowedQuestionIds) {
     query = query.in('source_question_id', allowedQuestionIds)
+  }
+  if (tagFilterIds) {
+    query = query.in('id', tagFilterIds)
   }
   if (filter.query && filter.query.trim()) {
     const q = filter.query.trim().replace(/[%_]/g, '')
@@ -163,6 +191,44 @@ export async function listBancoExams(): Promise<{ id: string; label: string }[]>
       label: `${sp?.name ?? 'Exame'} ${e.year}${color}`,
     }
   })
+}
+
+async function flashcardIdsForTagSlug(
+  service: ReturnType<typeof createServiceClient>,
+  slug: string
+): Promise<Set<string>> {
+  const { data: tagRows } = await service.from('tags').select('id').eq('slug', slug)
+  const tagIds = (tagRows ?? []).map((t) => t.id as string)
+  if (tagIds.length === 0) return new Set<string>()
+  const { data: ft } = await service
+    .from('flashcard_tags')
+    .select('flashcard_id')
+    .in('tag_id', tagIds)
+  return new Set((ft ?? []).map((r) => r.flashcard_id as string))
+}
+
+export async function listBancoTemas(): Promise<{
+  modulos: TemaOption[]
+  temas: TemaOption[]
+}> {
+  const service = createServiceClient()
+  const [modRes, temaRes] = await Promise.all([
+    service
+      .from('tags')
+      .select('slug, label')
+      .eq('dimension', 'modulo')
+      .order('display_order'),
+    service
+      .from('tags')
+      .select('slug, label')
+      .eq('dimension', 'topico_edital')
+      .is('parent_tag_id', null)
+      .order('display_order'),
+  ])
+  return {
+    modulos: (modRes.data ?? []) as TemaOption[],
+    temas: (temaRes.data ?? []) as TemaOption[],
+  }
 }
 
 export async function updateBancoFlashcardAction(
