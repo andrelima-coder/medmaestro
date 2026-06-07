@@ -43,8 +43,7 @@ export default async function DashboardPage() {
   const [
     profileRes,
     totalQuestoesRes,
-    classificadasRes,
-    comentadasRes,
+    kpisRes,
     lotesRes,
     modTagsRes,
     examsTableRes,
@@ -53,8 +52,9 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     service.from('profiles').select('role, full_name').eq('id', user!.id).single(),
     service.from('questions').select('id', { count: 'exact', head: true }),
-    service.from('question_tags').select('question_id', { count: 'exact', head: true }),
-    service.from('question_comments').select('question_id', { count: 'exact', head: true }),
+    // RPC: conta QUESTÕES DISTINTAS classificadas/comentadas (não linhas de
+    // question_tags/question_comments, que inflavam o número p/ >100%).
+    service.rpc('get_dashboard_kpis').single(),
     service.from('exams').select('id', { count: 'exact', head: true }),
     service
       .from('question_tags')
@@ -82,9 +82,16 @@ export default async function DashboardPage() {
   const name = profile?.full_name ?? user?.email ?? 'Usuário'
   const roleLabel = ROLE_LABELS[profile?.role as keyof typeof ROLE_LABELS] ?? ''
 
+  const kpis = (kpisRes.data ?? null) as {
+    total_questoes: number
+    classificadas: number
+    comentadas: number
+    provas: number
+  } | null
+
   const totalQuestoes = totalQuestoesRes.count ?? 0
-  const classificadas = classificadasRes.count ?? 0
-  const comentadas = comentadasRes.count ?? 0
+  const classificadas = Number(kpis?.classificadas ?? 0)
+  const comentadas = Number(kpis?.comentadas ?? 0)
   const totalLotes = lotesRes.count ?? 0
 
   const apiRows = apiUsageMonthRes.data ?? []
@@ -177,6 +184,7 @@ export default async function DashboardPage() {
           label="Questões no banco"
           icon={<Database className="size-3" />}
           value={totalQuestoes.toLocaleString('pt-BR')}
+          info="Total de questões originais cadastradas no banco. Não inclui variações geradas por IA."
         />
         <KpiCard
           tone="ok"
@@ -189,6 +197,7 @@ export default async function DashboardPage() {
               ? { direction: 'up', text: `${classifPct}% do total` }
               : undefined
           }
+          info="Questões que receberam ao menos uma tag curricular (módulo, tipo, dificuldade etc.). Conta questões distintas — uma questão com várias tags vale 1. O percentual é sobre o total de questões no banco."
         />
         <KpiCard
           tone="info"
@@ -200,6 +209,7 @@ export default async function DashboardPage() {
               ? { direction: 'neutral', text: `${comentPct}% cobertura` }
               : undefined
           }
+          info="Questões com ao menos um comentário editorial. Conta questões distintas — uma questão com vários comentários vale 1. 'Cobertura' é o percentual sobre o total do banco."
         />
         <KpiCard
           tone="pending"
@@ -207,6 +217,7 @@ export default async function DashboardPage() {
           icon={<ClipboardList className="size-3" />}
           value={totalLotes.toLocaleString('pt-BR')}
           valueClassName="text-[var(--mm-gold)]"
+          info="Cadernos de prova (exams) importados para o banco."
         />
       </div>
 

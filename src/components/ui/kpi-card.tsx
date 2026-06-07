@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Info } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -48,6 +49,8 @@ interface KpiCardProps
     text: React.ReactNode
   }
   valueClassName?: string
+  /** Texto explicativo exibido no hover de um ícone (i) ao lado do label. */
+  info?: string
 }
 
 function KpiCard({
@@ -58,6 +61,7 @@ function KpiCard({
   icon,
   delta,
   valueClassName,
+  info,
   ...props
 }: KpiCardProps) {
   const deltaDir = delta?.direction ?? "neutral"
@@ -83,6 +87,16 @@ function KpiCard({
       >
         {icon}
         {label}
+        {info && (
+          <button
+            type="button"
+            title={info}
+            aria-label={info}
+            className="ml-auto cursor-help text-current opacity-50 transition-opacity hover:opacity-100 focus:opacity-100 focus:outline-none"
+          >
+            <Info className="size-3" />
+          </button>
+        )}
       </div>
       <div
         className={cn(
