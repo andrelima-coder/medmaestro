@@ -1,16 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { ROLE_LABELS } from '@/types'
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  KpiCard,
-  ParetoBar,
-} from '@/components/ui'
+import { Card, CardBody, KpiCard } from '@/components/ui'
 import { CheckCircle2, Database, MessageSquare, ClipboardList } from 'lucide-react'
 import { LotesTableClient, type LoteRow } from './lotes-table-client'
+import { IncidenciaTemaClient, type TemaRow } from './incidencia-tema-client'
 
 export const metadata = { title: 'Dashboard — MedMaestro' }
 
@@ -58,7 +52,9 @@ export default async function DashboardPage() {
     service.from('exams').select('id', { count: 'exact', head: true }),
     service
       .from('question_tags')
-      .select('question_id, tags!inner(label, color, dimension)')
+      .select(
+        'tags!inner(label, dimension), questions!inner(exams!inner(year, exam_boards(short_name, name)))'
+      )
       .eq('tags.dimension', 'modulo'),
     service
       .from('exams')
@@ -106,33 +102,27 @@ export default async function DashboardPage() {
     0
   )
 
-  const moduloCount: Record<string, number> = {}
+  // Uma linha por tag de módulo, já carregando ano e banca da questão, para
+  // permitir filtrar a incidência por banca + ano(s) no cliente.
+  const temaRows: TemaRow[] = []
   for (const row of modTagsRes.data ?? []) {
-    const tag = row.tags as unknown as
-      | { label: string; color: string; dimension: string }
-      | null
-    if (!tag) continue
-    moduloCount[tag.label] = (moduloCount[tag.label] ?? 0) + 1
+    const tag = row.tags as unknown as { label: string } | null
+    const q = row.questions as unknown as {
+      exams: {
+        year: number
+        exam_boards: { short_name: string | null; name: string | null } | null
+      } | null
+    } | null
+    if (!tag || !q?.exams) continue
+    const board =
+      q.exams.exam_boards?.short_name ?? q.exams.exam_boards?.name ?? '—'
+    temaRows.push({ label: tag.label, year: q.exams.year, board })
   }
 
-  const totalTagged = Object.values(moduloCount).reduce((s, v) => s + v, 0)
-
-  const modulosData = MODULOS.map((m) => ({
-    ...m,
-    count: moduloCount[m.label] ?? 0,
-  }))
-
-  const maxCount = Math.max(...modulosData.map((m) => m.count), 1)
-
-  const top8 = [...modulosData].sort((a, b) => b.count - a.count).slice(0, 8)
-
-  const sorted = [...modulosData].sort((a, b) => b.count - a.count)
-  const top3Sum = sorted.slice(0, 3).reduce((s, m) => s + m.count, 0)
-  const top3Pct = totalTagged > 0 ? Math.round((top3Sum / totalTagged) * 100) : 0
-  const top3Names = sorted
-    .slice(0, 3)
-    .map((m, i) => `M${i + 1} ${m.label.split(' ')[0]}`)
-    .join(' + ')
+  const moduloColors = Object.fromEntries(
+    MODULOS.map((m) => [m.label, m.color])
+  )
+  const moduloOrder = MODULOS.map((m) => m.label)
 
   const exams: LoteRow[] = (examsTableRes.data ?? []).map((e) => {
     const board = e.exam_boards as unknown as { name: string; short_name: string } | null
@@ -226,45 +216,12 @@ export default async function DashboardPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Incidência por tema — usa ParetoBar do design system */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Incidência por tema</CardTitle>
-            <span
-              className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
-              style={{
-                background: 'var(--mm-gold-bg)',
-                color: 'var(--mm-gold)',
-                borderColor: 'var(--mm-gold-border)',
-              }}
-            >
-              Top 8
-            </span>
-          </CardHeader>
-          <CardBody>
-            {totalTagged === 0 ? (
-              <p className="py-6 text-center text-xs text-[var(--mm-muted)]">
-                Nenhuma questão classificada ainda
-              </p>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {top8.map((m) => {
-                  const pct = totalTagged > 0 ? Math.round((m.count / totalTagged) * 100) : 0
-                  return (
-                    <ParetoBar
-                      key={m.label}
-                      module={m.label}
-                      count={m.count}
-                      widthPct={pct}
-                      percentLabel={`${pct}%`}
-                      color={m.color}
-                    />
-                  )
-                })}
-              </div>
-            )}
-          </CardBody>
-        </Card>
+        {/* Incidência por tema — filtrável por banca + ano(s) */}
+        <IncidenciaTemaClient
+          rows={temaRows}
+          colors={moduloColors}
+          order={moduloOrder}
+        />
       </div>
 
       {/* Lotes importados (preserva client com filtros + paginação) */}
