@@ -15,7 +15,18 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
-// Exponential backoff: 60s, 120s, 240s (D08)
+// Erros 4xx permanentes (auth, request inválido, payload) não adianta re-tentar;
+// 429 (rate limit) e 5xx/rede sim. O SDK da Anthropic expõe `status` no erro.
+function isRetryable(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status
+  if (typeof status === 'number') {
+    if (status === 429) return true
+    if (status >= 400 && status < 500) return false
+  }
+  return true
+}
+
+// Exponential backoff: 60s, 120s, 240s (D08). Falha rápido em 4xx permanente.
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
   let lastError: unknown
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -23,6 +34,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
       return await fn()
     } catch (err) {
       lastError = err
+      if (!isRetryable(err)) break
       if (attempt < maxAttempts) {
         await sleep(60_000 * Math.pow(2, attempt - 1))
       }

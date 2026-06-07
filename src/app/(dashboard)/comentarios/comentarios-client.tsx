@@ -12,7 +12,9 @@ import {
 import { Card, CardBody, Badge, Pagination } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
-const COST_PER_COMMENT_USD = 0.015
+// Estimativa para Claude Opus (modelo real usado em generateComment): ~1.5k tokens
+// de saída a $75/Mtok + entrada ~ $0,12/comentário. Aproximado — só para orientar o usuário.
+const COST_PER_COMMENT_USD = 0.12
 
 export function ComentariosClient({
   rows,
@@ -122,7 +124,7 @@ export function ComentariosClient({
         </div>
         <div className="flex-1">
           <div className="text-xs font-semibold text-[#A78BFA]">
-            Geração por IA · Claude Sonnet
+            Geração por IA · Claude Opus
           </div>
           <div className="mt-0.5 text-[11px] text-[var(--mm-muted)]">
             Selecione questões e dispare a geração em lote. Comentários gerados podem ser
