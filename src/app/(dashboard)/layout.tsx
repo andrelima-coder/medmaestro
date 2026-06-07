@@ -25,6 +25,9 @@ export default async function DashboardLayout({
 
   const role = (profile?.role ?? 'analista') as UserRole
 
+  // Camada do aluno (feature 001): aluno não acessa o back-office.
+  if (role === 'aluno') redirect('/aluno')
+
   return (
     <div className="app-shell flex h-screen overflow-hidden bg-background">
       <a href="#main-content" className="skip-to-content">

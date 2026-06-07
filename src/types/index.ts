@@ -1,4 +1,4 @@
-export type UserRole = 'superadmin' | 'admin' | 'professor' | 'analista'
+export type UserRole = 'superadmin' | 'admin' | 'professor' | 'analista' | 'aluno'
 
 export interface Profile {
   id: string
@@ -6,6 +6,10 @@ export interface Profile {
   full_name: string | null
   role: UserRole
   avatar_url: string | null
+  // Camada do aluno (feature 001) — campos de lead/segmentação
+  phone?: string | null
+  origin?: string | null
+  is_student_of?: 'ja_aluno' | 'nao_aluno' | 'aluno_outro_curso' | null
   created_at: string
   updated_at: string
 }
@@ -25,6 +29,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Admin',
   professor: 'Professor',
   analista: 'Analista',
+  aluno: 'Aluno',
 }
 
 export const STATUS_LABELS: Record<QuestionStatus, string> = {

@@ -12,6 +12,7 @@ export type NavSectionDef = {
 }
 
 const ROLE_RANK: Record<UserRole, number> = {
+  aluno: -1, // fora da hierarquia de staff; nunca passa nas checagens do back-office
   analista: 0,
   professor: 1,
   admin: 2,
