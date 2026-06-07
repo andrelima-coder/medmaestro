@@ -256,23 +256,13 @@ export async function removeQuestionFromSimulado(
     question_id: questionId,
   })
 
-  // Resequencia posições
-  const { data: remaining } = await service
-    .from('simulado_questions')
-    .select('id')
-    .eq('simulado_id', simuladoId)
-    .order('position', { ascending: true })
-
-  if (remaining && remaining.length > 0) {
-    await Promise.all(
-      remaining.map((row, i) =>
-        service
-          .from('simulado_questions')
-          .update({ position: i + 1 })
-          .eq('id', row.id)
-      )
-    )
-  }
+  // Resequencia posições atomicamente (fecha o buraco deixado pela remoção).
+  // Constraint UNIQUE(simulado_id, position) é DEFERRABLE: a RPC renumera 1..n
+  // num único UPDATE dentro de uma transação. Ver migration 015.
+  const { error: reseqError } = await service.rpc('resequence_simulado_questions', {
+    p_simulado_id: simuladoId,
+  })
+  if (reseqError) return { ok: false, error: reseqError.message }
 
   revalidatePath(`/simulados/${simuladoId}`)
   return { ok: true }
@@ -330,7 +320,7 @@ export async function moveSimuladoQuestion(
 
   const { data: rows } = await service
     .from('simulado_questions')
-    .select('id, position')
+    .select('id')
     .eq('simulado_id', simuladoId)
     .order('position', { ascending: true })
 
@@ -342,13 +332,15 @@ export async function moveSimuladoQuestion(
   const swapIdx = direction === 'up' ? idx - 1 : idx + 1
   if (swapIdx < 0 || swapIdx >= rows.length) return { ok: true }
 
-  const current = rows[idx]
-  const swap = rows[swapIdx]
+  // Monta a nova ordem trocando os dois elementos e delega à RPC atômica.
+  const orderedIds = rows.map((r) => r.id)
+  ;[orderedIds[idx], orderedIds[swapIdx]] = [orderedIds[swapIdx], orderedIds[idx]]
 
-  await Promise.all([
-    service.from('simulado_questions').update({ position: swap.position }).eq('id', current.id),
-    service.from('simulado_questions').update({ position: current.position }).eq('id', swap.id),
-  ])
+  const { error } = await service.rpc('reorder_simulado_questions', {
+    p_simulado_id: simuladoId,
+    p_ordered_ids: orderedIds,
+  })
+  if (error) return { ok: false, error: error.message }
 
   revalidatePath(`/simulados/${simuladoId}`)
   return { ok: true }
@@ -372,15 +364,12 @@ export async function reorderSimuladoQuestions(
 
   if (!simulado) return { ok: false, error: 'Simulado não encontrado' }
 
-  await Promise.all(
-    orderedSqIds.map((sqId, i) =>
-      service
-        .from('simulado_questions')
-        .update({ position: i + 1 })
-        .eq('id', sqId)
-        .eq('simulado_id', simuladoId)
-    )
-  )
+  // Reordenação atômica via RPC (constraint DEFERRABLE). Ver migration 015.
+  const { error } = await service.rpc('reorder_simulado_questions', {
+    p_simulado_id: simuladoId,
+    p_ordered_ids: orderedSqIds,
+  })
+  if (error) return { ok: false, error: error.message }
 
   revalidatePath(`/simulados/${simuladoId}`)
   return { ok: true }
