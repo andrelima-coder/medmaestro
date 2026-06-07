@@ -198,6 +198,17 @@ export async function addQuestionToSimulado(
 
   if (!simulado) return { ok: false, error: 'Simulado não encontrado' }
 
+  // Impede questão duplicada no mesmo simulado (UNIQUE simulado_id+question_id,
+  // garantida no banco pela migration 017). Pré-checagem dá mensagem amigável.
+  const { data: existing } = await service
+    .from('simulado_questions')
+    .select('id')
+    .eq('simulado_id', simuladoId)
+    .eq('question_id', questionId)
+    .maybeSingle()
+
+  if (existing) return { ok: false, error: 'Esta questão já está no simulado' }
+
   // Próxima posição
   const { data: lastPos } = await service
     .from('simulado_questions')
@@ -205,7 +216,7 @@ export async function addQuestionToSimulado(
     .eq('simulado_id', simuladoId)
     .order('position', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   const position = (lastPos?.position ?? 0) + 1
 
@@ -215,7 +226,11 @@ export async function addQuestionToSimulado(
     position,
   })
 
-  if (error) return { ok: false, error: error.message }
+  // 23505 = unique_violation (corrida rara após a pré-checagem)
+  if (error) {
+    if (error.code === '23505') return { ok: false, error: 'Esta questão já está no simulado' }
+    return { ok: false, error: error.message }
+  }
 
   await logAudit(user.id, 'simulado', simuladoId, 'simulado_question_added', null, {
     question_id: questionId,
