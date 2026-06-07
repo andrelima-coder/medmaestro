@@ -110,8 +110,19 @@ export default async function RevisaoItemPage({
     specialties: { name: string; exam_boards: { name: string } | null } | null
   } | null
 
-  const alternativesHtml =
-    (question.alternatives_html as Record<'A' | 'B' | 'C' | 'D' | 'E', string> | null) ?? {}
+  // Por letra: usa o HTML quando existe, senão cai pro texto puro de
+  // `alternatives`. Questões importadas só têm `alternatives` populado —
+  // sem este fallback o editor carregava vazio e o autosave apagava o texto.
+  const altHtmlRaw =
+    (question.alternatives_html as Partial<Record<'A' | 'B' | 'C' | 'D' | 'E', string>> | null) ?? {}
+  const altPlain =
+    (question.alternatives as Partial<Record<'A' | 'B' | 'C' | 'D' | 'E', string>> | null) ?? {}
+  const alternativesHtml = Object.fromEntries(
+    (['A', 'B', 'C', 'D', 'E'] as const).map((l) => {
+      const h = altHtmlRaw[l]
+      return [l, h && h.trim() ? h : (altPlain[l] ?? '')]
+    })
+  ) as Record<'A' | 'B' | 'C' | 'D' | 'E', string>
   const stemHtml = (question.stem_html as string | null) ?? ''
 
   // Mapeia scope → signed URL pra imagens cujo escopo é uma alternativa.

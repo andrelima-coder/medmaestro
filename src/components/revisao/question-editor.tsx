@@ -45,6 +45,10 @@ export function QuestionEditor({
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dirtyRef = useRef(false)
+  // Evita autosave na montagem: só salva após uma edição real do usuário.
+  // Salvar no mount sobrescrevia `alternatives`/`stem` com o estado inicial do
+  // editor — apagava o texto de questões importadas cujo *_html vinha vazio.
+  const didMountRef = useRef(false)
 
   function handleUndo() {
     if (!confirm('Desfazer a última edição? O texto atual será substituído pela versão anterior.')) {
@@ -90,6 +94,10 @@ export function QuestionEditor({
   }, [])
 
   useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true
+      return
+    }
     scheduleSave()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stem, alts])
