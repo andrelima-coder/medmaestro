@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-type Format = 'tsv' | 'csv' | 'json'
+type Format = 'docx' | 'pdf' | 'tsv' | 'csv' | 'json'
 
 const FORMAT_LABEL: Record<Format, string> = {
+  docx: 'Word (.docx)',
+  pdf: 'PDF',
   tsv: 'TSV (Anki)',
   csv: 'CSV (planilha)',
   json: 'JSON',
 }
+
+const FORMATS: Format[] = ['docx', 'pdf', 'tsv', 'csv', 'json']
 
 export function ExportFlashcardsButton({
   examId,
@@ -80,7 +84,7 @@ export function ExportFlashcardsButton({
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
           }}
         >
-          {(['tsv', 'csv', 'json'] as Format[]).map((fmt) => (
+          {FORMATS.map((fmt) => (
             <a
               key={fmt}
               href={buildHref(fmt)}

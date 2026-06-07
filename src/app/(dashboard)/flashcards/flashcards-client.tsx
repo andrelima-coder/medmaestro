@@ -4,7 +4,8 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  generateFlashcardsBatchAction,
+  suggestCountsAction,
+  generateFlashcardsInlineAction,
   type FlashcardsListRow,
 } from './actions'
 import type { CardType } from '@/lib/flashcards/generate'
@@ -24,16 +25,31 @@ export function FlashcardsClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [pending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<string | null>(null)
-  const [showConfig, setShowConfig] = useState(false)
+  const [feedbackError, setFeedbackError] = useState(false)
 
-  const [count, setCount] = useState(2)
+  // Modal de geração
+  const [modalOpen, setModalOpen] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const [includeQa, setIncludeQa] = useState(true)
   const [includeCloze, setIncludeCloze] = useState(true)
   const [inheritTags, setInheritTags] = useState(true)
 
   const allSelected = rows.length > 0 && selected.size === rows.length
   const totalSel = selected.size
-  const totalCards = totalSel * count
+
+  const rowById = useMemo(() => {
+    const m = new Map<string, FlashcardsListRow>()
+    for (const r of rows) m.set(r.id, r)
+    return m
+  }, [rows])
+
+  const selectedRows = useMemo(
+    () => Array.from(selected).map((id) => rowById.get(id)).filter(Boolean) as FlashcardsListRow[],
+    [selected, rowById]
+  )
+
+  const totalCards = selectedRows.reduce((s, r) => s + (counts[r.id] ?? 2), 0)
   const estCost = (totalCards * COST_PER_CARD_USD).toFixed(2)
 
   const filterUrl = useMemo(
@@ -61,34 +77,65 @@ export function FlashcardsClient({
     })
   }
 
-  async function dispatch() {
+  async function openModal() {
     const ids = Array.from(selected)
     if (ids.length === 0) return
+    setFeedback(null)
+    setModalOpen(true)
+    // Pré-preenche com a sugestão da IA (mantém valores já ajustados).
+    setSuggesting(true)
+    const res = await suggestCountsAction(ids)
+    setSuggesting(false)
+    if (res.ok && res.counts) {
+      setCounts((prev) => {
+        const next = { ...prev }
+        for (const id of ids) next[id] = prev[id] ?? res.counts![id] ?? 2
+        return next
+      })
+    } else {
+      setCounts((prev) => {
+        const next = { ...prev }
+        for (const id of ids) next[id] = prev[id] ?? 2
+        return next
+      })
+    }
+  }
+
+  function setCountFor(id: string, value: number) {
+    const v = Math.max(1, Math.min(5, Math.round(value || 1)))
+    setCounts((prev) => ({ ...prev, [id]: v }))
+  }
+
+  function generate() {
     const types: CardType[] = []
     if (includeQa) types.push('qa')
     if (includeCloze) types.push('cloze')
     if (types.length === 0) {
       setFeedback('Erro: selecione ao menos um tipo de card')
+      setFeedbackError(true)
       return
     }
 
-    setFeedback(null)
-    setShowConfig(false)
+    const items = selectedRows.map((r) => ({ questionId: r.id, count: counts[r.id] ?? 2 }))
 
     startTransition(async () => {
-      const res = await generateFlashcardsBatchAction(ids, {
-        count,
-        types,
-        inheritTags,
-      })
-      if (res.ok) {
+      const res = await generateFlashcardsInlineAction(items, { types, inheritTags })
+      setModalOpen(false)
+      if (res.created > 0) {
+        setFeedbackError(res.failed > 0)
         setFeedback(
-          `${res.queued} questões enfileiradas — gerando ${count} card(s) cada. Atualize a aba "Revisar pendentes" em alguns segundos.`
+          `${res.created} flashcard(s) criado(s)` +
+            (res.failed > 0 ? ` · ${res.failed} questão(ões) falharam` : '') +
+            '. Já estão disponíveis na lista e para exportação.'
         )
         setSelected(new Set())
-        setTimeout(() => router.refresh(), 8000)
+        router.refresh()
       } else {
-        setFeedback(`Erro: ${res.error}`)
+        setFeedbackError(true)
+        setFeedback(
+          `Erro: nenhum card gerado.` +
+            (res.error ? ` ${res.error}` : res.errors[0] ? ` ${res.errors[0]}` : '')
+        )
       }
     })
   }
@@ -165,18 +212,18 @@ export function FlashcardsClient({
           )}
         </span>
         <button
-          onClick={() => setShowConfig((v) => !v)}
+          onClick={openModal}
           disabled={totalSel === 0 || pending}
           style={btnPrimary(totalSel > 0 && !pending)}
         >
-          {pending ? 'Enfileirando…' : `Gerar flashcards (${totalSel})`}
+          {pending ? 'Gerando…' : `Gerar flashcards (${totalSel})`}
         </button>
 
         {feedback && (
           <span
             style={{
               fontSize: 11,
-              color: feedback.startsWith('Erro') ? '#EF5350' : '#66BB6A',
+              color: feedbackError ? '#EF5350' : '#66BB6A',
               marginLeft: 8,
             }}
           >
@@ -185,69 +232,128 @@ export function FlashcardsClient({
         )}
       </div>
 
-      {/* Config inline (simples) */}
-      {showConfig && (
+      {/* Modal de geração */}
+      {modalOpen && (
         <div
+          onClick={() => !pending && setModalOpen(false)}
           style={{
-            background: 'var(--mm-surface)',
-            border: '1px solid var(--mm-line)',
-            borderRadius: 12,
-            padding: 16,
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            zIndex: 100,
             display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--mm-text)' }}>
-            Configuração da geração
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 12, color: 'var(--mm-text2)' }}>
-              Cards por questão:&nbsp;
-              <select
-                value={count}
-                onChange={(e) => setCount(Number(e.target.value))}
-                style={selectStyle}
-              >
-                {[1, 2, 3].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={checkLabel}>
-              <input
-                type="checkbox"
-                checked={includeQa}
-                onChange={(e) => setIncludeQa(e.target.checked)}
-              />
-              Q&A
-            </label>
-            <label style={checkLabel}>
-              <input
-                type="checkbox"
-                checked={includeCloze}
-                onChange={(e) => setIncludeCloze(e.target.checked)}
-              />
-              Cloze
-            </label>
-            <label style={checkLabel}>
-              <input
-                type="checkbox"
-                checked={inheritTags}
-                onChange={(e) => setInheritTags(e.target.checked)}
-              />
-              Herdar tags
-            </label>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={dispatch} disabled={pending} style={btnPrimary(!pending)}>
-              Confirmar e gerar
-            </button>
-            <button onClick={() => setShowConfig(false)} style={btnGhost}>
-              Cancelar
-            </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--mm-surface)',
+              border: '1px solid var(--mm-line2)',
+              borderRadius: 12,
+              width: 'min(640px, 100%)',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--mm-line)' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--mm-text)', fontFamily: 'var(--font-syne)' }}>
+                Gerar flashcards
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--mm-muted)', marginTop: 2 }}>
+                A IA analisa enunciado, alternativas (certas e erradas) e o comentário de
+                cada questão. Revise a quantidade sugerida por questão.
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 20px', overflowY: 'auto', flex: 1 }}>
+              {suggesting ? (
+                <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--mm-muted)' }}>
+                  Analisando questões e sugerindo quantidades…
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th()}>Q#</th>
+                      <th style={th()}>ENUNCIADO</th>
+                      <th style={{ ...th(), textAlign: 'right' }}>CARDS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedRows.map((r) => (
+                      <tr key={r.id} style={{ borderBottom: '1px solid var(--mm-line)' }}>
+                        <td style={{ ...td('var(--mm-gold)'), fontWeight: 700, whiteSpace: 'nowrap' }}>
+                          Q{r.question_number}
+                        </td>
+                        <td
+                          style={{
+                            ...td('var(--mm-text2)'),
+                            maxWidth: 360,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {r.stem || '—'}
+                        </td>
+                        <td style={{ ...td(), textAlign: 'right' }}>
+                          <input
+                            type="number"
+                            min={1}
+                            max={5}
+                            value={counts[r.id] ?? 2}
+                            onChange={(e) => setCountFor(r.id, Number(e.target.value))}
+                            style={{
+                              width: 56,
+                              background: 'var(--mm-bg2)',
+                              border: '1px solid var(--mm-line2)',
+                              borderRadius: 8,
+                              padding: '5px 8px',
+                              fontSize: 12,
+                              color: 'var(--mm-text)',
+                              textAlign: 'center',
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--mm-line)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                <label style={checkLabel}>
+                  <input type="checkbox" checked={includeQa} onChange={(e) => setIncludeQa(e.target.checked)} />
+                  Q&A
+                </label>
+                <label style={checkLabel}>
+                  <input type="checkbox" checked={includeCloze} onChange={(e) => setIncludeCloze(e.target.checked)} />
+                  Cloze
+                </label>
+                <label style={checkLabel}>
+                  <input type="checkbox" checked={inheritTags} onChange={(e) => setInheritTags(e.target.checked)} />
+                  Herdar tags (tema + habilidade)
+                </label>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--mm-muted)' }}>
+                  ≈ {totalCards} cards · ${estCost}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={generate} disabled={pending || suggesting} style={btnPrimary(!pending && !suggesting)}>
+                  {pending ? 'Gerando…' : 'Gerar agora'}
+                </button>
+                <button onClick={() => setModalOpen(false)} disabled={pending} style={btnGhost}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1,56 +1,109 @@
 'use server'
 
-import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { generateFlashcardsForQuestion, type CardType } from '@/lib/flashcards/generate'
+import {
+  generateFlashcardsForQuestion,
+  suggestFlashcardCounts,
+  type CardType,
+} from '@/lib/flashcards/generate'
 import { logAudit } from '@/lib/audit'
 import { sanitizeHtml } from '@/lib/sanitize-html'
 
 const BATCH_CONCURRENCY = 3
 
-export type GenerateBatchResult = {
+export type SuggestCountsResult = {
   ok: boolean
-  queued?: number
+  counts?: Record<string, number>
   error?: string
 }
 
-export async function generateFlashcardsBatchAction(
-  questionIds: string[],
-  config: { count: number; types: CardType[]; inheritTags: boolean }
-): Promise<GenerateBatchResult> {
+export async function suggestCountsAction(
+  questionIds: string[]
+): Promise<SuggestCountsResult> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  if (questionIds.length === 0) {
-    return { ok: false, error: 'Nenhuma questão selecionada' }
+  if (questionIds.length === 0) return { ok: false, error: 'Nenhuma questão selecionada' }
+
+  try {
+    const counts = await suggestFlashcardCounts(questionIds)
+    return { ok: true, counts }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+export type GenerateInlineItem = { questionId: string; count: number }
+
+export type GenerateInlineResult = {
+  ok: boolean
+  created: number
+  failed: number
+  errors: string[]
+  error?: string
+}
+
+export async function generateFlashcardsInlineAction(
+  items: GenerateInlineItem[],
+  config: { types: CardType[]; inheritTags: boolean }
+): Promise<GenerateInlineResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const clean = items.filter((it) => it.questionId && it.count > 0)
+  if (clean.length === 0) {
+    return { ok: false, created: 0, failed: 0, errors: [], error: 'Nenhuma questão selecionada' }
   }
   if (config.types.length === 0) {
-    return { ok: false, error: 'Selecione ao menos um tipo de card' }
+    return { ok: false, created: 0, failed: 0, errors: [], error: 'Selecione ao menos um tipo de card' }
   }
 
-  const ids = [...new Set(questionIds)]
-
-  await logAudit(user.id, 'question', ids[0], 'flashcards_batch_triggered', null, {
-    count: ids.length,
-    cards_per_question: config.count,
+  await logAudit(user.id, 'question', clean[0].questionId, 'flashcards_batch_triggered', null, {
+    count: clean.length,
+    total_cards_requested: clean.reduce((s, it) => s + it.count, 0),
     types: config.types,
   })
 
-  after(async () => {
-    for (let i = 0; i < ids.length; i += BATCH_CONCURRENCY) {
-      const batch = ids.slice(i, i + BATCH_CONCURRENCY)
-      await Promise.allSettled(
-        batch.map((id) => generateFlashcardsForQuestion(id, config))
-      )
-    }
-  })
+  let created = 0
+  let failed = 0
+  const errors: string[] = []
 
-  return { ok: true, queued: ids.length }
+  for (let i = 0; i < clean.length; i += BATCH_CONCURRENCY) {
+    const batch = clean.slice(i, i + BATCH_CONCURRENCY)
+    const results = await Promise.allSettled(
+      batch.map((it) =>
+        generateFlashcardsForQuestion(it.questionId, {
+          count: it.count,
+          types: config.types,
+          inheritTags: config.inheritTags,
+        })
+      )
+    )
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.ok) {
+        created += r.value.created
+      } else {
+        failed += 1
+        const msg =
+          r.status === 'fulfilled'
+            ? r.value.error ?? 'erro desconhecido'
+            : r.reason instanceof Error
+              ? r.reason.message
+              : String(r.reason)
+        if (errors.length < 5) errors.push(msg)
+      }
+    }
+  }
+
+  return { ok: created > 0, created, failed, errors }
 }
 
 export type FlashcardsListRow = {

@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 export const MODELS = {
   sonnet: 'claude-sonnet-4-6',
   opus: 'claude-opus-4-7',
+  haiku: 'claude-haiku-4-5',
 } as const
 
 export type ClaudeModel = (typeof MODELS)[keyof typeof MODELS]
@@ -53,6 +54,7 @@ export type ClaudeResult = {
 const PRICING_PER_MTOK: Record<ClaudeModel, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-opus-4-7': { input: 15, output: 75 },
+  'claude-haiku-4-5': { input: 1, output: 5 },
 }
 
 export function calcCostUsd(model: ClaudeModel, usage: ClaudeUsage): number {

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { buildFlashcardsDocx, buildFlashcardsPdf } from '@/lib/exports/flashcards'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-type Format = 'tsv' | 'csv' | 'json'
+type Format = 'tsv' | 'csv' | 'json' | 'docx' | 'pdf'
 
 type FlashcardRow = {
   id: string
@@ -24,6 +25,13 @@ type FlashcardRow = {
       specialties: { name: string | null } | null
     } | null
   } | null
+  flashcard_tags: Array<{ tags: { label: string | null; dimension: string | null } | null }> | null
+}
+
+function semanticTags(row: FlashcardRow): string[] {
+  return (row.flashcard_tags ?? [])
+    .map((ft) => ft.tags?.label ?? null)
+    .filter((l): l is string => !!l)
 }
 
 function escapeCsv(value: string): string {
@@ -53,6 +61,7 @@ function buildTagsField(row: FlashcardRow): string {
   if (row.questions?.question_number != null) {
     tags.push(`Q${row.questions.question_number}`)
   }
+  for (const t of semanticTags(row)) tags.push(t.replace(/\s+/g, '_'))
   return tags.join(' ')
 }
 
@@ -65,8 +74,11 @@ export async function GET(req: NextRequest) {
 
   const url = req.nextUrl
   const formatRaw = (url.searchParams.get('format') ?? 'tsv').toLowerCase()
-  const format: Format =
-    formatRaw === 'csv' ? 'csv' : formatRaw === 'json' ? 'json' : 'tsv'
+  const format: Format = (['csv', 'json', 'docx', 'pdf'] as const).includes(
+    formatRaw as 'csv' | 'json' | 'docx' | 'pdf'
+  )
+    ? (formatRaw as Format)
+    : 'tsv'
 
   const examId = url.searchParams.get('exam_id') ?? undefined
   const approvedOnly = url.searchParams.get('approved_only') !== '0'
@@ -76,7 +88,7 @@ export async function GET(req: NextRequest) {
   let query = service
     .from('flashcards')
     .select(
-      'id, front, back, card_type, difficulty, approved, created_at, source_question_id, questions(question_number, exams(year, booklet_color, specialties(name)))'
+      'id, front, back, card_type, difficulty, approved, created_at, source_question_id, questions(question_number, exams(year, booklet_color, specialties(name))), flashcard_tags(tags(label, dimension))'
     )
     .order('created_at', { ascending: false })
     .limit(5000)
@@ -105,6 +117,41 @@ export async function GET(req: NextRequest) {
 
   const stamp = new Date().toISOString().slice(0, 10)
   const filename = `medmaestro-flashcards-${stamp}.${format}`
+
+  if (format === 'docx' || format === 'pdf') {
+    const cards = rows.map((r) => ({
+      front: r.front ?? '',
+      back: r.back ?? '',
+      cardType: r.card_type,
+      difficulty: r.difficulty,
+      examLabel: buildExamLabel(r),
+      questionNumber: r.questions?.question_number ?? null,
+      tags: semanticTags(r),
+    }))
+    const exportData = {
+      title: 'Flashcards — MedMaestro',
+      subtitle: `${cards.length} flashcards · ${stamp}`,
+      cards,
+    }
+
+    const bytes =
+      format === 'docx' ? await buildFlashcardsDocx(exportData) : await buildFlashcardsPdf(exportData)
+    const ab = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer
+    return new NextResponse(ab, {
+      status: 200,
+      headers: {
+        'Content-Type':
+          format === 'docx'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Length': String(bytes.byteLength),
+      },
+    })
+  }
 
   if (format === 'json') {
     const payload = rows.map((r) => ({
