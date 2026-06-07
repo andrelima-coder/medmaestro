@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -125,16 +126,37 @@ export default async function RevisaoItemPage({
   ) as Record<'A' | 'B' | 'C' | 'D' | 'E', string>
   const stemHtml = (question.stem_html as string | null) ?? ''
 
-  // Mapeia scope → signed URL pra imagens cujo escopo é uma alternativa.
-  // Permite renderizar a figura inline na alternativa quando o texto vem vazio.
-  const scopeImageUrls: Partial<Record<string, string>> = {}
+  // Cada figura é ancorada no seu escopo: a do enunciado vai dentro da caixa do
+  // enunciado, as de alternativa dentro da alternativa correspondente. Geramos
+  // uma URL assinada por imagem (preview inline) e montamos um slot por escopo.
+  const previewByImageId: Record<string, string> = {}
   for (const img of images) {
-    if (!img.image_scope.startsWith('alternative_') && img.image_scope !== 'statement') continue
     const path = img.use_cropped && img.cropped_path ? img.cropped_path : img.full_page_path
     const { data: signed } = await service.storage
       .from('question-images')
       .createSignedUrl(path, 60 * 60)
-    if (signed?.signedUrl) scopeImageUrls[img.image_scope] = signed.signedUrl
+    if (signed?.signedUrl) previewByImageId[img.id] = signed.signedUrl
+  }
+
+  const figureSlot = (scope: string) => {
+    const scopeImages = images.filter((img) => img.image_scope === scope)
+    if (scopeImages.length === 0) return null
+    return (
+      <ImageModal
+        images={scopeImages}
+        previewUrls={scopeImages.map((img) => previewByImageId[img.id] ?? null)}
+        hideScopeLabel
+      />
+    )
+  }
+
+  const statementSlot = figureSlot('statement')
+  const alternativeSlots: Partial<Record<'A' | 'B' | 'C' | 'D' | 'E', ReactNode>> = {
+    A: figureSlot('alternative_a'),
+    B: figureSlot('alternative_b'),
+    C: figureSlot('alternative_c'),
+    D: figureSlot('alternative_d'),
+    E: figureSlot('alternative_e'),
   }
 
   const now = new Date()
@@ -286,7 +308,8 @@ export default async function RevisaoItemPage({
                 initialAlternativesHtml={alternativesHtml}
                 correctAnswer={(question.correct_answer as string | null) ?? null}
                 hasUndoableEdit={hasUndoableRevision}
-                scopeImageUrls={scopeImageUrls}
+                statementSlot={statementSlot}
+                alternativeSlots={alternativeSlots}
               />
 
               {/* Tabelas estruturadas (Docling) — somente leitura */}
@@ -300,8 +323,6 @@ export default async function RevisaoItemPage({
                     />
                   ) : null
                 )}
-
-              {images.length > 0 && <ImageModal images={images} />}
 
               {/* Aviso quando gabarito não disponível */}
               {!(question.correct_answer as string | null) && (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect, useRef, useCallback } from 'react'
+import { useState, useTransition, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import {
@@ -14,8 +14,6 @@ const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
 type AlternativesHtml = Partial<Record<(typeof LETTERS)[number], string>>
 
-type ScopeImageUrls = Partial<Record<'statement' | `alternative_${Lowercase<(typeof LETTERS)[number]>}`, string>>
-
 interface QuestionEditorProps {
   questionId: string
   initialStemHtml: string
@@ -23,9 +21,10 @@ interface QuestionEditorProps {
   correctAnswer: string | null
   readOnly?: boolean
   hasUndoableEdit?: boolean
-  /** Signed URLs por scope. Quando a alternativa está vazia mas existe imagem
-   * do scope correspondente, renderiza a figura inline. */
-  scopeImageUrls?: ScopeImageUrls
+  /** Figura(s) do enunciado, renderizada(s) dentro da caixa do enunciado. */
+  statementSlot?: ReactNode
+  /** Figura(s) por alternativa, renderizada(s) dentro da caixa da alternativa. */
+  alternativeSlots?: Partial<Record<(typeof LETTERS)[number], ReactNode>>
 }
 
 export function QuestionEditor({
@@ -35,7 +34,8 @@ export function QuestionEditor({
   correctAnswer,
   readOnly = false,
   hasUndoableEdit = false,
-  scopeImageUrls = {},
+  statementSlot = null,
+  alternativeSlots = {},
 }: QuestionEditorProps) {
   const router = useRouter()
   const [stem, setStem] = useState(initialStemHtml)
@@ -149,6 +149,7 @@ export function QuestionEditor({
             onUploadImage={handleUploadImage}
           />
         )}
+        {statementSlot}
       </div>
 
       <div className="flex flex-col gap-2">
@@ -159,9 +160,7 @@ export function QuestionEditor({
           {LETTERS.map((letter) => {
             const isCorrect = correctAnswer === letter
             const html = alts[letter] ?? ''
-            const scopeKey = `alternative_${letter.toLowerCase()}` as keyof ScopeImageUrls
-            const imageUrl = scopeImageUrls[scopeKey]
-            const isImageOnly = !html.trim() && !!imageUrl
+            const slot = alternativeSlots[letter]
             return (
               <div
                 key={letter}
@@ -179,19 +178,16 @@ export function QuestionEditor({
                 >
                   {letter})
                 </span>
-                <div className="flex-1 min-w-0">
-                  {isImageOnly ? (
-                    <img
-                      src={imageUrl}
-                      alt={`Alternativa ${letter} (figura)`}
-                      className="max-w-full rounded border border-white/5 bg-black/20"
-                      style={{ maxHeight: 220 }}
-                    />
-                  ) : readOnly ? (
-                    <div
-                      className="text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(html) || '<em class="opacity-60">vazia</em>' }}
-                    />
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  {readOnly ? (
+                    html.trim() ? (
+                      <div
+                        className="text-sm leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(html) }}
+                      />
+                    ) : !slot ? (
+                      <div className="text-sm" dangerouslySetInnerHTML={{ __html: '<em class="opacity-60">vazia</em>' }} />
+                    ) : null
                   ) : (
                     <RichTextEditor
                       value={html}
@@ -204,6 +200,7 @@ export function QuestionEditor({
                       onUploadImage={handleUploadImage}
                     />
                   )}
+                  {slot}
                 </div>
               </div>
             )

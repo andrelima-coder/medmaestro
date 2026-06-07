@@ -19,9 +19,14 @@ const SCOPE_LABELS: Record<string, string> = {
 
 interface ImageModalProps {
   images: QuestionImage[]
+  /** URLs assinadas (uma por imagem, na mesma ordem) para preview inline.
+   * Quando presente, mostra a figura visível e clicável; senão, um chip. */
+  previewUrls?: (string | null)[]
+  /** Esconde o rótulo do escopo no preview (já está ancorado no box certo). */
+  hideScopeLabel?: boolean
 }
 
-export function ImageModal({ images }: ImageModalProps) {
+export function ImageModal({ images, previewUrls, hideScopeLabel = false }: ImageModalProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
@@ -135,17 +140,42 @@ export function ImageModal({ images }: ImageModalProps) {
 
   return (
     <>
-      {/* Thumbnails / botões de abrir */}
+      {/* Preview inline da figura (clicável → zoom). Fallback: chip. */}
       <div className="flex flex-wrap gap-2 mt-2">
-        {images.map((img, i) => (
-          <button
-            key={img.id}
-            onClick={() => openModal(i)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
-          >
-            🖼 {SCOPE_LABELS[img.image_scope] ?? img.image_scope}
-          </button>
-        ))}
+        {images.map((img, i) => {
+          const preview = previewUrls?.[i]
+          if (preview) {
+            return (
+              <button
+                key={img.id}
+                onClick={() => openModal(i)}
+                title="Clique para ampliar"
+                className="group block overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:border-[var(--mm-gold)]/50"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={preview}
+                  alt={SCOPE_LABELS[img.image_scope] ?? img.image_scope}
+                  className="max-h-44 max-w-full object-contain bg-white"
+                />
+                {!hideScopeLabel && (
+                  <span className="block px-2 py-1 text-left text-[11px] text-muted-foreground">
+                    🖼 {SCOPE_LABELS[img.image_scope] ?? img.image_scope} · clique para ampliar
+                  </span>
+                )}
+              </button>
+            )
+          }
+          return (
+            <button
+              key={img.id}
+              onClick={() => openModal(i)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+            >
+              🖼 {SCOPE_LABELS[img.image_scope] ?? img.image_scope}
+            </button>
+          )
+        })}
       </div>
 
       {/* Modal */}
