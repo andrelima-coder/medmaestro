@@ -9,7 +9,7 @@ import {
   type VariationListRow,
 } from './actions'
 import type { DifficultyDelta } from '@/lib/variations/generate'
-import { Card, CardBody, Badge } from '@/components/ui'
+import { Card, CardBody, Badge, Pagination } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 const COST_SONNET = 0.005
@@ -24,10 +24,16 @@ const DIFFICULTY_LABEL: Record<DifficultyDelta, string> = {
 export function VariacoesClient({
   rows,
   exams,
+  total,
+  page,
+  pageSize,
   initialFilter,
 }: {
   rows: VariationListRow[]
   exams: { id: string; label: string }[]
+  total: number
+  page: number
+  pageSize: number
   initialFilter: { examId: string; onlyPending: boolean }
 }) {
   const router = useRouter()
@@ -47,16 +53,19 @@ export function VariacoesClient({
   const unitCost = model === 'opus' ? COST_OPUS : COST_SONNET
   const estCost = (totalVars * unitCost).toFixed(2)
 
-  const filterUrl = useMemo(
-    () => (next: Partial<typeof initialFilter>) => {
+  const buildUrl = useMemo(
+    () => (next: Partial<typeof initialFilter>, nextPage?: number) => {
       const f = { ...initialFilter, ...next }
       const params = new URLSearchParams()
       if (f.examId) params.set('exam', f.examId)
       if (f.onlyPending) params.set('only_pending', '1')
+      if (nextPage && nextPage > 1) params.set('page', String(nextPage))
       return `/variacoes${params.toString() ? `?${params.toString()}` : ''}`
     },
     [initialFilter]
   )
+  const filterUrl = (next: Partial<typeof initialFilter>) => buildUrl(next)
+  const pageUrl = (p: number) => buildUrl({}, p)
 
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
@@ -119,7 +128,7 @@ export function VariacoesClient({
             recriados; revise antes de promover ao banco.
           </div>
         </div>
-        <Badge tone="purple">{rows.length} disponíveis</Badge>
+        <Badge tone="purple">{total} disponíveis</Badge>
       </div>
 
       {/* Filtros */}
@@ -146,7 +155,7 @@ export function VariacoesClient({
           </CheckboxLabel>
 
           <span className="ml-auto text-[11px] text-[var(--mm-muted)]">
-            {rows.length} questões filtradas
+            {total} questões filtradas
           </span>
         </CardBody>
       </Card>
@@ -350,6 +359,8 @@ export function VariacoesClient({
           )}
         </CardBody>
       </Card>
+
+      <Pagination page={page} pageSize={pageSize} total={total} hrefForPage={pageUrl} />
     </div>
   )
 }

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { generateComment } from '@/lib/extraction/pipeline'
 import { logAudit } from '@/lib/audit'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 const BATCH_CONCURRENCY = 3
 
@@ -55,34 +56,59 @@ export type CommentRow = {
   extraction_confidence: number | null
 }
 
-export async function listQuestionsForComments(filter: {
-  examId?: string
-  withoutCommentOnly?: boolean
-  lowConfidenceOnly?: boolean
-}): Promise<CommentRow[]> {
+export type CommentListPage = { rows: CommentRow[]; total: number }
+
+export async function listQuestionsForComments(
+  filter: {
+    examId?: string
+    withoutCommentOnly?: boolean
+    lowConfidenceOnly?: boolean
+  },
+  pagination: { page: number; pageSize?: number }
+): Promise<CommentListPage> {
   const supabase = createServiceClient()
+  const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
+  const page = Math.max(1, pagination.page)
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('questions')
     .select(
-      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))'
+      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))',
+      { count: 'exact' }
     )
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
-    .limit(500)
 
   if (filter.examId) query = query.eq('exam_id', filter.examId)
   if (filter.lowConfidenceOnly) query = query.lte('extraction_confidence', 2)
 
-  const { data: rows } = await query
-  if (!rows) return []
+  // Filtro "apenas sem comentário": exclui no banco as questões já comentadas,
+  // para que count e paginação reflitam o conjunto filtrado.
+  if (filter.withoutCommentOnly) {
+    const { data: commented } = await supabase
+      .from('question_comments')
+      .select('question_id')
+    const commentedIds = [...new Set((commented ?? []).map((c) => c.question_id as string))]
+    if (commentedIds.length > 0) {
+      query = query.not('id', 'in', `(${commentedIds.join(',')})`)
+    }
+  }
 
-  const ids = rows.map((r) => r.id as string)
-  const { data: existingComments } = await supabase
-    .from('question_comments')
-    .select('question_id')
-    .in('question_id', ids)
-  const withComment = new Set((existingComments ?? []).map((c) => c.question_id as string))
+  const { data: rows, count } = await query.range(from, to)
+  if (!rows) return { rows: [], total: count ?? 0 }
+
+  // Enriquecimento has_comment só para as linhas da página atual.
+  const pageIds = rows.map((r) => r.id as string)
+  let withComment = new Set<string>()
+  if (!filter.withoutCommentOnly && pageIds.length > 0) {
+    const { data: existingComments } = await supabase
+      .from('question_comments')
+      .select('question_id')
+      .in('question_id', pageIds)
+    withComment = new Set((existingComments ?? []).map((c) => c.question_id as string))
+  }
 
   const result: CommentRow[] = rows.map((r) => {
     const exam = r.exams as unknown as {
@@ -98,13 +124,13 @@ export async function listQuestionsForComments(filter: {
       stem: ((r.stem as string | null) ?? '').slice(0, 120),
       exam_id: r.exam_id as string,
       exam_label: `${specName} ${exam?.year ?? ''}${color}`.trim(),
-      has_comment: withComment.has(r.id as string),
+      // Na visão filtrada todas as linhas são, por definição, sem comentário.
+      has_comment: filter.withoutCommentOnly ? false : withComment.has(r.id as string),
       extraction_confidence: (r.extraction_confidence as number | null) ?? null,
     }
   })
 
-  if (filter.withoutCommentOnly) return result.filter((r) => !r.has_comment)
-  return result
+  return { rows: result, total: count ?? 0 }
 }
 
 export async function listExamsForFilter(): Promise<

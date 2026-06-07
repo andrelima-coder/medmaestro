@@ -2,13 +2,19 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { listExamsForFilter, listQuestionsForComments } from './actions'
 import { ComentariosClient } from './comentarios-client'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 export const metadata = { title: 'Comentários — MedMaestro' }
 
 export default async function ComentariosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ exam?: string; only_pending?: string; low_conf?: string }>
+  searchParams: Promise<{
+    exam?: string
+    only_pending?: string
+    low_conf?: string
+    page?: string
+  }>
 }) {
   const supabase = await createClient()
   const {
@@ -22,11 +28,13 @@ export default async function ComentariosPage({
     withoutCommentOnly: sp.only_pending === '1',
     lowConfidenceOnly: sp.low_conf === '1',
   }
+  const page = Math.max(1, Number(sp.page) || 1)
 
-  const [exams, rows] = await Promise.all([
+  const [exams, list] = await Promise.all([
     listExamsForFilter(),
-    listQuestionsForComments(filter),
+    listQuestionsForComments(filter, { page }),
   ])
+  const { rows, total } = list
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +50,9 @@ export default async function ComentariosPage({
       <ComentariosClient
         rows={rows}
         exams={exams}
+        total={total}
+        page={page}
+        pageSize={QUESTIONS_PAGE_SIZE}
         initialFilter={{
           examId: filter.examId ?? '',
           onlyPending: filter.withoutCommentOnly,

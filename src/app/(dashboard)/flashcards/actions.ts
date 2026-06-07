@@ -10,6 +10,7 @@ import {
 } from '@/lib/flashcards/generate'
 import { logAudit } from '@/lib/audit'
 import { sanitizeHtml } from '@/lib/sanitize-html'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 const BATCH_CONCURRENCY = 3
 
@@ -116,38 +117,61 @@ export type FlashcardsListRow = {
   extraction_confidence: number | null
 }
 
-export async function listQuestionsForFlashcards(filter: {
-  examId?: string
-  withoutFlashcardOnly?: boolean
-  lowConfidenceOnly?: boolean
-}): Promise<FlashcardsListRow[]> {
+export type FlashcardsListPage = { rows: FlashcardsListRow[]; total: number }
+
+export async function listQuestionsForFlashcards(
+  filter: {
+    examId?: string
+    withoutFlashcardOnly?: boolean
+    lowConfidenceOnly?: boolean
+  },
+  pagination: { page: number; pageSize?: number }
+): Promise<FlashcardsListPage> {
   const supabase = createServiceClient()
+  const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
+  const page = Math.max(1, pagination.page)
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('questions')
     .select(
-      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))'
+      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))',
+      { count: 'exact' }
     )
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
-    .limit(500)
 
   if (filter.examId) query = query.eq('exam_id', filter.examId)
   if (filter.lowConfidenceOnly) query = query.lte('extraction_confidence', 2)
 
-  const { data: rows } = await query
-  if (!rows) return []
+  // Filtro "apenas sem flashcard": exclui no banco as questões que já têm
+  // flashcards, para count e paginação refletirem o conjunto filtrado.
+  if (filter.withoutFlashcardOnly) {
+    const { data: cards } = await supabase
+      .from('flashcards')
+      .select('source_question_id')
+    const withCardIds = [...new Set((cards ?? []).map((c) => c.source_question_id as string))]
+    if (withCardIds.length > 0) {
+      query = query.not('id', 'in', `(${withCardIds.join(',')})`)
+    }
+  }
 
-  const ids = rows.map((r) => r.id as string)
-  const { data: cards } = await supabase
-    .from('flashcards')
-    .select('source_question_id')
-    .in('source_question_id', ids)
+  const { data: rows, count } = await query.range(from, to)
+  if (!rows) return { rows: [], total: count ?? 0 }
 
+  // Contagem de flashcards só para as linhas da página atual.
+  const pageIds = rows.map((r) => r.id as string)
   const counts: Record<string, number> = {}
-  for (const c of cards ?? []) {
-    const id = c.source_question_id as string
-    counts[id] = (counts[id] ?? 0) + 1
+  if (!filter.withoutFlashcardOnly && pageIds.length > 0) {
+    const { data: cards } = await supabase
+      .from('flashcards')
+      .select('source_question_id')
+      .in('source_question_id', pageIds)
+    for (const c of cards ?? []) {
+      const id = c.source_question_id as string
+      counts[id] = (counts[id] ?? 0) + 1
+    }
   }
 
   const result: FlashcardsListRow[] = rows.map((r) => {
@@ -169,8 +193,7 @@ export async function listQuestionsForFlashcards(filter: {
     }
   })
 
-  if (filter.withoutFlashcardOnly) return result.filter((r) => r.flashcards_count === 0)
-  return result
+  return { rows: result, total: count ?? 0 }
 }
 
 export async function listExamsForFlashcardsFilter(): Promise<

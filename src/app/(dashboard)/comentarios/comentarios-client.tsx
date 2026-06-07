@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
 import { generateCommentsBatchAction, type CommentRow } from './actions'
-import { Card, CardBody, Badge } from '@/components/ui'
+import { Card, CardBody, Badge, Pagination } from '@/components/ui'
 import { cn } from '@/lib/utils'
 
 const COST_PER_COMMENT_USD = 0.015
@@ -13,10 +13,16 @@ const COST_PER_COMMENT_USD = 0.015
 export function ComentariosClient({
   rows,
   exams,
+  total,
+  page,
+  pageSize,
   initialFilter,
 }: {
   rows: CommentRow[]
   exams: { id: string; label: string }[]
+  total: number
+  page: number
+  pageSize: number
   initialFilter: { examId: string; onlyPending: boolean; lowConf: boolean }
 }) {
   const router = useRouter()
@@ -28,17 +34,21 @@ export function ComentariosClient({
   const totalSel = selected.size
   const estCost = (totalSel * COST_PER_COMMENT_USD).toFixed(2)
 
-  const filterUrl = useMemo(
-    () => (next: Partial<typeof initialFilter>) => {
+  // Mudar filtro reseta para a página 1; paginar preserva os filtros.
+  const buildUrl = useMemo(
+    () => (next: Partial<typeof initialFilter>, nextPage?: number) => {
       const f = { ...initialFilter, ...next }
       const params = new URLSearchParams()
       if (f.examId) params.set('exam', f.examId)
       if (f.onlyPending) params.set('only_pending', '1')
       if (f.lowConf) params.set('low_conf', '1')
+      if (nextPage && nextPage > 1) params.set('page', String(nextPage))
       return `/comentarios${params.toString() ? `?${params.toString()}` : ''}`
     },
     [initialFilter]
   )
+  const filterUrl = (next: Partial<typeof initialFilter>) => buildUrl(next)
+  const pageUrl = (p: number) => buildUrl({}, p)
 
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
@@ -94,7 +104,7 @@ export function ComentariosClient({
             editados na questão correspondente.
           </div>
         </div>
-        <Badge tone="purple">{rows.length} disponíveis</Badge>
+        <Badge tone="purple">{total} disponíveis</Badge>
       </div>
 
       {/* Filtros */}
@@ -128,7 +138,7 @@ export function ComentariosClient({
           </CheckboxLabel>
 
           <span className="ml-auto text-[11px] text-[var(--mm-muted)]">
-            {rows.length} questões filtradas
+            {total} questões filtradas
           </span>
         </CardBody>
       </Card>
@@ -248,6 +258,8 @@ export function ComentariosClient({
           )}
         </CardBody>
       </Card>
+
+      <Pagination page={page} pageSize={pageSize} total={total} hrefForPage={pageUrl} />
     </div>
   )
 }

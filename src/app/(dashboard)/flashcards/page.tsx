@@ -8,13 +8,19 @@ import {
 } from './actions'
 import { FlashcardsClient } from './flashcards-client'
 import { ExportFlashcardsButton } from '@/components/flashcards/export-button'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 export const metadata = { title: 'Flashcards — MedMaestro' }
 
 export default async function FlashcardsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ exam?: string; only_pending?: string; low_conf?: string }>
+  searchParams: Promise<{
+    exam?: string
+    only_pending?: string
+    low_conf?: string
+    page?: string
+  }>
 }) {
   const supabase = await createClient()
   const {
@@ -28,11 +34,13 @@ export default async function FlashcardsPage({
     withoutFlashcardOnly: sp.only_pending === '1',
     lowConfidenceOnly: sp.low_conf === '1',
   }
+  const page = Math.max(1, Number(sp.page) || 1)
 
-  const [exams, rows] = await Promise.all([
+  const [exams, list] = await Promise.all([
     listExamsForFlashcardsFilter(),
-    listQuestionsForFlashcards(filter),
+    listQuestionsForFlashcards(filter, { page }),
   ])
+  const { rows, total } = list
 
   const service = createServiceClient()
   const { count: pendingCount } = await service
@@ -78,6 +86,9 @@ export default async function FlashcardsPage({
       <FlashcardsClient
         rows={rows}
         exams={exams}
+        total={total}
+        page={page}
+        pageSize={QUESTIONS_PAGE_SIZE}
         initialFilter={{
           examId: filter.examId ?? '',
           onlyPending: filter.withoutFlashcardOnly,

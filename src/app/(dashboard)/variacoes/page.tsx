@@ -7,13 +7,14 @@ import {
   listQuestionsForVariations,
 } from './actions'
 import { VariacoesClient } from './variacoes-client'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 export const metadata = { title: 'Variações — MedMaestro' }
 
 export default async function VariacoesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ exam?: string; only_pending?: string }>
+  searchParams: Promise<{ exam?: string; only_pending?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const {
@@ -26,11 +27,13 @@ export default async function VariacoesPage({
     examId: sp.exam || undefined,
     withoutVariationOnly: sp.only_pending === '1',
   }
+  const page = Math.max(1, Number(sp.page) || 1)
 
-  const [exams, rows] = await Promise.all([
+  const [exams, list] = await Promise.all([
     listExamsForVariationsFilter(),
-    listQuestionsForVariations(filter),
+    listQuestionsForVariations(filter, { page }),
   ])
+  const { rows, total } = list
 
   const service = createServiceClient()
   const { count: pendingCount } = await service
@@ -61,6 +64,9 @@ export default async function VariacoesPage({
       <VariacoesClient
         rows={rows}
         exams={exams}
+        total={total}
+        page={page}
+        pageSize={QUESTIONS_PAGE_SIZE}
         initialFilter={{
           examId: filter.examId ?? '',
           onlyPending: filter.withoutVariationOnly,

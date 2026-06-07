@@ -9,16 +9,23 @@ import {
   type FlashcardsListRow,
 } from './actions'
 import type { CardType } from '@/lib/flashcards/generate'
+import { Pagination } from '@/components/ui'
 
 const COST_PER_CARD_USD = 0.003
 
 export function FlashcardsClient({
   rows,
   exams,
+  total,
+  page,
+  pageSize,
   initialFilter,
 }: {
   rows: FlashcardsListRow[]
   exams: { id: string; label: string }[]
+  total: number
+  page: number
+  pageSize: number
   initialFilter: { examId: string; onlyPending: boolean; lowConf: boolean }
 }) {
   const router = useRouter()
@@ -52,17 +59,20 @@ export function FlashcardsClient({
   const totalCards = selectedRows.reduce((s, r) => s + (counts[r.id] ?? 2), 0)
   const estCost = (totalCards * COST_PER_CARD_USD).toFixed(2)
 
-  const filterUrl = useMemo(
-    () => (next: Partial<typeof initialFilter>) => {
+  const buildUrl = useMemo(
+    () => (next: Partial<typeof initialFilter>, nextPage?: number) => {
       const f = { ...initialFilter, ...next }
       const params = new URLSearchParams()
       if (f.examId) params.set('exam', f.examId)
       if (f.onlyPending) params.set('only_pending', '1')
       if (f.lowConf) params.set('low_conf', '1')
+      if (nextPage && nextPage > 1) params.set('page', String(nextPage))
       return `/flashcards${params.toString() ? `?${params.toString()}` : ''}`
     },
     [initialFilter]
   )
+  const filterUrl = (next: Partial<typeof initialFilter>) => buildUrl(next)
+  const pageUrl = (p: number) => buildUrl({}, p)
 
   function toggleAll() {
     setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))
@@ -187,7 +197,7 @@ export function FlashcardsClient({
         </label>
 
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--mm-muted)' }}>
-          {rows.length} questões filtradas
+          {total} questões filtradas
         </span>
       </div>
 
@@ -446,6 +456,8 @@ export function FlashcardsClient({
           </table>
         )}
       </div>
+
+      <Pagination page={page} pageSize={pageSize} total={total} hrefForPage={pageUrl} />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import {
   type DifficultyDelta,
 } from '@/lib/variations/generate'
 import { logAudit } from '@/lib/audit'
+import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 
 const BATCH_CONCURRENCY = 2
 
@@ -68,36 +69,59 @@ export type VariationListRow = {
   extraction_confidence: number | null
 }
 
-export async function listQuestionsForVariations(filter: {
-  examId?: string
-  withoutVariationOnly?: boolean
-}): Promise<VariationListRow[]> {
+export type VariationListPage = { rows: VariationListRow[]; total: number }
+
+export async function listQuestionsForVariations(
+  filter: {
+    examId?: string
+    withoutVariationOnly?: boolean
+  },
+  pagination: { page: number; pageSize?: number }
+): Promise<VariationListPage> {
   const supabase = createServiceClient()
+  const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
+  const page = Math.max(1, pagination.page)
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
 
   let query = supabase
     .from('questions')
     .select(
-      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))'
+      'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))',
+      { count: 'exact' }
     )
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
-    .limit(500)
 
   if (filter.examId) query = query.eq('exam_id', filter.examId)
 
-  const { data: rows } = await query
-  if (!rows) return []
+  // Filtro "apenas sem variação": exclui no banco as questões que já têm
+  // variações, para count e paginação refletirem o conjunto filtrado.
+  if (filter.withoutVariationOnly) {
+    const { data: vars } = await supabase
+      .from('question_variations')
+      .select('source_question_id')
+    const withVarIds = [...new Set((vars ?? []).map((v) => v.source_question_id as string))]
+    if (withVarIds.length > 0) {
+      query = query.not('id', 'in', `(${withVarIds.join(',')})`)
+    }
+  }
 
-  const ids = rows.map((r) => r.id as string)
-  const { data: vars } = await supabase
-    .from('question_variations')
-    .select('source_question_id')
-    .in('source_question_id', ids)
+  const { data: rows, count } = await query.range(from, to)
+  if (!rows) return { rows: [], total: count ?? 0 }
 
+  // Contagem de variações só para as linhas da página atual.
+  const pageIds = rows.map((r) => r.id as string)
   const counts: Record<string, number> = {}
-  for (const v of vars ?? []) {
-    const id = v.source_question_id as string
-    counts[id] = (counts[id] ?? 0) + 1
+  if (!filter.withoutVariationOnly && pageIds.length > 0) {
+    const { data: vars } = await supabase
+      .from('question_variations')
+      .select('source_question_id')
+      .in('source_question_id', pageIds)
+    for (const v of vars ?? []) {
+      const id = v.source_question_id as string
+      counts[id] = (counts[id] ?? 0) + 1
+    }
   }
 
   const result: VariationListRow[] = rows.map((r) => {
@@ -119,8 +143,7 @@ export async function listQuestionsForVariations(filter: {
     }
   })
 
-  if (filter.withoutVariationOnly) return result.filter((r) => r.variations_count === 0)
-  return result
+  return { rows: result, total: count ?? 0 }
 }
 
 export async function listExamsForVariationsFilter(): Promise<
