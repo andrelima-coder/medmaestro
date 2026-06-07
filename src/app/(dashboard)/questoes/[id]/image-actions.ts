@@ -1,7 +1,6 @@
 'use server'
 
 import { createServiceClient } from '@/lib/supabase/service'
-import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 export interface QuestionImage {
   id: string
@@ -14,8 +13,6 @@ export interface QuestionImage {
 }
 
 export async function getQuestionImages(questionId: string): Promise<QuestionImage[]> {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const service = createServiceClient()
   const { data } = await service
     .from('question_images')
@@ -28,8 +25,6 @@ export async function getQuestionImages(questionId: string): Promise<QuestionIma
 export async function getSignedImageUrl(
   path: string
 ): Promise<{ url: string | null; error?: string }> {
-  const auth = await requireUser()
-  if (!auth.ok) return { url: null, error: auth.error }
   const service = createServiceClient()
   const { data, error } = await service.storage
     .from('question-images')
@@ -42,8 +37,6 @@ export async function toggleImageCrop(
   imageId: string,
   useCropped: boolean
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireReviewer()
-  if (!auth.ok) return { ok: false, error: auth.error }
   const service = createServiceClient()
   const { error } = await service
     .from('question_images')

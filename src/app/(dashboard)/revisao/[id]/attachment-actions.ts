@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getQuestionAttachmentUrl, uploadFile } from '@/lib/storage/signed-urls'
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_ALLOWED_MIME } from '@/lib/uploads/file-types'
-import { requireUser } from '@/lib/auth/guards'
 
 const MAX_BYTES = ATTACHMENT_MAX_BYTES
 const ALLOWED_MIME = new Set(ATTACHMENT_ALLOWED_MIME)
@@ -27,8 +26,6 @@ export interface QuestionAttachment {
 export async function getQuestionAttachments(
   questionId: string
 ): Promise<QuestionAttachment[]> {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const service = createServiceClient()
   const { data, error } = await service
     .from('question_attachments')

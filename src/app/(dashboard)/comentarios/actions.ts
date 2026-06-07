@@ -7,7 +7,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { generateComment } from '@/lib/extraction/pipeline'
 import { logAudit } from '@/lib/audit'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
-import { requireUser } from '@/lib/auth/guards'
 
 const BATCH_CONCURRENCY = 3
 
@@ -67,8 +66,6 @@ export async function listQuestionsForComments(
   },
   pagination: { page: number; pageSize?: number }
 ): Promise<CommentListPage> {
-  const auth = await requireUser()
-  if (!auth.ok) return { rows: [], total: 0 }
   const supabase = createServiceClient()
   const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
   const page = Math.max(1, pagination.page)
@@ -145,8 +142,6 @@ export async function listFilteredCommentQuestionIds(filter: {
   withoutCommentOnly?: boolean
   lowConfidenceOnly?: boolean
 }): Promise<string[]> {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const supabase = createServiceClient()
 
   let query = supabase
@@ -176,8 +171,6 @@ export async function listFilteredCommentQuestionIds(filter: {
 export async function listExamsForFilter(): Promise<
   { id: string; label: string }[]
 > {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('exams')

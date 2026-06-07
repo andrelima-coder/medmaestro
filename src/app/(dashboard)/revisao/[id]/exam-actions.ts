@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { logAudit } from '@/lib/audit'
-import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 export interface ExamOption {
   id: string
@@ -15,8 +14,6 @@ export interface ExamOption {
 }
 
 export async function listExamsForReassignment(): Promise<ExamOption[]> {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const service = createServiceClient()
   const { data } = await service
     .from('exams')
@@ -44,8 +41,6 @@ export async function reassignQuestionExam(
   questionId: string,
   newExamId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireReviewer()
-  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },

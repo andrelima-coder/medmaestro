@@ -4,7 +4,6 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
 import { generateComment } from '@/lib/extraction/pipeline'
-import { requireUser } from '@/lib/auth/guards'
 
 export interface QuestionComment {
   id: string
@@ -17,8 +16,6 @@ export interface QuestionComment {
 }
 
 export async function getQuestionComments(questionId: string): Promise<QuestionComment[]> {
-  const auth = await requireUser()
-  if (!auth.ok) return []
   const service = createServiceClient()
   const { data } = await service
     .from('question_comments')

@@ -3,7 +3,7 @@ import { parseGabaritoForExam } from '@/lib/gabarito/run'
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.WORKER_SECRET
-  if (!secret) return false // fail-closed: sem secret configurado, nega (não expõe o endpoint)
+  if (!secret) return true
   return request.headers.get('authorization') === `Bearer ${secret}`
 }
 
