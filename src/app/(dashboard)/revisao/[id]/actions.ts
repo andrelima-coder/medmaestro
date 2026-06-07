@@ -6,6 +6,44 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
 
+const REVIEWER_ROLES = new Set(['professor', 'admin', 'superadmin'])
+
+// Gate de autorização das transições de revisão: exige papel de revisor
+// (professor+) e respeita o lock por claim (não deixa atropelar outro revisor).
+// Espelha a lógica de content-actions.ts:requireReviewer + checagem de lock.
+async function requireReviewerAndLock(
+  service: ReturnType<typeof createServiceClient>,
+  userId: string,
+  questionId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: profile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single()
+  if (!profile || !REVIEWER_ROLES.has(profile.role as string)) {
+    return { ok: false, error: 'Apenas revisores podem alterar o status da questão' }
+  }
+
+  const { data: assignment } = await service
+    .from('review_assignments')
+    .select('assigned_to, expires_at, status')
+    .eq('question_id', questionId)
+    .single()
+
+  const now = new Date()
+  if (
+    assignment &&
+    assignment.assigned_to !== userId &&
+    assignment.status === 'in_progress' &&
+    new Date(assignment.expires_at) > now
+  ) {
+    return { ok: false, error: 'Questão travada por outro revisor' }
+  }
+
+  return { ok: true }
+}
+
 export async function renewClaim(
   questionId: string
 ): Promise<{ ok: boolean; expiresAt?: string }> {
@@ -72,6 +110,9 @@ export async function submitReviewAction(
 
   const service = createServiceClient()
 
+  const authz = await requireReviewerAndLock(service, user.id, questionId)
+  if (!authz.ok) throw new Error(authz.error)
+
   const { data: question, error: qErr } = await service
     .from('questions')
     .select('*')
@@ -131,6 +172,9 @@ export async function saveAsDraft(questionId: string): Promise<void> {
   if (!user) throw new Error('Não autenticado')
 
   const service = createServiceClient()
+
+  const authz = await requireReviewerAndLock(service, user.id, questionId)
+  if (!authz.ok) throw new Error(authz.error)
 
   await service
     .from('questions')

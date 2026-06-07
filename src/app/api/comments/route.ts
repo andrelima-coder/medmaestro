@@ -3,7 +3,7 @@ import { generateComment } from '@/lib/extraction/pipeline'
 
 function checkAuth(request: Request): boolean {
   const secret = process.env.WORKER_SECRET
-  if (!secret) return true
+  if (!secret) return false // fail-closed: sem secret configurado, nega (não expõe o endpoint)
   return request.headers.get('authorization') === `Bearer ${secret}`
 }
 

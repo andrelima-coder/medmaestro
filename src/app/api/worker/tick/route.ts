@@ -30,7 +30,8 @@ export async function POST(request: Request) {
   const auth = request.headers.get('authorization') ?? ''
   const secret = process.env.WORKER_SECRET
 
-  if (secret && !safeBearerCheck(auth, secret)) {
+  // fail-closed: sem WORKER_SECRET configurado, nega (não expõe o endpoint)
+  if (!secret || !safeBearerCheck(auth, secret)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
