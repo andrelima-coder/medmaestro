@@ -128,6 +128,7 @@ export function CampanhaForm({
         </label>
         <Text label="Data de liberação dos comentários (se aplicável)" name="rel_coment_at" type="datetime-local" />
         <Check label="Permitir revisão das questões/alternativas" name="rel_revisao" />
+        <Check label="Liberar dashboard de desempenho (Fase 2)" name="rel_dashboard" />
       </Section>
 
       <Section title="Live">

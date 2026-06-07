@@ -53,6 +53,7 @@ export async function createCampaignAction(
     comentarios_mode: (formData.get('rel_coment_mode') as string) || 'oculto', // oculto|imediato|data
     comentarios_release_at: (formData.get('rel_coment_at') as string) || null,
     revisao: formData.get('rel_revisao') === 'on',
+    dashboard: formData.get('rel_dashboard') === 'on', // libera o dashboard de desempenho (Fase 2)
   }
 
   const liveAt = (formData.get('live_at') as string) || null
