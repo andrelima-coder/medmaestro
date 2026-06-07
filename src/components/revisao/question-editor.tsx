@@ -161,6 +161,9 @@ export function QuestionEditor({
             const isCorrect = correctAnswer === letter
             const html = alts[letter] ?? ''
             const slot = alternativeSlots[letter]
+            // Esconde a caixa quando a alternativa não tem texto nem figura
+            // (ex.: questões com só 4 alternativas reais não mostram a "E" vazia).
+            if (!html.trim() && !slot) return null
             return (
               <div
                 key={letter}
