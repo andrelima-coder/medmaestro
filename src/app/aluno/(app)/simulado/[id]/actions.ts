@@ -1,7 +1,9 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { sendConversionEvent, findLeadIdByUserEmail } from '@/lib/marketing/conversao'
 
 // Runtime do simulado (feature 001 — T017/T018/T020).
 // Cronômetro autoritativo no servidor (coluna deadline_at). O cliente apenas
@@ -220,7 +222,7 @@ export async function submitAttempt(attemptId: string): Promise<ActionResult<{ s
   const service = createServiceClient()
   const { data: attempt } = await service
     .from('simulado_attempts')
-    .select('id, user_id, status, time_remaining, deadline_at')
+    .select('id, user_id, campaign_id, status, time_remaining, deadline_at')
     .eq('id', attemptId)
     .single()
   if (!attempt || attempt.user_id !== userId) return { ok: false, error: 'Tentativa inválida.' }
@@ -231,6 +233,20 @@ export async function submitAttempt(attemptId: string): Promise<ActionResult<{ s
     .from('simulado_attempts')
     .update({ status: 'entregue', time_remaining: remaining, deadline_at: null })
     .eq('id', attemptId)
+
+  // Conversão: simulado_concluido (pós-resposta, best-effort).
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const email = user?.email
+  if (email) {
+    after(async () => {
+      const leadId = await findLeadIdByUserEmail(attempt.campaign_id, email)
+      if (leadId) await sendConversionEvent(leadId, 'simulado_concluido')
+    })
+  }
+
   return { ok: true, data: { status: 'entregue' } }
 }
 

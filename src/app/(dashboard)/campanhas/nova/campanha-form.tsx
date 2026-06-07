@@ -151,6 +151,13 @@ export function CampanhaForm({
         <Check label="Exigir verificação de e-mail" name="require_email_verification" />
       </Section>
 
+      <Section title="Rastreamento / Pixel (por campanha)">
+        <Text label="Meta Pixel ID" name="meta_pixel_id" />
+        <Text label="Meta Access Token (Conversions API)" name="meta_access_token" />
+        <Text label="Google Measurement ID (GA4)" name="ga_measurement_id" />
+        <Text label="Google API Secret (GA4)" name="ga_api_secret" />
+      </Section>
+
       <Check label="Publicar imediatamente" name="publish" />
 
       {state?.error && (

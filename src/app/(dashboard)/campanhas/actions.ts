@@ -58,6 +58,17 @@ export async function createCampaignAction(
   const liveAt = (formData.get('live_at') as string) || null
   const liveUrl = (formData.get('live_url') as string)?.trim() || null
 
+  // Rastreamento/pixel por campanha (T016).
+  const tracking: Record<string, string> = {}
+  const metaPixel = (formData.get('meta_pixel_id') as string)?.trim()
+  const metaToken = (formData.get('meta_access_token') as string)?.trim()
+  const gaId = (formData.get('ga_measurement_id') as string)?.trim()
+  const gaSecret = (formData.get('ga_api_secret') as string)?.trim()
+  if (metaPixel) tracking.meta_pixel_id = metaPixel
+  if (metaToken) tracking.meta_access_token = metaToken
+  if (gaId) tracking.ga_measurement_id = gaId
+  if (gaSecret) tracking.ga_api_secret = gaSecret
+
   // Formulário embedável.
   const allowedDomains = ((formData.get('allowed_domains') as string) || '')
     .split(',')
@@ -95,7 +106,7 @@ export async function createCampaignAction(
       releases,
       live_at: liveAt,
       live_url: liveUrl,
-      tracking: {},
+      tracking,
       status: publish ? 'publicada' : 'rascunho',
       created_by: user.id,
     })

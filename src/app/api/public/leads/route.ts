@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit } from '@/lib/utils/rate-limit'
+import { sendConversionEvent } from '@/lib/marketing/conversao'
 
 // Endpoint público de captação de lead (feature 001 — T014).
 // Contrato: _reversa_forward/001-camada-aluno-simulados/interfaces/embed-lead-capture.md
@@ -139,6 +140,8 @@ export async function POST(request: Request) {
       consent_version: body.consent_version,
       origin_url: request.headers.get('referer') ?? request.headers.get('origin'),
     })
+    // Conversão: lead_cadastrado (pós-resposta, não bloqueia).
+    after(() => sendConversionEvent(leadId!, 'lead_cadastrado'))
   }
 
   // Próximo passo conforme o modo de acesso da campanha.
