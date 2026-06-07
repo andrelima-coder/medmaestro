@@ -85,6 +85,23 @@ export async function GET(req: NextRequest) {
   const ids = url.searchParams.get('ids')?.split(',').filter(Boolean)
 
   const service = createServiceClient()
+
+  // Exportar cards aprovados é livre (estudo via Anki). Incluir NÃO aprovados
+  // (approved_only=0) exige papel de revisor — não vaza rascunhos pendentes.
+  if (!approvedOnly) {
+    const { data: profile } = await service
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    const REVIEWER_ROLES = new Set(['professor', 'admin', 'superadmin'])
+    if (!profile || !REVIEWER_ROLES.has(profile.role as string)) {
+      return NextResponse.json(
+        { error: 'Apenas revisores podem exportar flashcards não aprovados' },
+        { status: 403 }
+      )
+    }
+  }
   let query = service
     .from('flashcards')
     .select(

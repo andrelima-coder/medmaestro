@@ -39,6 +39,18 @@ export default async function SimuladoDetailPage({
 
   const isOwner = simulado.created_by === user.id
 
+  // Autorização de leitura: dono OU admin/superadmin (alinhado ao endpoint de
+  // export). Evita IDOR de leitura — terceiros não veem simulado alheio por URL.
+  if (!isOwner) {
+    const { data: profile } = await service
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
+    if (!isAdmin) notFound()
+  }
+
   const { data: sqRows } = await service
     .from('simulado_questions')
     .select(
