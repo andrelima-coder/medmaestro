@@ -181,7 +181,7 @@ export async function pauseAttempt(attemptId: string): Promise<ActionResult<{ re
   const remaining = remainingFrom(attempt)
   await service
     .from('simulado_attempts')
-    .update({ time_remaining: remaining, deadline_at: null })
+    .update({ time_remaining: remaining, deadline_at: null, was_paused: true })
     .eq('id', attemptId)
   return { ok: true, data: { remaining } }
 }
@@ -232,4 +232,26 @@ export async function submitAttempt(attemptId: string): Promise<ActionResult<{ s
     .update({ status: 'entregue', time_remaining: remaining, deadline_at: null })
     .eq('id', attemptId)
   return { ok: true, data: { status: 'entregue' } }
+}
+
+/** Envia uma dúvida sobre uma questão, agregada para a live (T023). */
+export async function saveDoubt(
+  campaignId: string,
+  questionId: string,
+  text: string
+): Promise<ActionResult<null>> {
+  const userId = await currentAlunoId()
+  if (!userId) return { ok: false, error: 'Não autenticado.' }
+  const clean = text?.trim()
+  if (!clean) return { ok: false, error: 'Escreva sua dúvida.' }
+
+  const service = createServiceClient()
+  const { error } = await service.from('question_doubts').insert({
+    question_id: questionId,
+    user_id: userId,
+    campaign_id: campaignId,
+    text: clean,
+  })
+  if (error) return { ok: false, error: 'Não foi possível enviar a dúvida.' }
+  return { ok: true, data: null }
 }
