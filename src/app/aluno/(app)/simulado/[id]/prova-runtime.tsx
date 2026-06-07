@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveAnswer, pauseAttempt, submitAttempt, syncTime } from './actions'
+import { saveAnswer, pauseAttempt, submitAttempt, syncTime, reportarErro } from './actions'
 
 type Question = {
   id: string
   number: number
+  origem?: string | null
   stem: string
   alternatives: Record<string, string>
 }
@@ -48,6 +49,11 @@ export function ProvaRuntime({
   const [selected, setSelected] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  // Ferramentas de prova (T019) — estado client-side por questão.
+  const [eliminated, setEliminated] = useState<Record<string, string[]>>({})
+  const [flagged, setFlagged] = useState<Record<string, boolean>>({})
+  const [reported, setReported] = useState<Record<string, boolean>>({})
+  const stemRef = useRef<HTMLParagraphElement>(null)
   const submittedRef = useRef(false)
 
   const q = questions[current]
@@ -119,7 +125,51 @@ export function ProvaRuntime({
     })
   }
 
+  function toggleEliminate(alt: string) {
+    if (!q) return
+    setEliminated((e) => {
+      const cur = new Set(e[q.id] ?? [])
+      if (cur.has(alt)) cur.delete(alt)
+      else cur.add(alt)
+      if (selected === alt) setSelected(null) // não manter selecionada uma eliminada
+      return { ...e, [q.id]: [...cur] }
+    })
+  }
+
+  function highlightSelection() {
+    const sel = window.getSelection()
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+    const range = sel.getRangeAt(0)
+    if (stemRef.current && stemRef.current.contains(range.commonAncestorContainer)) {
+      try {
+        const mark = document.createElement('mark')
+        mark.style.background = '#fde68a'
+        range.surroundContents(mark)
+        sel.removeAllRanges()
+      } catch {
+        /* seleção atravessa nós — ignora */
+      }
+    }
+  }
+
+  function toggleFlag() {
+    if (!q) return
+    setFlagged((f) => ({ ...f, [q.id]: !f[q.id] }))
+  }
+
+  function onReport() {
+    if (!q) return
+    const motivo = window.prompt('O que parece errado nesta questão? (enviado à curadoria)')
+    if (!motivo) return
+    startTransition(async () => {
+      const res = await reportarErro(q.id, motivo)
+      if (res.ok) setReported((r) => ({ ...r, [q.id]: true }))
+    })
+  }
+
   if (!q) return <p className="text-muted-foreground">Esta prova não tem questões.</p>
+
+  const elim = new Set(eliminated[q.id] ?? [])
 
   const answeredCount = Object.values(answers).filter((a) => a.locked).length
 
@@ -143,12 +193,13 @@ export function ProvaRuntime({
                 : i === current
                   ? 'border-primary text-foreground'
                   : 'border-border text-muted-foreground'
+              const flag = flagged[qq.id] ? ' ring-2 ring-amber-400' : ''
               return (
                 <button
                   key={qq.id}
                   onClick={() => setCurrent(i)}
-                  className={`size-8 rounded-md border text-xs ${cls}`}
-                  title={st?.locked ? 'Respondida' : 'Pendente'}
+                  className={`size-8 rounded-md border text-xs ${cls}${flag}`}
+                  title={flagged[qq.id] ? 'Sinalizada' : st?.locked ? 'Respondida' : 'Pendente'}
                 >
                   {i + 1}
                 </button>
@@ -178,33 +229,76 @@ export function ProvaRuntime({
       <section className="rounded-xl border border-border bg-card p-6">
         <div className="mb-2 text-xs text-muted-foreground">
           {campaignName} · Questão {current + 1} de {questions.length}
+          {q.origem ? ` · ${q.origem}` : ''}
         </div>
-        <p className="whitespace-pre-line text-foreground">{q.stem}</p>
+
+        {/* Ferramentas de prova (T019) */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={highlightSelection}
+            className="rounded-md border border-border px-2 py-1 text-xs text-foreground"
+          >
+            Marca-texto
+          </button>
+          <button
+            type="button"
+            onClick={toggleFlag}
+            className={`rounded-md border px-2 py-1 text-xs ${
+              flagged[q.id] ? 'border-amber-400 text-amber-600' : 'border-border text-foreground'
+            }`}
+          >
+            {flagged[q.id] ? 'Sinalizada' : 'Sinalizar'}
+          </button>
+          <button
+            type="button"
+            onClick={onReport}
+            disabled={reported[q.id] || isPending}
+            className="rounded-md border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+          >
+            {reported[q.id] ? 'Erro reportado' : 'Reportar erro'}
+          </button>
+        </div>
+
+        <p ref={stemRef} className="whitespace-pre-line text-foreground">
+          {q.stem}
+        </p>
 
         <div className="mt-5 space-y-2">
           {ALTS.map((alt) => {
             const text = q.alternatives[alt]
             if (!text) return null
             const isSel = selected === alt
+            const isElim = elim.has(alt)
             return (
-              <label
+              <div
                 key={alt}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
+                className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${
                   isSel ? 'border-primary bg-primary/5' : 'border-border'
-                } ${locked ? 'opacity-70' : ''}`}
+                } ${locked ? 'opacity-70' : ''} ${isElim ? 'opacity-50' : ''}`}
               >
                 <input
                   type="radio"
                   name="alt"
                   className="mt-1"
                   checked={isSel}
-                  disabled={locked || isPending}
+                  disabled={locked || isPending || isElim}
                   onChange={() => setSelected(alt)}
                 />
-                <span className="text-foreground">
+                <span className={`flex-1 text-foreground ${isElim ? 'line-through' : ''}`}>
                   <strong>{alt})</strong> {text}
                 </span>
-              </label>
+                {!locked && (
+                  <button
+                    type="button"
+                    onClick={() => toggleEliminate(alt)}
+                    title={isElim ? 'Restaurar alternativa' : 'Eliminar alternativa'}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {isElim ? '↶' : '✕'}
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>

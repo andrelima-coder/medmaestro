@@ -257,6 +257,23 @@ export async function submitAttempt(attemptId: string): Promise<ActionResult<{ s
   return { ok: true, data: { status: 'entregue' } }
 }
 
+/** Reporta um possível erro na questão; vira sinalização para a curadoria (T019). */
+export async function reportarErro(
+  questionId: string,
+  motivo: string
+): Promise<ActionResult<null>> {
+  const userId = await currentAlunoId()
+  if (!userId) return { ok: false, error: 'Não autenticado.' }
+  const service = createServiceClient()
+  const { error } = await service.from('gabarito_flags').insert({
+    question_id: questionId,
+    reason: `reporte_aluno: ${motivo?.trim() || 'sem detalhe'}`,
+    status: 'aberto',
+  })
+  if (error) return { ok: false, error: 'Não foi possível enviar o reporte.' }
+  return { ok: true, data: null }
+}
+
 /** Envia uma dúvida sobre uma questão, agregada para a live (T023). */
 export async function saveDoubt(
   campaignId: string,

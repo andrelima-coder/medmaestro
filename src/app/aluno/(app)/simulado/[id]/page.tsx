@@ -17,6 +17,7 @@ type QuestionRow = {
     alternative_c: string | null
     alternative_d: string | null
     alternative_e: string | null
+    exams: { year: number | null } | null
   } | null
 }
 
@@ -103,7 +104,7 @@ export default async function SimuladoPage({
   const { data: rows } = await service
     .from('simulado_questions')
     .select(
-      'position, questions(id, question_no, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e)'
+      'position, questions(id, question_no, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e, exams(year))'
     )
     .eq('simulado_id', campaign.simulado_id)
     .order('position', { ascending: true })
@@ -115,6 +116,7 @@ export default async function SimuladoPage({
       return {
         id: q.id,
         number: q.question_no ?? r.position,
+        origem: q.exams?.year ? `Ano ${q.exams.year}` : null,
         stem: q.stem ?? '',
         alternatives: {
           A: q.alternative_a ?? '',
