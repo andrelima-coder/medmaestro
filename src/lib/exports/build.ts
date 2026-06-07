@@ -44,7 +44,13 @@ export type QuestionData = {
   alternatives: Record<string, string>
   correctAnswer: string | null
   note: string | null
-  figures: Array<{ data: Uint8Array; contentType: string; figureNumber: number | null }>
+  figures: Array<{
+    data: Uint8Array
+    contentType: string
+    figureNumber: number | null
+    /** 'statement' | 'alternative_a'..'alternative_e' — define onde a figura é ancorada. */
+    scope?: string
+  }>
   comments: CommentRow[]
   referencias: CommentRow[]
   /** Dicas para o professor (comment_type='dica_professor'). */
@@ -60,6 +66,62 @@ export type ExportData = {
 }
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E']
+
+/** Separa as figuras por escopo: as do enunciado e as de cada alternativa.
+ * Figuras sem escopo (ou legadas) caem no enunciado. */
+export function splitFiguresByScope(figures: QuestionData['figures']) {
+  const statement: QuestionData['figures'] = []
+  const byAlt: Record<string, QuestionData['figures']> = {}
+  for (const fig of figures) {
+    const scope = fig.scope ?? 'statement'
+    if (scope.startsWith('alternative_')) {
+      const letter = scope.slice('alternative_'.length).toUpperCase()
+      ;(byAlt[letter] ??= []).push(fig)
+    } else {
+      statement.push(fig)
+    }
+  }
+  return { statement, byAlt }
+}
+
+function docxImageType(contentType: string): 'jpg' | 'png' | 'gif' | 'bmp' {
+  return contentType.includes('png')
+    ? 'png'
+    : contentType.includes('gif')
+      ? 'gif'
+      : contentType.includes('bmp')
+        ? 'bmp'
+        : 'jpg'
+}
+
+function docxFigureParagraphs(
+  figs: QuestionData['figures'],
+  opts?: { width?: number; height?: number; indentLeft?: number }
+): Paragraph[] {
+  const out: Paragraph[] = []
+  for (const fig of figs) {
+    try {
+      out.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: fig.data,
+              transformation: { width: opts?.width ?? 420, height: opts?.height ?? 300 },
+              type: docxImageType(fig.contentType),
+            }),
+          ],
+          spacing: { after: 160 },
+          indent: opts?.indentLeft ? { left: opts.indentLeft } : undefined,
+        })
+      )
+    } catch {
+      // ignora figura corrompida
+    }
+  }
+  return out
+}
+
 const COMMENT_TYPE_LABEL: Record<string, string> = {
   explicacao: 'Explicação',
   pegadinha: 'Pegadinha',
@@ -153,60 +215,41 @@ export async function buildDocxBuffer(data: ExportData): Promise<Buffer> {
       )
     }
 
-    if (data.content.figuras && q.figures.length > 0) {
-      for (const fig of q.figures) {
-        try {
-          const type: 'jpg' | 'png' | 'gif' | 'bmp' =
-            fig.contentType.includes('png')
-              ? 'png'
-              : fig.contentType.includes('gif')
-                ? 'gif'
-                : fig.contentType.includes('bmp')
-                  ? 'bmp'
-                  : 'jpg'
-          sectionChildren.push(
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new ImageRun({
-                  data: fig.data,
-                  transformation: { width: 420, height: 300 },
-                  type,
-                }),
-              ],
-              spacing: { after: 160 },
-            })
-          )
-        } catch {
-          // ignora figura corrompida
-        }
-      }
+    const { statement: stmtFigs, byAlt: altFigs } = splitFiguresByScope(q.figures)
+
+    // Figuras do enunciado (logo após o texto do enunciado)
+    if (data.content.figuras) {
+      for (const p of docxFigureParagraphs(stmtFigs)) sectionChildren.push(p)
     }
 
     if (data.content.alternativas) {
       LETTERS.forEach((letter) => {
         const text = q.alternatives[letter]
-        if (!text) return
+        const figs = data.content.figuras ? (altFigs[letter] ?? []) : []
+        // Renderiza a alternativa quando tem texto OU figura ancorada.
+        if (!text && figs.length === 0) return
         const isCorrect = data.content.gabarito && q.correctAnswer === letter
         sectionChildren.push(
           new Paragraph({
             children: [
               new TextRun({
-                text: `${letter})  `,
+                text: text ? `${letter})  ` : `${letter})`,
                 bold: true,
                 size: 22,
                 color: isCorrect ? '1a7a3f' : undefined,
               }),
-              new TextRun({
-                text,
-                size: 22,
-                color: isCorrect ? '1a7a3f' : undefined,
-              }),
+              ...(text
+                ? [new TextRun({ text, size: 22, color: isCorrect ? '1a7a3f' : undefined })]
+                : []),
             ],
             indent: { left: 360 },
-            spacing: { after: 80 },
+            spacing: { after: figs.length ? 40 : 80 },
           })
         )
+        // Figura(s) da própria alternativa, logo abaixo da letra.
+        for (const p of docxFigureParagraphs(figs, { width: 300, height: 210, indentLeft: 360 })) {
+          sectionChildren.push(p)
+        }
       })
     }
 
@@ -419,6 +462,30 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
     }
   }
 
+  // Desenha uma lista de figuras (centralizadas), atualizando o cursor y.
+  const drawFigures = async (
+    figs: QuestionData['figures'],
+    maxW: number,
+    indent = 0
+  ) => {
+    for (const fig of figs) {
+      try {
+        const img = fig.contentType.includes('png')
+          ? await pdf.embedPng(fig.data)
+          : await pdf.embedJpg(fig.data)
+        const ratio = img.width / img.height
+        const w = Math.min(maxW, img.width)
+        const h = w / ratio
+        ensureSpace(h + 10)
+        const cx = MARGIN + indent + (CONTENT_W - indent - w) / 2
+        page.drawImage(img, { x: cx, y: y - h, width: w, height: h })
+        y -= h + 10
+      } catch {
+        // skip broken image
+      }
+    }
+  }
+
   function wrap(text: string, maxWidth: number, f: typeof font, size: number): string[] {
     if (!text) return ['']
     const words = text.split(/\s+/)
@@ -520,34 +587,33 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
       drawText(q.stem, { size: 10, after: 6 })
     }
 
-    if (data.content.figuras && q.figures.length > 0) {
-      for (const fig of q.figures) {
-        try {
-          let img
-          if (fig.contentType.includes('png')) {
-            img = await pdf.embedPng(fig.data)
-          } else {
-            img = await pdf.embedJpg(fig.data)
-          }
-          const maxW = 360
-          const ratio = img.width / img.height
-          const w = Math.min(maxW, img.width)
-          const h = w / ratio
-          ensureSpace(h + 10)
-          const cx = MARGIN + (CONTENT_W - w) / 2
-          page.drawImage(img, { x: cx, y: y - h, width: w, height: h })
-          y -= h + 10
-        } catch {
-          // skip broken image
-        }
-      }
+    const { statement: pdfStmtFigs, byAlt: pdfAltFigs } = splitFiguresByScope(q.figures)
+
+    // Figuras do enunciado
+    if (data.content.figuras) {
+      await drawFigures(pdfStmtFigs, 360)
     }
 
     if (data.content.alternativas) {
       for (const letter of LETTERS) {
         const txt = q.alternatives[letter]
-        if (!txt) continue
+        const figs = data.content.figuras ? (pdfAltFigs[letter] ?? []) : []
+        if (!txt && figs.length === 0) continue
         const isCorrect = data.content.gabarito && q.correctAnswer === letter
+        if (!txt) {
+          // Alternativa só com figura: desenha a letra e a figura ancorada.
+          ensureSpace(14)
+          page.drawText(`${letter})`, {
+            x: MARGIN + 12,
+            y: y - 10,
+            size: 10,
+            font: fontBold,
+            color: isCorrect ? rgb(0.1, 0.48, 0.25) : rgb(0.13, 0.13, 0.18),
+          })
+          y -= 14
+          await drawFigures(figs, 260, 12)
+          continue
+        }
         const f = fontBold
         const size = 10
         ensureSpace(size * 1.4)
@@ -575,6 +641,8 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
           first = false
         }
         y -= 2
+        // Figura(s) ancorada(s) nesta alternativa (texto + figura).
+        if (figs.length) await drawFigures(figs, 260, 12)
       }
     }
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -101,6 +102,39 @@ export default async function QuestaoDetailPage({
 
   const hasUndoableRevision = !!lastTagRevResult.data
 
+  // Figuras ancoradas por escopo: a do enunciado dentro do enunciado, as de
+  // alternativa dentro da alternativa correspondente (espelha a Revisão).
+  const previewByImageId: Record<string, string> = {}
+  for (const img of images) {
+    const path = img.use_cropped && img.cropped_path ? img.cropped_path : img.full_page_path
+    const { data: signed } = await service.storage
+      .from('question-images')
+      .createSignedUrl(path, 60 * 60)
+    if (signed?.signedUrl) previewByImageId[img.id] = signed.signedUrl
+  }
+
+  const figureSlot = (scope: string): ReactNode => {
+    const scopeImages = images.filter((img) => img.image_scope === scope)
+    if (scopeImages.length === 0) return null
+    return (
+      <ImageModal
+        images={scopeImages}
+        previewUrls={scopeImages.map((img) => previewByImageId[img.id] ?? null)}
+        hideScopeLabel
+      />
+    )
+  }
+
+  const statementSlot = figureSlot('statement')
+  const alternativeSlots: Partial<Record<(typeof LETTERS)[number], ReactNode>> = {
+    A: figureSlot('alternative_a'),
+    B: figureSlot('alternative_b'),
+    C: figureSlot('alternative_c'),
+    D: figureSlot('alternative_d'),
+    E: figureSlot('alternative_e'),
+  }
+  const hasAnyAlternative = LETTERS.some((l) => (alternatives[l] ?? '').trim() || alternativeSlots[l])
+
   const examParts = [
     exam?.exam_boards?.short_name,
     exam?.specialties?.name,
@@ -165,6 +199,9 @@ export default async function QuestaoDetailPage({
                 {question.stem ?? '(sem enunciado)'}
               </p>
 
+              {/* Figura(s) do enunciado */}
+              {statementSlot}
+
               {/* Tabelas estruturadas (Docling) */}
               {Array.isArray(question.extracted_tables) &&
                 (question.extracted_tables as Array<{ html?: string }>).map((t, i) =>
@@ -177,24 +214,25 @@ export default async function QuestaoDetailPage({
                   ) : null
                 )}
 
-              {/* Alternativas */}
-              {Object.keys(alternatives).length > 0 && (
+              {/* Alternativas (texto e/ou figura ancorada na própria alternativa) */}
+              {hasAnyAlternative && (
                 <div className="flex flex-col gap-0">
                   {LETTERS.map((letter) => {
-                    const text = alternatives[letter]
-                    if (!text) return null
+                    const text = (alternatives[letter] ?? '').trim()
+                    const slot = alternativeSlots[letter]
+                    if (!text && !slot) return null
                     const isCorrect = question.correct_answer === letter
                     return (
                       <AltCard key={letter} letter={letter} correct={isCorrect}>
-                        {text}
+                        <div className="flex flex-col gap-2">
+                          {text && <span>{text}</span>}
+                          {slot}
+                        </div>
                       </AltCard>
                     )
                   })}
                 </div>
               )}
-
-              {/* Imagens da questão */}
-              {images.length > 0 && <ImageModal images={images} />}
             </CardBody>
           </Card>
 

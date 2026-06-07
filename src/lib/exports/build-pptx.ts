@@ -1,5 +1,6 @@
 import pptxgen from 'pptxgenjs'
 import type { ExportData, QuestionData } from '@/lib/exports/build'
+import { splitFiguresByScope } from '@/lib/exports/build'
 
 // Paleta MedMaestro (dark)
 const BG = '0A0A0A'
@@ -98,7 +99,14 @@ function addQuestionSlide(
   slide.background = { color: BG }
   header(slide, pptx, q)
 
-  const hasFigure = showFigures && q.figures.length > 0
+  const { statement: stmtFigs, byAlt: altFigs } = splitFiguresByScope(q.figures)
+  const altFigEntries = LETTERS.filter((l) => (altFigs[l]?.length ?? 0) > 0).map((l) => ({
+    letter: l,
+    fig: altFigs[l][0],
+  }))
+  const hasStmtFig = showFigures && stmtFigs.length > 0
+  const hasAltFigs = showFigures && altFigEntries.length > 0
+  const hasFigure = hasStmtFig || hasAltFigs
   const textW = hasFigure ? 7.4 : 12.1
 
   if (showStem && q.stem) {
@@ -129,15 +137,40 @@ function addQuestionSlide(
   }
 
   if (hasFigure) {
-    const fig = q.figures[0]
     slide.addShape(pptx.ShapeType.roundRect, {
       x: 8.25, y: 1.2, w: 4.45, h: 5.0, fill: { color: PANEL }, line: { color: '2a3550', width: 1 },
     })
-    slide.addImage({
-      data: dataUri(fig.contentType, fig.data),
-      x: 8.45, y: 1.4, w: 4.05, h: 4.6,
-      sizing: { type: 'contain', w: 4.05, h: 4.6 },
-    })
+    if (hasAltFigs) {
+      // Alternativas em imagem: grade 2 colunas, cada figura rotulada (A–D).
+      const cols = 2
+      const cellW = 2.0
+      const cellH = 2.3
+      const gx = 8.45
+      const gy = 1.4
+      altFigEntries.forEach((e, i) => {
+        const r = Math.floor(i / cols)
+        const c = i % cols
+        const x = gx + c * (cellW + 0.1)
+        const yy = gy + r * (cellH + 0.1)
+        const isCorrect = showGabarito && q.correctAnswer === e.letter
+        slide.addText(`${e.letter})`, {
+          x, y: yy, w: 0.6, h: 0.28,
+          fontFace: 'Arial', fontSize: 12, bold: true, color: isCorrect ? GREEN : TEXT,
+        })
+        slide.addImage({
+          data: dataUri(e.fig.contentType, e.fig.data),
+          x, y: yy + 0.28, w: cellW, h: cellH - 0.28,
+          sizing: { type: 'contain', w: cellW, h: cellH - 0.28 },
+        })
+      })
+    } else {
+      const fig = stmtFigs[0]
+      slide.addImage({
+        data: dataUri(fig.contentType, fig.data),
+        x: 8.45, y: 1.4, w: 4.05, h: 4.6,
+        sizing: { type: 'contain', w: 4.05, h: 4.6 },
+      })
+    }
   }
 }
 

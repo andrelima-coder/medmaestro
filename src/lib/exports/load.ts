@@ -116,12 +116,13 @@ export async function loadQuestionsForExport(
     useCropped: boolean
     pageNumber: number | null
     figureNumber: number | null
+    scope: string
   }
   const imagesByQuestion = new Map<string, ImgItem[]>()
   if (includeImages) {
     const { data: imgs } = await service
       .from('question_images')
-      .select('question_id, full_page_path, cropped_path, use_cropped, page_number, figure_number')
+      .select('question_id, full_page_path, cropped_path, use_cropped, page_number, figure_number, image_scope')
       .in('question_id', questionIds)
     for (const img of imgs ?? []) {
       const list = imagesByQuestion.get(img.question_id as string) ?? []
@@ -131,6 +132,7 @@ export async function loadQuestionsForExport(
         useCropped: Boolean(img.use_cropped),
         pageNumber: (img.page_number as number | null) ?? null,
         figureNumber: (img.figure_number as number | null) ?? null,
+        scope: (img.image_scope as string | null) ?? 'statement',
       })
       imagesByQuestion.set(img.question_id as string, list)
     }
@@ -228,11 +230,22 @@ export async function loadQuestionsForExport(
         const path = img.useCropped && img.cropped ? img.cropped : img.path
         const bytes = imageBytes.get(path)
         if (!bytes) return null
-        return { data: bytes.data, contentType: bytes.contentType, figureNumber: img.figureNumber }
+        return {
+          data: bytes.data,
+          contentType: bytes.contentType,
+          figureNumber: img.figureNumber,
+          scope: img.scope,
+        }
       })
       .filter(
-        (f): f is { data: Uint8Array; contentType: string; figureNumber: number | null } =>
-          f !== null
+        (
+          f
+        ): f is {
+          data: Uint8Array
+          contentType: string
+          figureNumber: number | null
+          scope: string
+        } => f !== null
       )
 
     const cmts = commentsByQuestion.get(qid) ?? []
