@@ -54,6 +54,15 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
     { label: 'Análise', href: '/analise', iconKey: 'BarChart2' },
   ]
 
+  // Captação (camada do aluno — feature 001), admin+.
+  const captacao: NavItemDef[] = can(role, 'admin')
+    ? [
+        { label: 'Campanhas', href: '/campanhas', iconKey: 'FileText' },
+        { label: 'Leads', href: '/leads', iconKey: 'Users' },
+        { label: 'Calibração', href: '/calibracao', iconKey: 'BarChart2' },
+      ]
+    : []
+
   const admin: NavItemDef[] = [
     ...(can(role, 'admin')
       ? [{ label: 'Auditoria', href: '/auditoria', iconKey: 'Shield' }]
@@ -82,6 +91,10 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
   }
 
   sections.push({ title: 'Análise', items: analise })
+
+  if (captacao.length > 0) {
+    sections.push({ title: 'Captação', items: captacao })
+  }
 
   if (admin.length > 0) {
     sections.push({ title: 'Admin', items: admin })

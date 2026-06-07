@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendConversionEvent, findLeadIdByUserEmail } from '@/lib/marketing/conversao'
+import { logAudit } from '@/lib/audit'
 
 // Runtime do simulado (feature 001 — T017/T018/T020).
 // Cronômetro autoritativo no servidor (coluna deadline_at). O cliente apenas
@@ -233,6 +234,12 @@ export async function submitAttempt(attemptId: string): Promise<ActionResult<{ s
     .from('simulado_attempts')
     .update({ status: 'entregue', time_remaining: remaining, deadline_at: null })
     .eq('id', attemptId)
+
+  // Telemetria: registra a entrega (T031).
+  await logAudit(userId, 'attempt', attemptId, 'attempt_submitted', null, {
+    campaign_id: attempt.campaign_id,
+    remaining,
+  })
 
   // Conversão: simulado_concluido (pós-resposta, best-effort).
   const supabase = await createClient()

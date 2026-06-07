@@ -1,0 +1,53 @@
+name: Aluno lembretes tick
+
+# Dispara os lembretes da camada do aluno (feature 001): abertura de simulado e
+# live. O endpoint é idempotente (dedup por campanha em campaign_reminders), então
+# execuções concorrentes não reenviam.
+#
+# Pré-requisitos (Settings → Secrets and variables → Actions):
+#   - WORKER_SECRET    (mesmo valor configurado em produção)
+#   - APP_URL          (https://medmaestro.example.com — sem barra final)
+#
+# Para pausar: comente o bloco `schedule` ou desative em Settings → Actions.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: aluno-lembretes-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Trigger /api/aluno/lembretes/tick
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$WORKER_SECRET" ]; then
+            echo "::error::APP_URL ou WORKER_SECRET não configurados nas secrets do repositório"
+            exit 1
+          fi
+
+          response=$(curl -fsSL --max-time 180 \
+            -X POST \
+            -H "Authorization: Bearer $WORKER_SECRET" \
+            -H "Content-Type: application/json" \
+            -w "\n__HTTP_STATUS__:%{http_code}" \
+            "$APP_URL/api/aluno/lembretes/tick")
+
+          http_status=$(echo "$response" | grep '__HTTP_STATUS__' | cut -d':' -f2)
+          body=$(echo "$response" | grep -v '__HTTP_STATUS__')
+
+          echo "Status: $http_status"
+          echo "Body: $body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::lembretes tick falhou com HTTP $http_status"
+            exit 1
+          fi
