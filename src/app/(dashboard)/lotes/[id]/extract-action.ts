@@ -5,10 +5,13 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { runExtractionPipeline } from '@/lib/extraction/pipeline'
+import { requireRole } from '@/lib/auth/guards'
 
 export async function triggerExtractionAction(
   examId: string
 ): Promise<{ ok: boolean; queued?: boolean; error?: string }> {
+  const auth = await requireRole('admin')
+  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { logAudit } from '@/lib/audit'
+import { requireUser } from '@/lib/auth/guards'
 
 async function getUser() {
   const supabase = await createClient()
@@ -399,6 +400,8 @@ export async function searchQuestionsForSimulado(
   questions: { id: string; question_number: number; stem: string; exam_label: string }[]
   addedIds: string[]
 }> {
+  const auth = await requireUser()
+  if (!auth.ok) return { questions: [], addedIds: [] }
   const service = createServiceClient()
 
   const [questionsRes, addedRes] = await Promise.all([

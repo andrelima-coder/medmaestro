@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sanitizeHtml } from '@/lib/sanitize-html'
+import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 export type BancoFilter = {
   examId?: string
@@ -177,6 +178,8 @@ export async function listBancoFlashcards(
 }
 
 export async function listBancoExams(): Promise<{ id: string; label: string }[]> {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const service = createServiceClient()
   const { data } = await service
     .from('exams')
@@ -211,6 +214,8 @@ export async function listBancoTemas(): Promise<{
   modulos: TemaOption[]
   temas: TemaOption[]
 }> {
+  const auth = await requireUser()
+  if (!auth.ok) return { modulos: [], temas: [] }
   const service = createServiceClient()
   const [modRes, temaRes] = await Promise.all([
     service
@@ -235,6 +240,8 @@ export async function updateBancoFlashcardAction(
   id: string,
   patch: { front?: string; back?: string; difficulty?: number; approved?: boolean }
 ): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },
@@ -266,6 +273,8 @@ export async function updateBancoFlashcardAction(
 export async function deleteBancoFlashcardAction(
   id: string
 ): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },

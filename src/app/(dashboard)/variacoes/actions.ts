@@ -11,6 +11,7 @@ import {
 } from '@/lib/variations/generate'
 import { logAudit } from '@/lib/audit'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
+import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 const BATCH_CONCURRENCY = 2
 
@@ -78,6 +79,8 @@ export async function listQuestionsForVariations(
   },
   pagination: { page: number; pageSize?: number }
 ): Promise<VariationListPage> {
+  const auth = await requireUser()
+  if (!auth.ok) return { rows: [], total: 0 }
   const supabase = createServiceClient()
   const pageSize = pagination.pageSize ?? QUESTIONS_PAGE_SIZE
   const page = Math.max(1, pagination.page)
@@ -154,6 +157,8 @@ export async function listFilteredVariationQuestionIds(filter: {
   examId?: string
   withoutVariationOnly?: boolean
 }): Promise<string[]> {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
 
   let query = supabase
@@ -182,6 +187,8 @@ export async function listFilteredVariationQuestionIds(filter: {
 export async function listExamsForVariationsFilter(): Promise<
   { id: string; label: string }[]
 > {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('exams')
@@ -212,6 +219,8 @@ export type PendingVariation = {
 }
 
 export async function listPendingVariations(): Promise<PendingVariation[]> {
+  const auth = await requireUser()
+  if (!auth.ok) return []
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('question_variations')
@@ -254,6 +263,8 @@ export async function listPendingVariations(): Promise<PendingVariation[]> {
 export async function approveVariationAction(
   id: string
 ): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },
@@ -274,6 +285,8 @@ export async function approveVariationAction(
 }
 
 export async function rejectVariationAction(id: string): Promise<{ ok: boolean }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false }
   const supabase = await createClient()
   const {
     data: { user },
@@ -288,6 +301,8 @@ export async function rejectVariationAction(id: string): Promise<{ ok: boolean }
 export async function promoteVariationAction(
   id: string
 ): Promise<{ ok: boolean; questionId?: string; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
   const supabase = await createClient()
   const {
     data: { user },
