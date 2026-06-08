@@ -270,6 +270,36 @@ export type QSearchResult = {
   hasAnswer: boolean
 }
 
+export type QuestionPreview = {
+  stem: string
+  alternatives: Record<string, string>
+  correctAnswer: string | null
+  comments: { type: string; content: string }[]
+}
+
+/** Detalhe completo de uma questão para conferência antes de incluir. */
+export async function getQuestionPreviewAction(
+  questionId: string
+): Promise<QuestionPreview | null> {
+  const user = await assertAdmin()
+  if (!user) return null
+  const service = createServiceClient()
+  const { data } = await service
+    .from('questions')
+    .select('stem, alternatives, correct_answer, question_comments(content, comment_type)')
+    .eq('id', questionId)
+    .single()
+  if (!data) return null
+  return {
+    stem: (data.stem as string | null) ?? '',
+    alternatives: (data.alternatives as Record<string, string> | null) ?? {},
+    correctAnswer: (data.correct_answer as string | null) ?? null,
+    comments: ((data.question_comments as { content: string; comment_type: string | null }[] | null) ?? []).map(
+      (c) => ({ type: c.comment_type ?? '', content: c.content ?? '' })
+    ),
+  }
+}
+
 export async function searchQuestionsAction(filter: QSearchFilter): Promise<QSearchResult[]> {
   const user = await assertAdmin()
   if (!user) return []

@@ -4,10 +4,12 @@ import { useActionState, useState } from 'react'
 import {
   createCampaignAction,
   searchQuestionsAction,
+  getQuestionPreviewAction,
   type CampaignState,
   type PickerOptions,
   type QSearchFilter,
   type QSearchResult,
+  type QuestionPreview,
 } from '../actions'
 
 function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
@@ -68,6 +70,24 @@ export function CampanhaForm({
   const [searched, setSearched] = useState(false)
   const [selected, setSelected] = useState<QSearchResult[]>([])
   const [fillN, setFillN] = useState(20)
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [previewData, setPreviewData] = useState<Record<string, QuestionPreview | 'loading'>>({})
+
+  async function togglePreview(id: string) {
+    if (previewId === id) {
+      setPreviewId(null)
+      return
+    }
+    setPreviewId(id)
+    if (!previewData[id]) {
+      setPreviewData((p) => ({ ...p, [id]: 'loading' }))
+      const d = await getQuestionPreviewAction(id)
+      setPreviewData((p) => ({
+        ...p,
+        [id]: d ?? { stem: '', alternatives: {}, correctAnswer: null, comments: [] },
+      }))
+    }
+  }
 
   const selectedIds = new Set(selected.map((q) => q.id))
   const currentFilter: QSearchFilter = {
@@ -236,31 +256,49 @@ export function CampanhaForm({
             ) : (
               results.map((q) => {
                 const checked = selectedIds.has(q.id)
+                const open = previewId === q.id
+                const pv = previewData[q.id]
                 return (
-                  <label
+                  <div
                     key={q.id}
-                    className={`flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm ${
-                      checked ? 'bg-primary/10' : 'hover:bg-card'
-                    }`}
+                    className={`rounded-md ${checked ? 'bg-primary/10' : ''}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggle(q)}
-                      className="mt-0.5 size-4"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate text-foreground">
-                        {q.number ? `Q${q.number} · ` : ''}
-                        {q.stem || '(sem enunciado)'}
+                    <div className="flex items-start gap-2 p-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggle(q)}
+                        className="mt-0.5 size-4 cursor-pointer"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-foreground">
+                          {q.number ? `Q${q.number} · ` : ''}
+                          {q.stem || '(sem enunciado)'}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {q.examLabel}
+                          {q.hasAnswer ? ' · gabarito' : ' · sem gabarito'}
+                          {q.hasComment ? ' · comentário' : ''}
+                        </span>
                       </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {q.examLabel}
-                        {q.hasAnswer ? ' · gabarito' : ' · sem gabarito'}
-                        {q.hasComment ? ' · comentário' : ''}
-                      </span>
-                    </span>
-                  </label>
+                      <button
+                        type="button"
+                        onClick={() => togglePreview(q.id)}
+                        className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-card"
+                      >
+                        {open ? 'Fechar' : 'Ver'}
+                      </button>
+                    </div>
+                    {open && (
+                      <div className="border-t border-border/50 px-3 py-3">
+                        {!pv || pv === 'loading' ? (
+                          <p className="text-xs text-muted-foreground">Carregando…</p>
+                        ) : (
+                          <QuestionPreviewView pv={pv} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )
               })
             )}
@@ -358,6 +396,53 @@ export function CampanhaForm({
         {isPending ? 'Criando…' : 'Criar campanha'}
       </button>
     </form>
+  )
+}
+
+function QuestionPreviewView({ pv }: { pv: QuestionPreview }) {
+  const letters = ['A', 'B', 'C', 'D', 'E']
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="whitespace-pre-wrap text-foreground">{pv.stem || '(sem enunciado)'}</p>
+      <ul className="space-y-1">
+        {letters.map((L) => {
+          const text = pv.alternatives?.[L]
+          if (!text) return null
+          const correct = pv.correctAnswer === L
+          return (
+            <li
+              key={L}
+              className={`rounded-md px-2 py-1 ${
+                correct ? 'bg-green-500/15 font-medium text-green-600' : 'text-foreground'
+              }`}
+            >
+              <strong>{L})</strong> {text}
+              {correct ? ' ✓' : ''}
+            </li>
+          )
+        })}
+      </ul>
+      {pv.correctAnswer == null && (
+        <p className="text-xs text-amber-500">Sem gabarito cadastrado.</p>
+      )}
+      <div>
+        <p className="mb-1 text-xs font-semibold text-muted-foreground">Comentários</p>
+        {pv.comments.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem comentários.</p>
+        ) : (
+          <div className="space-y-2">
+            {pv.comments.map((c, i) => (
+              <div key={i} className="rounded-md bg-background p-2">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {c.type || 'comentário'}
+                </p>
+                <p className="whitespace-pre-wrap text-foreground">{c.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
