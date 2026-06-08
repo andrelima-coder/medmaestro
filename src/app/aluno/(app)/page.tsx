@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getGoalAndToday, getStreak } from '@/lib/aluno/estudo'
+import { getGoalAndToday, getStreak, getWeakestModule } from '@/lib/aluno/estudo'
 import { GoalSetter } from './home-client'
 
 export const metadata = { title: 'Área do Aluno — MedMaestro' }
@@ -15,6 +15,7 @@ export default async function AlunoHomePage() {
   let goal = 10
   let today = 0
   let streak = 0
+  let weakest: { tagId: string; label: string; pct: number } | null = null
 
   if (user) {
     const service = createServiceClient()
@@ -28,6 +29,7 @@ export default async function AlunoHomePage() {
     goal = gt.goal
     today = gt.today
     streak = await getStreak(service, user.id)
+    weakest = await getWeakestModule(service, user.id)
   }
 
   const pct = goal > 0 ? Math.min(100, Math.round((today / goal) * 100)) : 0
@@ -58,6 +60,22 @@ export default async function AlunoHomePage() {
           <GoalSetter initial={goal} />
         </div>
       </div>
+
+      {/* Recomendação adaptativa (ponto fraco) */}
+      {weakest && (
+        <a
+          href={`/aluno/praticar?modulo=${weakest.tagId}`}
+          className="block rounded-2xl border border-amber-400 bg-amber-500/5 p-5 transition hover:bg-amber-500/10"
+        >
+          <div className="text-xs font-semibold text-amber-600">🎯 Recomendado para você</div>
+          <div className="mt-1 font-semibold text-foreground">
+            Praticar seu ponto fraco: {weakest.label}
+          </div>
+          <div className="mt-0.5 text-sm text-muted-foreground">
+            Seu acerto neste módulo é {weakest.pct}%. Bora melhorar?
+          </div>
+        </a>
+      )}
 
       {/* Atalhos */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

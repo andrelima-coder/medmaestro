@@ -6,8 +6,16 @@ import type { PracticeQuestion } from '@/lib/aluno/estudo'
 
 const ALTS = ['A', 'B', 'C', 'D', 'E'] as const
 
-export function PraticarClient({ modules }: { modules: { id: string; label: string }[] }) {
-  const [moduleId, setModuleId] = useState<string>('')
+export function PraticarClient({
+  modules,
+  weakest,
+  initialModule = '',
+}: {
+  modules: { id: string; label: string }[]
+  weakest?: { tagId: string; label: string; pct: number } | null
+  initialModule?: string
+}) {
+  const [moduleId, setModuleId] = useState<string>(initialModule)
   const [batch, setBatch] = useState<PracticeQuestion[] | null>(null)
   const [idx, setIdx] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
@@ -15,9 +23,11 @@ export function PraticarClient({ modules }: { modules: { id: string; label: stri
   const [acertos, setAcertos] = useState(0)
   const [isPending, startTransition] = useTransition()
 
-  function iniciar() {
+  function iniciar(forced?: string) {
+    const mod = forced !== undefined ? forced : moduleId
+    if (forced !== undefined) setModuleId(forced)
     startTransition(async () => {
-      const b = await getBatchAction(moduleId || null)
+      const b = await getBatchAction(mod || null)
       setBatch(b)
       setIdx(0)
       setSelected(null)
@@ -66,12 +76,22 @@ export function PraticarClient({ modules }: { modules: { id: string; label: stri
           </select>
         </label>
         <button
-          onClick={iniciar}
+          onClick={() => iniciar()}
           disabled={isPending}
           className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           {isPending ? 'Carregando…' : 'Começar'}
         </button>
+
+        {weakest && (
+          <button
+            onClick={() => iniciar(weakest.tagId)}
+            disabled={isPending}
+            className="mt-3 w-full rounded-lg border border-amber-400 px-4 py-2.5 text-sm font-medium text-amber-600 disabled:opacity-60"
+          >
+            🎯 Praticar meu ponto fraco: {weakest.label} ({weakest.pct}%)
+          </button>
+        )}
       </div>
     )
   }

@@ -140,6 +140,28 @@ export async function getStreak(service: SupabaseClient, userId: string): Promis
   return streak
 }
 
+/** Módulo de menor acerto do aluno (ponto fraco), com mínimo de respostas. */
+export async function getWeakestModule(
+  service: SupabaseClient,
+  userId: string,
+  minResponses = 5
+): Promise<{ tagId: string; label: string; pct: number } | null> {
+  const { data } = await service
+    .from('student_module_stats')
+    .select('tag_id, tag_label, correct, total')
+    .eq('user_id', userId)
+    .eq('dimension', 'modulo')
+  const rows = (data ?? [])
+    .filter((r) => (r.total ?? 0) >= minResponses)
+    .map((r) => ({
+      tagId: r.tag_id as string,
+      label: (r.tag_label as string) ?? '—',
+      pct: r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0,
+    }))
+    .sort((a, b) => a.pct - b.pct)
+  return rows[0] ?? null
+}
+
 /** Cards de erro: questões erradas (prática ∪ simulado) menos as dominadas. */
 export async function getErrorCards(
   service: SupabaseClient,
