@@ -1,9 +1,14 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { createCampaignAction, type CampaignState } from '../actions'
-
-type SimuladoOption = { id: string; title: string }
+import {
+  createCampaignAction,
+  searchQuestionsAction,
+  type CampaignState,
+  type PickerOptions,
+  type QSearchFilter,
+  type QSearchResult,
+} from '../actions'
 
 function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
   const endpoint = `${endpointBase || ''}/api/public/leads`
@@ -38,11 +43,11 @@ function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: str
 }
 
 export function CampanhaForm({
-  simulados,
+  options,
   appUrl,
   alunoUrl = '',
 }: {
-  simulados: SimuladoOption[]
+  options: PickerOptions
   appUrl: string
   alunoUrl?: string
 }) {
@@ -51,6 +56,54 @@ export function CampanhaForm({
     null
   )
   const [accessMode, setAccessMode] = useState('imediato')
+
+  // ── Seletor de questões ──
+  const [moduloTagId, setModuloTagId] = useState('')
+  const [specialtyId, setSpecialtyId] = useState('')
+  const [examId, setExamId] = useState('')
+  const [year, setYear] = useState('')
+  const [onlyReady, setOnlyReady] = useState(false)
+  const [results, setResults] = useState<QSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
+  const [selected, setSelected] = useState<QSearchResult[]>([])
+  const [fillN, setFillN] = useState(20)
+
+  const selectedIds = new Set(selected.map((q) => q.id))
+  const currentFilter: QSearchFilter = {
+    moduloTagId: moduloTagId || null,
+    specialtyId: specialtyId || null,
+    examId: examId || null,
+    year: year ? Number(year) : null,
+    onlyReady,
+  }
+
+  async function runSearch() {
+    setSearching(true)
+    try {
+      const r = await searchQuestionsAction(currentFilter)
+      setResults(r)
+      setSearched(true)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  function toggle(q: QSearchResult) {
+    setSelected((prev) =>
+      prev.some((x) => x.id === q.id) ? prev.filter((x) => x.id !== q.id) : [...prev, q]
+    )
+  }
+
+  function fillRandom() {
+    const pool = results.filter((q) => !selectedIds.has(q.id))
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    const add = pool.slice(0, Math.max(0, fillN))
+    setSelected((prev) => [...prev, ...add])
+  }
 
   if (state?.ok && state.embedId) {
     return (
@@ -73,22 +126,149 @@ export function CampanhaForm({
     <form action={formAction} className="max-w-2xl space-y-5">
       <Section title="Campanha">
         <Text label="Nome da campanha" name="name" required />
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-foreground">Simulado (molde)</span>
-          <select
-            name="simulado_id"
-            required
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Selecione…</option>
-            {simulados.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
-          </select>
-        </label>
         <Text label="Duração (minutos)" name="duration_minutes" type="number" required />
+      </Section>
+
+      <Section title="Questões do simulado">
+        <p className="text-xs text-muted-foreground">
+          Filtre o banco, marque as questões e/ou use “preencher aleatórias”. A ordem de seleção é a
+          ordem em que aparecem na prova.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Select
+            label="Módulo"
+            value={moduloTagId}
+            onChange={setModuloTagId}
+            options={[
+              { value: '', label: 'Todos' },
+              ...options.modulos.map((m) => ({ value: m.id, label: m.label })),
+            ]}
+          />
+          <Select
+            label="Especialidade"
+            value={specialtyId}
+            onChange={setSpecialtyId}
+            options={[
+              { value: '', label: 'Todas' },
+              ...options.especialidades.map((s) => ({ value: s.id, label: s.name })),
+            ]}
+          />
+          <Select
+            label="Prova"
+            value={examId}
+            onChange={setExamId}
+            options={[
+              { value: '', label: 'Todas' },
+              ...options.provas.map((p) => ({ value: p.id, label: p.label })),
+            ]}
+          />
+          <Select
+            label="Ano"
+            value={year}
+            onChange={setYear}
+            options={[
+              { value: '', label: 'Todos' },
+              ...options.anos.map((y) => ({ value: String(y), label: String(y) })),
+            ]}
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={onlyReady}
+            onChange={(e) => setOnlyReady(e.target.checked)}
+            className="size-4"
+          />
+          Apenas questões com gabarito e comentário
+        </label>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={runSearch}
+            disabled={searching}
+            className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground disabled:opacity-60"
+          >
+            {searching ? 'Buscando…' : 'Buscar questões'}
+          </button>
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min={1}
+              value={fillN}
+              onChange={(e) => setFillN(Number(e.target.value))}
+              className="w-20 rounded-lg border border-border bg-background px-2 py-2 text-sm text-foreground"
+            />
+            <button
+              type="button"
+              onClick={fillRandom}
+              disabled={results.length === 0}
+              className="rounded-lg border border-border px-3 py-2 text-sm text-foreground disabled:opacity-50"
+            >
+              Preencher aleatórias
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-sm">
+          <span className="font-medium text-foreground">
+            {selected.length} questão(ões) selecionada(s)
+          </span>
+          {selected.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelected([])}
+              className="text-xs text-red-500 underline"
+            >
+              Limpar seleção
+            </button>
+          )}
+        </div>
+
+        {searched && (
+          <div className="max-h-80 space-y-1 overflow-auto rounded-lg border border-border p-2">
+            {results.length === 0 ? (
+              <p className="p-2 text-sm text-muted-foreground">
+                Nenhuma questão encontrada para esse filtro.
+              </p>
+            ) : (
+              results.map((q) => {
+                const checked = selectedIds.has(q.id)
+                return (
+                  <label
+                    key={q.id}
+                    className={`flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm ${
+                      checked ? 'bg-primary/10' : 'hover:bg-card'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(q)}
+                      className="mt-0.5 size-4"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-foreground">
+                        {q.number ? `Q${q.number} · ` : ''}
+                        {q.stem || '(sem enunciado)'}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {q.examLabel}
+                        {q.hasAnswer ? ' · gabarito' : ' · sem gabarito'}
+                        {q.hasComment ? ' · comentário' : ''}
+                      </span>
+                    </span>
+                  </label>
+                )
+              })
+            )}
+          </div>
+        )}
+
+        <input type="hidden" name="question_ids" value={selected.map((q) => q.id).join(',')} />
+        <input type="hidden" name="question_filters" value={JSON.stringify(currentFilter)} />
       </Section>
 
       <Section title="Acesso">
@@ -178,6 +358,35 @@ export function CampanhaForm({
         {isPending ? 'Criando…' : 'Criar campanha'}
       </button>
     </form>
+  )
+}
+
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

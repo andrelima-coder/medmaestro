@@ -39,7 +39,16 @@ export async function createCampaignAction(
   if (!user) return { ok: false, error: 'Sem permissão.' }
 
   const name = (formData.get('name') as string)?.trim()
-  const simuladoId = (formData.get('simulado_id') as string)?.trim()
+  const questionIds = ((formData.get('question_ids') as string) || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  let filtersSnapshot: Record<string, unknown> = {}
+  try {
+    filtersSnapshot = JSON.parse((formData.get('question_filters') as string) || '{}')
+  } catch {
+    filtersSnapshot = {}
+  }
   const duration = Number(formData.get('duration_minutes'))
   const accessMode = (formData.get('access_mode') as string)?.trim() // imediato|data_unica|janela
   const windowStart = (formData.get('window_start') as string) || null
@@ -82,7 +91,9 @@ export async function createCampaignAction(
     .filter(Boolean)
 
   // Validações.
-  if (!name || !simuladoId) return { ok: false, error: 'Nome e simulado são obrigatórios.' }
+  if (!name) return { ok: false, error: 'O nome da campanha é obrigatório.' }
+  if (questionIds.length === 0)
+    return { ok: false, error: 'Selecione pelo menos uma questão para o simulado.' }
   if (!Number.isFinite(duration) || duration <= 0)
     return { ok: false, error: 'Duração inválida.' }
   if (!['imediato', 'data_unica', 'janela'].includes(accessMode))
@@ -93,6 +104,33 @@ export async function createCampaignAction(
     return { ok: false, error: 'O fim da janela deve ser depois do início.' }
 
   const service = createServiceClient()
+
+  // Monta o simulado-molde desta campanha a partir das questões escolhidas.
+  const { data: simulado, error: sErr } = await service
+    .from('simulados')
+    .insert({
+      title: `${name} — campanha`,
+      created_by: user.id,
+      filters_used: filtersSnapshot,
+      total_questions: questionIds.length,
+    })
+    .select('id')
+    .single()
+
+  if (sErr || !simulado) {
+    return { ok: false, error: sErr?.message ?? 'Falha ao criar o simulado.' }
+  }
+  const simuladoId = simulado.id
+
+  const sqRows = questionIds.map((qid, i) => ({
+    simulado_id: simuladoId,
+    question_id: qid,
+    position: i + 1,
+  }))
+  const { error: sqErr } = await service.from('simulado_questions').insert(sqRows)
+  if (sqErr) {
+    return { ok: false, error: `Simulado criado, mas as questões falharam: ${sqErr.message}` }
+  }
 
   const { data: campaign, error: cErr } = await service
     .from('campaigns')
@@ -162,4 +200,125 @@ export async function listSimuladosForSelect() {
     .order('created_at', { ascending: false })
     .limit(200)
   return data ?? []
+}
+
+// ── Seletor de questões na criação da campanha ──────────────────────────────
+
+export type PickerOptions = {
+  modulos: { id: string; label: string }[]
+  especialidades: { id: string; name: string }[]
+  provas: { id: string; label: string; year: number | null }[]
+  anos: number[]
+}
+
+export async function getPickerOptions(): Promise<PickerOptions> {
+  const service = createServiceClient()
+  const [{ data: modulos }, { data: especialidades }, { data: provas }] = await Promise.all([
+    service
+      .from('tags')
+      .select('id, label')
+      .eq('dimension', 'modulo')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
+    service.from('specialties').select('id, name').order('name', { ascending: true }),
+    service
+      .from('exams')
+      .select('id, year, specialties(name), exam_boards(short_name)')
+      .order('year', { ascending: false })
+      .limit(500),
+  ])
+
+  const provasList = ((provas ?? []) as unknown as {
+    id: string
+    year: number | null
+    specialties: { name: string } | null
+    exam_boards: { short_name: string } | null
+  }[]).map((e) => ({
+    id: e.id,
+    year: e.year ?? null,
+    label: `${e.specialties?.name ?? 'Prova'}${e.year ? ' ' + e.year : ''}${
+      e.exam_boards?.short_name ? ' · ' + e.exam_boards.short_name : ''
+    }`,
+  }))
+
+  const anos = [...new Set(provasList.map((p) => p.year).filter((y): y is number => y != null))].sort(
+    (a, b) => b - a
+  )
+
+  return {
+    modulos: (modulos ?? []) as { id: string; label: string }[],
+    especialidades: (especialidades ?? []) as { id: string; name: string }[],
+    provas: provasList,
+    anos,
+  }
+}
+
+export type QSearchFilter = {
+  moduloTagId?: string | null
+  examId?: string | null
+  specialtyId?: string | null
+  year?: number | null
+  onlyReady?: boolean // só com gabarito + comentário
+}
+
+export type QSearchResult = {
+  id: string
+  number: number | null
+  stem: string
+  examLabel: string
+  hasComment: boolean
+  hasAnswer: boolean
+}
+
+export async function searchQuestionsAction(filter: QSearchFilter): Promise<QSearchResult[]> {
+  const user = await assertAdmin()
+  if (!user) return []
+  const service = createServiceClient()
+
+  const needExamInner = !!(filter.specialtyId || filter.year)
+  const examSel = needExamInner
+    ? 'exams!inner(year, specialty_id, specialties(name))'
+    : 'exams(year, specialty_id, specialties(name))'
+
+  const sel =
+    'id, question_number, stem, correct_answer, exam_id, question_comments(id), ' +
+    examSel +
+    (filter.moduloTagId ? ', question_tags!inner(tag_id)' : '')
+
+  let q = service.from('questions').select(sel).limit(500)
+  if (filter.examId) q = q.eq('exam_id', filter.examId)
+  if (filter.specialtyId) q = q.eq('exams.specialty_id', filter.specialtyId)
+  if (filter.year) q = q.eq('exams.year', filter.year)
+  if (filter.moduloTagId) q = q.eq('question_tags.tag_id', filter.moduloTagId)
+
+  const { data } = await q
+
+  const seen = new Set<string>()
+  const out: QSearchResult[] = []
+  for (const r of (data ?? []) as unknown as {
+    id: string
+    question_number: number | null
+    stem: string | null
+    correct_answer: string | null
+    question_comments: { id: string }[] | null
+    exams: { year: number | null; specialties: { name: string } | null } | null
+  }[]) {
+    if (seen.has(r.id)) continue
+    seen.add(r.id)
+    const hasComment = (r.question_comments?.length ?? 0) > 0
+    const hasAnswer = r.correct_answer != null
+    if (filter.onlyReady && !(hasComment && hasAnswer)) continue
+    const exam = r.exams
+    out.push({
+      id: r.id,
+      number: r.question_number ?? null,
+      stem: (r.stem ?? '').slice(0, 140),
+      examLabel: exam
+        ? `${exam.specialties?.name ?? 'Prova'}${exam.year ? ' ' + exam.year : ''}`
+        : '—',
+      hasComment,
+      hasAnswer,
+    })
+  }
+  return out
 }

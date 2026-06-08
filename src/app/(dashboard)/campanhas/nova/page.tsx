@@ -1,10 +1,10 @@
 import { CampanhaForm } from './campanha-form'
-import { listSimuladosForSelect } from '../actions'
+import { getPickerOptions } from '../actions'
 
 export const metadata = { title: 'Nova campanha — MedMaestro' }
 
 export default async function NovaCampanhaPage() {
-  const simulados = await listSimuladosForSelect()
+  const options = await getPickerOptions()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const alunoUrl = process.env.NEXT_PUBLIC_ALUNO_URL ?? ''
 
@@ -12,9 +12,10 @@ export default async function NovaCampanhaPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold text-foreground">Simulado Aberto para Alunos</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Monte a campanha de captação e gere o código do formulário para a landing page.
+        Monte a campanha de captação, escolha as questões do simulado e gere o código do formulário
+        para a landing page.
       </p>
-      <CampanhaForm simulados={simulados} appUrl={appUrl} alunoUrl={alunoUrl} />
+      <CampanhaForm options={options} appUrl={appUrl} alunoUrl={alunoUrl} />
     </div>
   )
 }
