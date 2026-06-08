@@ -37,28 +37,28 @@ export default async function CampanhasPage() {
       {campaigns.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhuma campanha ainda.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-muted-foreground">
-              <th className="py-2">Nome</th>
-              <th className="py-2">Status</th>
-              <th className="py-2">Acesso</th>
-              <th className="py-2">embed_id</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.map((c) => (
-              <tr key={c.id} className="border-b border-border/50">
-                <td className="py-2 text-foreground">{c.name}</td>
-                <td className="py-2">{c.status}</td>
-                <td className="py-2">{c.access_mode}</td>
-                <td className="py-2">
-                  <code className="text-xs">{c.campaign_form?.[0]?.embed_id ?? '—'}</code>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-[2fr_1fr_1fr_1.5fr] gap-2 border-b border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground">
+            <span>Nome</span>
+            <span>Status</span>
+            <span>Acesso</span>
+            <span>embed_id</span>
+          </div>
+          {campaigns.map((c) => (
+            <Link
+              key={c.id}
+              href={`/campanhas/${c.id}`}
+              className="grid grid-cols-[2fr_1fr_1fr_1.5fr] items-center gap-2 border-b border-border/50 px-4 py-3 text-sm transition-colors last:border-0 hover:bg-card"
+            >
+              <span className="truncate font-medium text-foreground">{c.name}</span>
+              <span className="text-muted-foreground">{c.status}</span>
+              <span className="text-muted-foreground">{c.access_mode}</span>
+              <code className="truncate text-xs text-muted-foreground">
+                {c.campaign_form?.[0]?.embed_id ?? '—'}
+              </code>
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   )
