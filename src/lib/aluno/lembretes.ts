@@ -12,6 +12,18 @@ function resend() {
   return new Resend(process.env.RESEND_API_KEY)
 }
 
+/** Rodapé padrão: identificação do remetente + link de descadastro (LGPD). */
+function footerHtml(leadId: string, campaignName: string): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const unsub = `${base}/api/public/unsubscribe?lead=${encodeURIComponent(leadId)}`
+  return `<hr style="margin:24px 0;border:none;border-top:1px solid #e5e5e5" />
+  <p style="font-size:12px;color:#777;line-height:1.5">
+    Você recebeu este e-mail porque se cadastrou no simulado "${campaignName}" do MedMaestro.<br />
+    MedMaestro · medmaestro.com.br<br />
+    <a href="${unsub}" style="color:#777">Não quero mais receber estes e-mails (descadastrar)</a>
+  </p>`
+}
+
 /** Link "Adicionar ao Google Agenda" para a data de abertura. */
 function calendarLink(title: string, startISO: string): string {
   const start = startISO.replace(/[-:]/g, '').replace(/\.\d+/, '')
@@ -23,20 +35,22 @@ function calendarLink(title: string, startISO: string): string {
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-function openingHtml(name: string, openISO: string | null): string {
+function openingHtml(name: string, openISO: string | null, footer: string): string {
   const cal = openISO ? calendarLink(`Simulado: ${name}`, openISO) : null
   return `<div style="font-family:sans-serif">
     <h2>Seu simulado "${name}" vai abrir!</h2>
     <p>Prepare-se: a janela de realização está chegando. Faça de uma só vez, dentro do tempo, para a experiência mais realista.</p>
     ${cal ? `<p><a href="${cal}">Adicionar à agenda</a></p>` : ''}
+    ${footer}
   </div>`
 }
 
-function liveHtml(name: string, liveUrl: string | null): string {
+function liveHtml(name: string, liveUrl: string | null, footer: string): string {
   return `<div style="font-family:sans-serif">
     <h2>Correção comentada ao vivo — ${name}</h2>
     <p>Tire suas dúvidas e veja a resolução das questões na nossa live.</p>
     ${liveUrl ? `<p><a href="${liveUrl}">Assistir / ativar lembrete no YouTube</a></p>` : ''}
+    ${footer}
   </div>`
 }
 
@@ -65,26 +79,35 @@ export async function sendCampaignReminder(
 
   const { data: leads } = await service
     .from('leads')
-    .select('email, lead_consents(id)')
+    .select('id, email, unsubscribed_at, lead_consents(id)')
     .eq('campaign_id', campaignId)
 
+  // Só leads consentidos e que não pediram descadastro.
   const recipients = (leads ?? [])
-    .filter((l) => ((l.lead_consents as { id: string }[] | null)?.length ?? 0) > 0)
-    .map((l) => l.email)
+    .filter(
+      (l) =>
+        ((l.lead_consents as { id: string }[] | null)?.length ?? 0) > 0 &&
+        !(l as { unsubscribed_at: string | null }).unsubscribed_at
+    )
+    .map((l) => ({ id: l.id as string, email: l.email as string }))
 
+  const campaignName = campaign.name ?? 'Simulado'
   const subject =
     type === 'abertura'
-      ? `Seu simulado "${campaign.name}" vai abrir`
-      : `Live de correção — ${campaign.name}`
-  const html =
-    type === 'abertura'
-      ? openingHtml(campaign.name ?? 'Simulado', campaign.window_start)
-      : liveHtml(campaign.name ?? 'Simulado', campaign.live_url)
+      ? `Seu simulado "${campaignName}" vai abrir`
+      : `Live de correção — ${campaignName}`
 
   const client = resend()
-  for (const to of recipients) {
+  let sent = 0
+  for (const r of recipients) {
+    const footer = footerHtml(r.id, campaignName)
+    const html =
+      type === 'abertura'
+        ? openingHtml(campaignName, campaign.window_start, footer)
+        : liveHtml(campaignName, campaign.live_url, footer)
     try {
-      await client.emails.send({ from: FROM, to, subject, html })
+      await client.emails.send({ from: FROM, to: r.email, subject, html })
+      sent++
     } catch (e) {
       console.error('[lembrete]', e)
     }
@@ -92,7 +115,7 @@ export async function sendCampaignReminder(
 
   await service
     .from('campaign_reminders')
-    .update({ recipients: recipients.length })
+    .update({ recipients: sent })
     .eq('campaign_id', campaignId)
     .eq('type', type)
 
