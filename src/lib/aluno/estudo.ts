@@ -21,23 +21,30 @@ export type ErrorCard = {
 type QRow = {
   id: string
   stem: string | null
-  alternative_a: string | null
-  alternative_b: string | null
-  alternative_c: string | null
-  alternative_d: string | null
-  alternative_e: string | null
+  alternatives: Record<string, string> | null
   correct_answer?: string | null
-  question_comments?: { content: string; is_published: boolean }[] | null
+  question_comments?: { content: string; comment_type: string | null }[] | null
 }
 
 function toAlternatives(q: QRow): Record<string, string> {
+  const alt = (q.alternatives ?? {}) as Record<string, string>
   return {
-    A: q.alternative_a ?? '',
-    B: q.alternative_b ?? '',
-    C: q.alternative_c ?? '',
-    D: q.alternative_d ?? '',
-    E: q.alternative_e ?? '',
+    A: alt.A ?? '',
+    B: alt.B ?? '',
+    C: alt.C ?? '',
+    D: alt.D ?? '',
+    E: alt.E ?? '',
   }
+}
+
+/** Escolhe o comentário de explicação (ou o primeiro disponível). */
+function pickComment(
+  comments?: { content: string; comment_type: string | null }[] | null
+): string | null {
+  const list = comments ?? []
+  if (list.length === 0) return null
+  const explic = list.find((c) => c.comment_type === 'explicacao')
+  return (explic ?? list[0])?.content ?? null
 }
 
 /** Módulos disponíveis para o filtro de prática. */
@@ -60,7 +67,7 @@ export async function getPracticeBatch(
   let q = service
     .from('questions')
     .select(
-      'id, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e' +
+      'id, stem, alternatives' +
         (moduleTagId ? ', question_tags!inner(tag_id)' : '')
     )
     .not('correct_answer', 'is', null)
@@ -88,13 +95,12 @@ export async function getCorrection(
 ): Promise<{ correctAnswer: string | null; comment: string | null }> {
   const { data } = await service
     .from('questions')
-    .select('correct_answer, question_comments(content, is_published)')
+    .select('correct_answer, question_comments(content, comment_type)')
     .eq('id', questionId)
     .single()
-  const comment =
-    (data?.question_comments as { content: string; is_published: boolean }[] | null)?.find(
-      (c) => c.is_published
-    )?.content ?? null
+  const comment = pickComment(
+    data?.question_comments as { content: string; comment_type: string | null }[] | null
+  )
   return { correctAnswer: data?.correct_answer ?? null, comment }
 }
 
@@ -203,14 +209,13 @@ export async function getErrorCards(
 
   const { data: qs } = await service
     .from('questions')
-    .select('id, stem, correct_answer, question_comments(content, is_published)')
+    .select('id, stem, correct_answer, question_comments(content, comment_type)')
     .in('id', ids)
 
   return ((qs ?? []) as unknown as QRow[]).map((q) => ({
     questionId: q.id,
     stem: q.stem ?? '',
     correctAnswer: q.correct_answer ?? null,
-    comment:
-      (q.question_comments ?? []).find((c) => c.is_published)?.content ?? null,
+    comment: pickComment(q.question_comments),
   }))
 }

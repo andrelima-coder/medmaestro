@@ -10,13 +10,9 @@ type QuestionRow = {
   position: number
   questions: {
     id: string
-    question_no: number | null
+    question_number: number | null
     stem: string | null
-    alternative_a: string | null
-    alternative_b: string | null
-    alternative_c: string | null
-    alternative_d: string | null
-    alternative_e: string | null
+    alternatives: Record<string, string> | null
     exams: { year: number | null } | null
   } | null
 }
@@ -104,7 +100,7 @@ export default async function SimuladoPage({
   const { data: rows } = await service
     .from('simulado_questions')
     .select(
-      'position, questions(id, question_no, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e, exams(year))'
+      'position, questions(id, question_number, stem, alternatives, exams(year))'
     )
     .eq('simulado_id', campaign.simulado_id)
     .order('position', { ascending: true })
@@ -113,17 +109,18 @@ export default async function SimuladoPage({
     .filter((r) => r.questions)
     .map((r) => {
       const q = r.questions!
+      const alt = (q.alternatives ?? {}) as Record<string, string>
       return {
         id: q.id,
-        number: q.question_no ?? r.position,
+        number: q.question_number ?? r.position,
         origem: q.exams?.year ? `Ano ${q.exams.year}` : null,
         stem: q.stem ?? '',
         alternatives: {
-          A: q.alternative_a ?? '',
-          B: q.alternative_b ?? '',
-          C: q.alternative_c ?? '',
-          D: q.alternative_d ?? '',
-          E: q.alternative_e ?? '',
+          A: alt.A ?? '',
+          B: alt.B ?? '',
+          C: alt.C ?? '',
+          D: alt.D ?? '',
+          E: alt.E ?? '',
         } as Record<string, string>,
       }
     })

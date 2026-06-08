@@ -56,7 +56,7 @@ export default async function ResultadoPage({
   const { data: rows } = await service
     .from('simulado_questions')
     .select(
-      'position, questions(id, question_no, stem, alternative_a, alternative_b, alternative_c, alternative_d, alternative_e, correct_answer)'
+      'position, questions(id, question_number, stem, alternatives, correct_answer)'
     )
     .eq('simulado_id', campaign?.simulado_id)
     .order('position', { ascending: true })
@@ -65,13 +65,9 @@ export default async function ResultadoPage({
     position: number
     questions: {
       id: string
-      question_no: number | null
+      question_number: number | null
       stem: string | null
-      alternative_a: string | null
-      alternative_b: string | null
-      alternative_c: string | null
-      alternative_d: string | null
-      alternative_e: string | null
+      alternatives: Record<string, string> | null
       correct_answer: string | null
     } | null
   }
@@ -114,11 +110,14 @@ export default async function ResultadoPage({
     const ids = qrows.map((r) => r.questions!.id)
     const { data: comments } = await service
       .from('question_comments')
-      .select('question_id, content')
+      .select('question_id, content, comment_type')
       .in('question_id', ids)
-      .eq('is_published', true)
+      .order('comment_type', { ascending: true })
     for (const c of comments ?? []) {
-      if (!commentByQ[c.question_id]) commentByQ[c.question_id] = c.content
+      // prioriza explicacao; não sobrescreve uma explicacao já escolhida
+      if (!commentByQ[c.question_id] || c.comment_type === 'explicacao') {
+        commentByQ[c.question_id] = c.content
+      }
     }
   }
 
@@ -132,9 +131,10 @@ export default async function ResultadoPage({
     if (isCorrect) correct++
 
     const showDist = allowReview && (totalByQ[q.id] ?? 0) >= MIN_DISTRIBUTION
+    const alt = (q.alternatives ?? {}) as Record<string, string>
     return {
       id: q.id,
-      number: q.question_no ?? r.position,
+      number: q.question_number ?? r.position,
       selected,
       // verde/vermelho só quando a nota/gabarito é liberada.
       correct: showScore ? isCorrect : null,
@@ -142,11 +142,11 @@ export default async function ResultadoPage({
       stem: allowReview ? (q.stem ?? '') : null,
       alternatives: allowReview
         ? {
-            A: q.alternative_a ?? '',
-            B: q.alternative_b ?? '',
-            C: q.alternative_c ?? '',
-            D: q.alternative_d ?? '',
-            E: q.alternative_e ?? '',
+            A: alt.A ?? '',
+            B: alt.B ?? '',
+            C: alt.C ?? '',
+            D: alt.D ?? '',
+            E: alt.E ?? '',
           }
         : null,
       comment: commentsReleased ? (commentByQ[q.id] ?? null) : null,
