@@ -1,0 +1,39 @@
+name: Analytics refresh tick
+
+# Recalcula os agregados de desempenho (feature 002) periodicamente.
+# Idempotente (recalc_analytics faz TRUNCATE+INSERT). Fail-closed no WORKER_SECRET.
+#
+# Secrets necessárias: APP_URL, WORKER_SECRET.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: analytics-refresh-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Trigger /api/analytics/refresh
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          WORKER_SECRET: ${{ secrets.WORKER_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$WORKER_SECRET" ]; then
+            echo "::error::APP_URL ou WORKER_SECRET não configurados nas secrets do repositório"
+            exit 1
+          fi
+          response=$(curl -fsSL --max-time 180 \
+            -X POST \
+            -H "Authorization: Bearer $WORKER_SECRET" \
+            -H "Content-Type: application/json" \
+            -w "\n__HTTP_STATUS__:%{http_code}" \
+            "$APP_URL/api/analytics/refresh")
+          http_status=$(echo "$response" | grep '__HTTP_STATUS__' | cut -d':' -f2)
+          echo "Status: $http_status"
+          [ "$http_status" = "200" ] || { echo "::error::refresh falhou ($http_status)"; exit 1; }
