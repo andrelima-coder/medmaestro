@@ -1,9 +1,17 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/forgot-password', '/reset-password', '/api/auth/callback']
+const PUBLIC_ROUTES = [
+  '/login',
+  '/forgot-password',
+  '/reset-password',
+  '/api/auth/callback',
+  // Camada do aluno (feature 001/005): entradas públicas
+  '/aluno/login',
+  '/aluno/cadastro',
+]
 
-// Rotas com auth via WORKER_SECRET (Bearer) — não devem passar pelo proxy de sessão Supabase
+// Rotas com auth via WORKER_SECRET (Bearer) ou anônimas — não passam pelo proxy de sessão Supabase
 const WORKER_ROUTES = [
   '/api/extract',
   '/api/parse-gabarito',
@@ -12,15 +20,35 @@ const WORKER_ROUTES = [
   '/api/worker',
   '/api/health',
   '/api/admin',
+  // Feature aluno: endpoint público de captação (anônimo) + workers da camada do aluno
+  '/api/public',
+  '/api/analytics',
+  '/api/aluno',
 ]
 
 const ADMIN_ROUTES = ['/auditoria', '/configuracoes/usuarios']
 const SUPERADMIN_ROUTES = ['/configuracoes/hierarquia', '/configuracoes/tags']
 const PROFESSOR_ROUTES = ['/simulados']
 
+// Host do subdomínio do aluno (ex.: aluno.medmaestro.com.br). Quando definido, a
+// raiz desse host é reescrita para /aluno (URLs limpas) e o back-office vira 404.
+const ALUNO_HOST = process.env.NEXT_PUBLIC_ALUNO_HOST
+
 export async function proxy(request: NextRequest) {
-  // Worker routes têm auth Bearer próprio — não exigem cookie de sessão Supabase
-  if (WORKER_ROUTES.some((r) => request.nextUrl.pathname.startsWith(r))) {
+  const { pathname } = request.nextUrl
+
+  // 1) Roteamento por subdomínio do aluno.
+  if (ALUNO_HOST) {
+    const host = request.headers.get('host')?.split(':')[0]
+    if (host === ALUNO_HOST && !pathname.startsWith('/aluno') && !pathname.startsWith('/api')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/aluno' + (pathname === '/' ? '' : pathname)
+      return NextResponse.rewrite(url)
+    }
+  }
+
+  // 2) Worker / endpoints anônimos têm auth própria — sem sessão Supabase.
+  if (WORKER_ROUTES.some((r) => pathname.startsWith(r))) {
     return NextResponse.next({ request })
   }
 
@@ -35,9 +63,7 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -51,19 +77,26 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
   const isPublic = PUBLIC_ROUTES.some((r) => pathname.startsWith(r))
+  const isAlunoArea = pathname === '/aluno' || pathname.startsWith('/aluno/')
 
+  // Não autenticado: manda para o login correto (aluno x staff).
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(
+      new URL(isAlunoArea ? '/aluno/login' : '/login', request.url)
+    )
   }
 
+  // Autenticado em telas de entrada: manda para a área certa.
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
+  if (user && (pathname === '/aluno/login' || pathname === '/aluno/cadastro')) {
+    return NextResponse.redirect(new URL('/aluno', request.url))
+  }
 
-  // Cache de role com TTL 60s — D11
   if (user) {
+    // Cache de role com TTL 60s — D11
     const cachedRole = request.cookies.get('mm-role')?.value
     let role: string
 
@@ -85,23 +118,20 @@ export async function proxy(request: NextRequest) {
       })
     }
 
-    // Guards por role
-    if (SUPERADMIN_ROUTES.some((r) => pathname.startsWith(r)) && role !== 'superadmin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
-    if (
-      ADMIN_ROUTES.some((r) => pathname.startsWith(r)) &&
-      !['admin', 'superadmin'].includes(role)
-    ) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-
-    if (
-      PROFESSOR_ROUTES.some((r) => pathname.startsWith(r)) &&
-      !['professor', 'admin', 'superadmin'].includes(role)
-    ) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+    // Guards de papel só valem no back-office (não na área do aluno).
+    if (!isAlunoArea) {
+      if (SUPERADMIN_ROUTES.some((r) => pathname.startsWith(r)) && role !== 'superadmin') {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      if (ADMIN_ROUTES.some((r) => pathname.startsWith(r)) && !['admin', 'superadmin'].includes(role)) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+      if (
+        PROFESSOR_ROUTES.some((r) => pathname.startsWith(r)) &&
+        !['professor', 'admin', 'superadmin'].includes(role)
+      ) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
   }
 
