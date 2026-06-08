@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
+import { QuestoesList, type QuestaoItem } from './questoes-list'
 
 export const metadata = { title: 'Campanha — MedMaestro' }
 
 type QRow = {
   position: number
   questions: {
+    id: string
     question_number: number | null
     stem: string | null
     exams: { year: number | null; specialties: { name: string } | null } | null
@@ -68,11 +70,21 @@ export default async function CampanhaDetailPage({
 
   const { data: rows } = await service
     .from('simulado_questions')
-    .select('position, questions(question_number, stem, exams(year, specialties(name)))')
+    .select('position, questions(id, question_number, stem, exams(year, specialties(name)))')
     .eq('simulado_id', c.simulado_id)
     .order('position', { ascending: true })
 
   const questions = ((rows ?? []) as unknown as QRow[]).filter((r) => r.questions)
+  const questoesItems: QuestaoItem[] = questions.map((r) => {
+    const q = r.questions!
+    return {
+      id: q.id,
+      position: r.position,
+      number: q.question_number ?? null,
+      stem: (q.stem ?? '').slice(0, 120),
+      examLabel: `${q.exams?.specialties?.name ?? 'Prova'}${q.exams?.year ? ' ' + q.exams.year : ''}`,
+    }
+  })
 
   const releases = (c.releases ?? {}) as {
     nota_gabarito?: boolean
@@ -154,33 +166,12 @@ export default async function CampanhaDetailPage({
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground">
-          Questões do simulado ({questions.length})
+          Questões do simulado ({questoesItems.length})
         </h2>
-        {questions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma questão vinculada.</p>
-        ) : (
-          <ol className="space-y-1 rounded-lg border border-border p-2 text-sm">
-            {questions.map((r) => {
-              const q = r.questions!
-              const exam = q.exams
-              return (
-                <li key={r.position} className="flex gap-2 rounded-md p-2 hover:bg-card">
-                  <span className="shrink-0 text-muted-foreground">{r.position}.</span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-foreground">
-                      {q.question_number ? `Q${q.question_number} · ` : ''}
-                      {(q.stem ?? '').slice(0, 120) || '(sem enunciado)'}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {exam?.specialties?.name ?? 'Prova'}
-                      {exam?.year ? ` ${exam.year}` : ''}
-                    </span>
-                  </span>
-                </li>
-              )
-            })}
-          </ol>
-        )}
+        <p className="text-xs text-muted-foreground">
+          Clique em “Ver” para conferir enunciado, alternativas (com gabarito) e comentários.
+        </p>
+        <QuestoesList questoes={questoesItems} />
       </section>
     </div>
   )
