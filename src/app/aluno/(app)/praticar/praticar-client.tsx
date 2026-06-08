@@ -1,0 +1,176 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { getBatchAction, recordPracticeAction, type PracticeResult } from './actions'
+import type { PracticeQuestion } from '@/lib/aluno/estudo'
+
+const ALTS = ['A', 'B', 'C', 'D', 'E'] as const
+
+export function PraticarClient({ modules }: { modules: { id: string; label: string }[] }) {
+  const [moduleId, setModuleId] = useState<string>('')
+  const [batch, setBatch] = useState<PracticeQuestion[] | null>(null)
+  const [idx, setIdx] = useState(0)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [result, setResult] = useState<PracticeResult | null>(null)
+  const [acertos, setAcertos] = useState(0)
+  const [isPending, startTransition] = useTransition()
+
+  function iniciar() {
+    startTransition(async () => {
+      const b = await getBatchAction(moduleId || null)
+      setBatch(b)
+      setIdx(0)
+      setSelected(null)
+      setResult(null)
+      setAcertos(0)
+    })
+  }
+
+  function responder() {
+    if (!batch || !selected) return
+    const q = batch[idx]
+    startTransition(async () => {
+      const r = await recordPracticeAction(q.id, selected)
+      setResult(r)
+      if (r.isCorrect) setAcertos((a) => a + 1)
+    })
+  }
+
+  function proxima() {
+    setResult(null)
+    setSelected(null)
+    setIdx((i) => i + 1)
+  }
+
+  // Tela inicial: escolher filtro.
+  if (!batch) {
+    return (
+      <div className="mx-auto mt-10 max-w-md rounded-2xl border border-border bg-card p-8">
+        <h1 className="text-xl font-bold text-foreground">Praticar</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Responda questões avulsas com correção na hora.
+        </p>
+        <label className="mt-5 block">
+          <span className="mb-1 block text-sm font-medium text-foreground">Módulo (opcional)</span>
+          <select
+            value={moduleId}
+            onChange={(e) => setModuleId(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          >
+            <option value="">Todos os módulos</option>
+            {modules.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          onClick={iniciar}
+          disabled={isPending}
+          className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {isPending ? 'Carregando…' : 'Começar'}
+        </button>
+      </div>
+    )
+  }
+
+  // Fim do lote.
+  if (idx >= batch.length) {
+    return (
+      <div className="mx-auto mt-10 max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+        <h1 className="text-xl font-bold text-foreground">Sessão concluída 🎉</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Você acertou {acertos} de {batch.length}.
+        </p>
+        <button
+          onClick={() => setBatch(null)}
+          className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+        >
+          Praticar mais
+        </button>
+      </div>
+    )
+  }
+
+  const q = batch[idx]
+
+  return (
+    <div className="mx-auto mt-6 max-w-3xl">
+      <div className="mb-2 text-xs text-muted-foreground">
+        Questão {idx + 1} de {batch.length} · acertos: {acertos}
+      </div>
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <p className="whitespace-pre-line text-foreground">{q.stem}</p>
+        <div className="mt-5 space-y-2">
+          {ALTS.map((alt) => {
+            const text = q.alternatives[alt]
+            if (!text) return null
+            const isSel = selected === alt
+            const isCorrect = result?.correctAnswer === alt
+            const isWrongPick = result && isSel && !result.isCorrect
+            return (
+              <label
+                key={alt}
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
+                  result
+                    ? isCorrect
+                      ? 'border-emerald-500 bg-emerald-500/10'
+                      : isWrongPick
+                        ? 'border-red-400 bg-red-400/10'
+                        : 'border-border'
+                    : isSel
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="alt"
+                  className="mt-1"
+                  checked={isSel}
+                  disabled={!!result || isPending}
+                  onChange={() => setSelected(alt)}
+                />
+                <span className="text-foreground">
+                  <strong>{alt})</strong> {text}
+                </span>
+              </label>
+            )
+          })}
+        </div>
+
+        {result && (
+          <div className="mt-4 rounded-lg bg-muted/50 p-3 text-sm">
+            <p className={result.isCorrect ? 'text-emerald-600' : 'text-red-500'}>
+              {result.isCorrect ? 'Você acertou!' : `Resposta correta: ${result.correctAnswer}`}
+            </p>
+            {result.comment && (
+              <p className="mt-2 whitespace-pre-line text-foreground">{result.comment}</p>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          {!result ? (
+            <button
+              onClick={responder}
+              disabled={!selected || isPending}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              Responder
+            </button>
+          ) : (
+            <button
+              onClick={proxima}
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
+            >
+              {idx + 1 >= batch.length ? 'Finalizar' : 'Próxima'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
