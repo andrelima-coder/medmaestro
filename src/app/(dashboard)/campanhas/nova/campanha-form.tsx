@@ -5,8 +5,9 @@ import { createCampaignAction, type CampaignState } from '../actions'
 
 type SimuladoOption = { id: string; title: string }
 
-function buildEmbedSnippet(embedId: string, appUrl: string): string {
-  const endpoint = `${appUrl || ''}/api/public/leads`
+function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
+  const endpoint = `${endpointBase || ''}/api/public/leads`
+  const destino = `${alunoBase || endpointBase || ''}/login`
   return `<form id="mm-lead-form">
   <input name="name" placeholder="Nome" required />
   <input name="email" type="email" placeholder="E-mail" required />
@@ -28,7 +29,7 @@ function buildEmbedSnippet(embedId: string, appUrl: string): string {
         consent:d.get('consent')==='on', consent_version:'v1', hp:d.get('hp')
       })
     }).then(function(r){return r.json()}).then(function(j){
-      if(j.lead_id){ window.location.href='${appUrl || ''}/aluno/login'; }
+      if(j.lead_id){ window.location.href='${destino}'; }
       else { alert('Não foi possível enviar. Verifique os campos.'); }
     });
   });
@@ -39,9 +40,11 @@ function buildEmbedSnippet(embedId: string, appUrl: string): string {
 export function CampanhaForm({
   simulados,
   appUrl,
+  alunoUrl = '',
 }: {
   simulados: SimuladoOption[]
   appUrl: string
+  alunoUrl?: string
 }) {
   const [state, formAction, isPending] = useActionState<CampaignState, FormData>(
     createCampaignAction,
@@ -57,7 +60,7 @@ export function CampanhaForm({
           Cole este código na landing page externa para captar leads desta campanha.
         </p>
         <pre className="mt-4 max-h-80 overflow-auto rounded-lg bg-background p-4 text-xs text-foreground">
-          {buildEmbedSnippet(state.embedId, appUrl)}
+          {buildEmbedSnippet(state.embedId, appUrl, alunoUrl)}
         </pre>
         <p className="mt-2 text-xs text-muted-foreground">
           embed_id: <code>{state.embedId}</code>
