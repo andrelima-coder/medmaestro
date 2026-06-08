@@ -60,6 +60,7 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
         { label: 'Campanhas', href: '/campanhas', iconKey: 'FileText' },
         { label: 'Leads', href: '/leads', iconKey: 'Users' },
         { label: 'Calibração', href: '/calibracao', iconKey: 'BarChart2' },
+        { label: 'Analytics', href: '/analise/campanhas', iconKey: 'BarChart2' },
       ]
     : []
 
