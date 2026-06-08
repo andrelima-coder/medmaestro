@@ -1,7 +1,15 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
+import { getCampaignDashboard } from '../actions'
 import { QuestoesList, type QuestaoItem } from './questoes-list'
+
+function fmtDur(sec: number | null): string {
+  if (sec == null) return '—'
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}m ${String(s).padStart(2, '0')}s`
+}
 
 export const metadata = { title: 'Campanha — MedMaestro' }
 
@@ -96,6 +104,8 @@ export default async function CampanhaDetailPage({
   const form = (c.campaign_form as unknown as { embed_id: string; allowed_domains: string[] }[] | null)?.[0]
   const embedId = form?.embed_id ?? null
 
+  const dash = await getCampaignDashboard(c.id)
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
   const alunoUrl = process.env.NEXT_PUBLIC_ALUNO_URL ?? ''
   const studentLink = `${alunoUrl || appUrl}/simulado/${c.id}`
@@ -119,6 +129,75 @@ export default async function CampanhaDetailPage({
           </span>
         </div>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Acompanhamento</h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <Metric label="Cadastros" value={String(dash.cadastros)} />
+          <Metric label="Iniciaram" value={String(dash.iniciaram)} hint={`${dash.conversaoPct}% dos cadastros`} />
+          <Metric label="Finalizaram" value={String(dash.finalizaram)} />
+          <Metric label="Em andamento" value={String(dash.emAndamento)} />
+          <Metric
+            label="Taxa de abandono"
+            value={`${dash.abandonoPct}%`}
+            hint="iniciaram e não terminaram"
+            danger={dash.abandonoPct >= 50}
+          />
+          <Metric
+            label="Média dos alunos"
+            value={dash.mediaPct == null ? '—' : `${dash.mediaPct}%`}
+          />
+          <Metric label="Tempo médio" value={fmtDur(dash.tempoMedioSeg)} />
+        </div>
+
+        {dash.finalizaram > 0 && (
+          <div className="rounded-xl border border-border p-4">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">
+              Distribuição das notas ({dash.finalizaram} finalizada{dash.finalizaram > 1 ? 's' : ''})
+            </p>
+            <div className="space-y-1">
+              {dash.distribuicao.map((d) => {
+                const pct =
+                  dash.finalizaram > 0 ? Math.round((d.n / dash.finalizaram) * 100) : 0
+                return (
+                  <div key={d.faixa} className="flex items-center gap-2 text-xs">
+                    <span className="w-14 shrink-0 text-muted-foreground">{d.faixa}</span>
+                    <span className="h-3 flex-1 overflow-hidden rounded bg-background">
+                      <span
+                        className="block h-full bg-primary"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </span>
+                    <span className="w-8 shrink-0 text-right text-foreground">{d.n}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {dash.finalizacoes.length > 0 && (
+          <div className="overflow-hidden rounded-xl border border-border">
+            <div className="grid grid-cols-[2fr_1fr_1fr_1.5fr] gap-2 border-b border-border bg-card px-4 py-2 text-xs font-medium text-muted-foreground">
+              <span>Aluno</span>
+              <span>Nota</span>
+              <span>Tempo</span>
+              <span>Finalizou em</span>
+            </div>
+            {dash.finalizacoes.map((f, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[2fr_1fr_1fr_1.5fr] gap-2 border-b border-border/50 px-4 py-2 text-sm last:border-0"
+              >
+                <span className="truncate text-foreground">{f.nome}</span>
+                <span className="text-foreground">{f.scorePct}%</span>
+                <span className="text-muted-foreground">{fmtDur(f.tempoSeg)}</span>
+                <span className="text-muted-foreground">{fmt(f.finishedAt)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="grid grid-cols-2 gap-3 rounded-xl border border-border p-4 text-sm md:grid-cols-3">
         <Info label="Acesso" value={c.access_mode} />
@@ -182,6 +261,28 @@ function Info({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-medium text-foreground">{value}</div>
+    </div>
+  )
+}
+
+function Metric({
+  label,
+  value,
+  hint,
+  danger,
+}: {
+  label: string
+  value: string
+  hint?: string
+  danger?: boolean
+}) {
+  return (
+    <div className="rounded-xl border border-border p-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`text-xl font-bold ${danger ? 'text-red-500' : 'text-foreground'}`}>
+        {value}
+      </div>
+      {hint && <div className="mt-0.5 text-[10px] text-muted-foreground">{hint}</div>}
     </div>
   )
 }

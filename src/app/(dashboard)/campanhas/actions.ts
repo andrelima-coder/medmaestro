@@ -352,3 +352,166 @@ export async function searchQuestionsAction(filter: QSearchFilter): Promise<QSea
   }
   return out
 }
+
+// ── Dashboard de acompanhamento da campanha ─────────────────────────────────
+
+export type CampaignDashboard = {
+  cadastros: number
+  iniciaram: number
+  finalizaram: number
+  emAndamento: number
+  abandonoPct: number
+  conversaoPct: number // cadastros -> iniciaram
+  mediaPct: number | null
+  tempoMedioSeg: number | null
+  totalQuestoes: number
+  distribuicao: { faixa: string; n: number }[]
+  finalizacoes: { nome: string; scorePct: number; tempoSeg: number | null; finishedAt: string | null }[]
+}
+
+export async function getCampaignDashboard(campaignId: string): Promise<CampaignDashboard> {
+  const service = createServiceClient()
+
+  const { data: camp } = await service
+    .from('campaigns')
+    .select('simulado_id, duration_minutes')
+    .eq('id', campaignId)
+    .single()
+  const simuladoId = camp?.simulado_id
+  const durationSec = (camp?.duration_minutes ?? 0) * 60
+
+  // Gabarito do molde.
+  const { data: sq } = await service
+    .from('simulado_questions')
+    .select('question_id, questions(correct_answer)')
+    .eq('simulado_id', simuladoId)
+  const correctMap: Record<string, string | null> = {}
+  for (const r of (sq ?? []) as unknown as {
+    question_id: string
+    questions: { correct_answer: string | null } | null
+  }[]) {
+    correctMap[r.question_id] = r.questions?.correct_answer ?? null
+  }
+  const totalQuestoes = (sq ?? []).length
+
+  // Cadastros + tentativas.
+  const [{ count: cadastros }, { data: attemptsData }] = await Promise.all([
+    service.from('leads').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId),
+    service
+      .from('simulado_attempts')
+      .select('id, user_id, status, time_remaining')
+      .eq('campaign_id', campaignId),
+  ])
+  const att = (attemptsData ?? []) as {
+    id: string
+    user_id: string
+    status: string
+    time_remaining: number | null
+  }[]
+  const iniciaram = att.length
+  const finishedAtt = att.filter((a) => a.status === 'entregue')
+  const finalizaram = finishedAtt.length
+  const emAndamento = iniciaram - finalizaram
+  const abandonoPct = iniciaram > 0 ? Math.round((emAndamento / iniciaram) * 100) : 0
+  const conversaoPct =
+    (cadastros ?? 0) > 0 ? Math.round((iniciaram / (cadastros ?? 1)) * 100) : 0
+
+  // Notas reais (independem do gating do aluno).
+  const finishedIds = finishedAtt.map((a) => a.id)
+  const scoreByAttempt: Record<string, number> = {}
+  if (finishedIds.length > 0 && totalQuestoes > 0) {
+    const { data: qa } = await service
+      .from('question_attempts')
+      .select('attempt_id, question_id, selected_alt')
+      .in('attempt_id', finishedIds)
+    const correctCount: Record<string, number> = {}
+    for (const r of (qa ?? []) as {
+      attempt_id: string
+      question_id: string
+      selected_alt: string | null
+    }[]) {
+      const corr = correctMap[r.question_id]
+      if (corr && r.selected_alt === corr) {
+        correctCount[r.attempt_id] = (correctCount[r.attempt_id] ?? 0) + 1
+      }
+    }
+    for (const id of finishedIds) {
+      scoreByAttempt[id] = Math.round(((correctCount[id] ?? 0) / totalQuestoes) * 100)
+    }
+  }
+  const scores = finishedIds.map((id) => scoreByAttempt[id] ?? 0)
+  const mediaPct =
+    scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null
+
+  // Tempo gasto = duração − tempo restante (em segundos), só p/ finalizadas.
+  const tempoByAttempt: Record<string, number | null> = {}
+  for (const a of finishedAtt) {
+    const rem = a.time_remaining ?? null
+    tempoByAttempt[a.id] = durationSec > 0 && rem != null ? Math.max(0, durationSec - rem) : null
+  }
+  const tempos = finishedAtt
+    .map((a) => tempoByAttempt[a.id])
+    .filter((t): t is number => t != null)
+  const tempoMedioSeg =
+    tempos.length > 0 ? Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length) : null
+
+  // Distribuição de notas.
+  const faixas: [string, number, number][] = [
+    ['0–20', 0, 20],
+    ['21–40', 21, 40],
+    ['41–60', 41, 60],
+    ['61–80', 61, 80],
+    ['81–100', 81, 100],
+  ]
+  const distribuicao = faixas.map(([faixa, lo, hi]) => ({
+    faixa,
+    n: scores.filter((s) => s >= lo && s <= hi).length,
+  }))
+
+  // Finalizações (com nome e horário) — ordem decrescente de término.
+  const { data: res } =
+    finishedIds.length > 0
+      ? await service
+          .from('attempt_results')
+          .select('attempt_id, finished_at')
+          .in('attempt_id', finishedIds)
+      : { data: [] as { attempt_id: string; finished_at: string | null }[] }
+  const finAtMap: Record<string, string | null> = {}
+  for (const r of (res ?? []) as { attempt_id: string; finished_at: string | null }[]) {
+    finAtMap[r.attempt_id] = r.finished_at
+  }
+
+  const userIds = [...new Set(finishedAtt.map((a) => a.user_id))]
+  const { data: profs } =
+    userIds.length > 0
+      ? await service.from('profiles').select('id, full_name').in('id', userIds)
+      : { data: [] as { id: string; full_name: string | null }[] }
+  const nameMap: Record<string, string> = {}
+  for (const p of (profs ?? []) as { id: string; full_name: string | null }[]) {
+    nameMap[p.id] = p.full_name ?? '—'
+  }
+
+  const finalizacoes = finishedAtt
+    .map((a) => ({
+      nome: nameMap[a.user_id] ?? 'Aluno',
+      scorePct: scoreByAttempt[a.id] ?? 0,
+      tempoSeg: tempoByAttempt[a.id] ?? null,
+      finishedAt: finAtMap[a.id] ?? null,
+    }))
+    .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))
+    .slice(0, 50)
+
+  return {
+    cadastros: cadastros ?? 0,
+    iniciaram,
+    finalizaram,
+    emAndamento,
+    abandonoPct,
+    conversaoPct,
+    mediaPct,
+    tempoMedioSeg,
+    totalQuestoes,
+    distribuicao,
+    finalizacoes,
+  }
+}
