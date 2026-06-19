@@ -5,9 +5,10 @@ name: Analytics refresh tick
 #
 # Secrets necessárias: APP_URL, WORKER_SECRET.
 
+# ⚠️ O cron MIGROU para Coolify Scheduled Task (uuid dbo3hjtq7b82l65tpm29f6zt,
+# */30) em 2026-06-19. Runners do GitHub não alcançam o servidor BR de forma
+# confiável. Aqui fica só o trigger manual de emergência.
 on:
-  schedule:
-    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 concurrency:

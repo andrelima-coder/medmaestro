@@ -10,9 +10,10 @@ name: Aluno lembretes tick
 #
 # Para pausar: comente o bloco `schedule` ou desative em Settings → Actions.
 
+# ⚠️ O cron MIGROU para Coolify Scheduled Task (uuid hsepeylghnp68ic4sktjtexd,
+# */15) em 2026-06-19. Runners do GitHub não alcançam o servidor BR de forma
+# confiável. Aqui fica só o trigger manual de emergência.
 on:
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 concurrency:

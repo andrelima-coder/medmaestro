@@ -11,11 +11,11 @@ name: Worker tick
 # Para pausar o cron sem deletar o workflow: comente a sessão `schedule` abaixo
 # ou desative em Settings → Actions → Workflows.
 
+# ⚠️ O cron MIGROU para Coolify Scheduled Task (uuid gnfs174jt28z6nyrf4pek8e7,
+# */5) em 2026-06-11. Os runners do GitHub não alcançam o servidor BR de forma
+# confiável (curl 28: couldn't connect), gerando falhas intermitentes. O Coolify
+# roda no mesmo datacenter do app. Aqui fica só o trigger manual de emergência.
 on:
-  schedule:
-    # GitHub Actions cron tem granularidade mínima de 5 min.
-    # Off-minute (3) reduz colisão com :00 / :30 do fleet global.
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 concurrency:
