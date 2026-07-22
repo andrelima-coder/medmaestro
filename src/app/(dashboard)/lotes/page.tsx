@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { RetriggerButton } from '@/components/lotes/retrigger-button'
+import { DeleteLoteButton } from '@/components/lotes/delete-lote-button'
 import { MiniProgressBar } from '@/components/lotes/mini-progress-bar'
 
 export const metadata = { title: 'Lotes — MedMaestro' }
@@ -313,6 +314,20 @@ export default async function LotesPage() {
                         )}
                         {(statusKey === 'error' || statusKey === 'pending') && (
                           <RetriggerButton examId={eid} />
+                        )}
+                        {/* Excluir: para lotes com erro, abandonados ou travados
+                            em extração. Lotes concluídos não mostram o botão
+                            (proteção contra exclusão acidental de banco pronto). */}
+                        {(statusKey === 'error' ||
+                          statusKey === 'pending' ||
+                          statusKey === 'extracting') && (
+                          <DeleteLoteButton
+                            examId={eid}
+                            label={`${specialty?.name ?? 'Lote'} ${exam.year as number}${
+                              exam.booklet_color ? ` · ${exam.booklet_color as string}` : ''
+                            }`}
+                            questionCount={qCount}
+                          />
                         )}
                       </div>
                     </td>

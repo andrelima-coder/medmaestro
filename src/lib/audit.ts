@@ -4,6 +4,7 @@ export type AuditAction =
   // Exames
   | 'exam_uploaded'
   | 'exam_status_changed'
+  | 'exam_deleted'
   // Questões
   | 'question_tags_updated'
   | 'question_status_changed'
