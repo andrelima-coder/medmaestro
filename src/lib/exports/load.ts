@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
+import { examLabel as buildExamLabel } from '@/lib/exams/label'
 import {
   buildDocxBuffer,
   buildPdfBuffer,
@@ -57,6 +58,17 @@ export function safeFilename(title: string, fallback = 'export'): string {
 
 /** Tipos de comentário tratados como "dica para o professor". */
 export const TEACHER_TIP_TYPE = 'dica_professor'
+
+/** Detecta image/png ou image/jpeg pelos magic bytes; null se desconhecido. */
+function sniffImageMime(buf: Uint8Array): string | null {
+  if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return 'image/png'
+  }
+  if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xd8) {
+    return 'image/jpeg'
+  }
+  return null
+}
 
 type QuestionRow = {
   id: string
@@ -136,12 +148,37 @@ export async function loadQuestionsForExport(
       })
       imagesByQuestion.set(img.question_id as string, list)
     }
-    for (const list of imagesByQuestion.values()) {
+    const SCOPE_ORDER = [
+      'statement',
+      'alternative_a',
+      'alternative_b',
+      'alternative_c',
+      'alternative_d',
+      'alternative_e',
+    ]
+    for (const [qid, list] of imagesByQuestion.entries()) {
+      // Ordem estável: scope (enunciado antes das alternativas) e depois
+      // figure_number. Antes misturava figure_number com page_number (escalas
+      // diferentes) e a ordem das figuras podia variar entre exports.
       list.sort((a, b) => {
-        const ap = a.figureNumber ?? a.pageNumber ?? 0
-        const bp = b.figureNumber ?? b.pageNumber ?? 0
-        return ap - bp
+        const as = SCOPE_ORDER.indexOf(a.scope)
+        const bs = SCOPE_ORDER.indexOf(b.scope)
+        if (as !== bs) return as - bs
+        return (a.figureNumber ?? 999) - (b.figureNumber ?? 999)
       })
+      // Deduplica figuras que resolvem para o MESMO arquivo (ex.: duas linhas
+      // sem crop apontando para a mesma página inteira) — evitava a mesma
+      // página aparecer 2x no DOCX/PDF.
+      const seen = new Set<string>()
+      imagesByQuestion.set(
+        qid,
+        list.filter((img) => {
+          const p = img.useCropped && img.cropped ? img.cropped : img.path
+          if (seen.has(p)) return false
+          seen.add(p)
+          return true
+        })
+      )
     }
   }
 
@@ -201,8 +238,12 @@ export async function loadQuestionsForExport(
             const r = await fetch(s.signedUrl)
             if (!r.ok) return
             const ab = await r.arrayBuffer()
-            const ct = r.headers.get('content-type') ?? 'image/jpeg'
-            imageBytes.set(s.path, { data: new Uint8Array(ab), contentType: ct })
+            const bytes = new Uint8Array(ab)
+            // Tipo detectado pelos magic bytes do arquivo, não pelo header HTTP.
+            // Um PNG servido como octet-stream fazia o embedJpg do PDF falhar e
+            // a figura sumia do export sem aviso.
+            const ct = sniffImageMime(bytes) ?? r.headers.get('content-type') ?? 'image/jpeg'
+            imageBytes.set(s.path, { data: bytes, contentType: ct })
           } catch {
             // ignore
           }
@@ -220,9 +261,13 @@ export async function loadQuestionsForExport(
     position += 1
 
     const exam = q.exams
-    const examLabel = [exam?.exam_boards?.short_name ?? null, exam?.year ?? null]
-      .filter(Boolean)
-      .join(' ')
+    const examLabel = exam
+      ? buildExamLabel({
+          name: exam.exam_boards?.short_name,
+          year: exam.year,
+          bookletColor: exam.booklet_color,
+        })
+      : ''
 
     const imgs = imagesByQuestion.get(qid) ?? []
     const figures = imgs

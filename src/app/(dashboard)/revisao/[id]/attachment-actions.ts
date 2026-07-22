@@ -132,7 +132,11 @@ export async function uploadQuestionAttachment(
     )
     .single()
 
-  if (error || !inserted) return { ok: false, error: error?.message ?? 'Falha ao salvar registro' }
+  if (error || !inserted) {
+    // Evita arquivo órfão no bucket quando o INSERT falha (ex.: CHECK de MIME).
+    await service.storage.from('question-attachments').remove([path]).catch(() => {})
+    return { ok: false, error: error?.message ?? 'Falha ao salvar registro' }
+  }
 
   let signed = ''
   try {

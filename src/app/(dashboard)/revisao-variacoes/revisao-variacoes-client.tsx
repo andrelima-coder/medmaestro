@@ -59,6 +59,9 @@ export function RevisaoVariacoesClient({
 
   function reject() {
     if (!v || pending) return
+    // Descartar é DELETE definitivo — confirmação evita perda por toque
+    // acidental na tecla D.
+    if (!window.confirm('Descartar esta variação definitivamente?')) return
     startTransition(async () => {
       await rejectVariationAction(v.id)
       next()

@@ -19,8 +19,43 @@ import { extractTextFirst } from './text-first'
 import { detectarBanca, getBancaPorId } from '../bancas/registry'
 import { validateAnswerKeys } from '../gabarito/run'
 import type { BancaParser } from './types'
+import type { ClaudeModel } from '@/lib/ai/claude'
 
 const TEXT_FIRST_MIN_CONFIDENCE = 0.7
+
+// AUDITORIA 2026-07: o enum question_status em PRODUÇÃO não possui 'extracted'
+// (valores reais: pending_extraction, pending_review, in_review, pending_approval,
+// approved, published, rejected, needs_attention, draft, flagged). Gravar
+// 'extracted' fazia TODO upsert de questão falhar ("invalid input value for
+// enum") — causa raiz das extrações com 0 questões (TEMI 2026 rosa).
+const STATUS_FRESH_EXTRACTION = 'pending_review'
+// Questões nesses status podem ser sobrescritas por re-execução do pipeline.
+// Qualquer outro status indica trabalho humano (revisão/aprovação) e é protegido.
+const OVERWRITABLE_STATUSES = new Set(['pending_extraction', 'pending_review'])
+
+/**
+ * Números de questão já existentes no exame: todos (para pular re-extração
+ * Vision já paga) e os protegidos (status indica revisão humana — nunca
+ * sobrescrever).
+ */
+async function loadExistingQuestionNumbers(
+  exam_id: string
+): Promise<{ all: Set<number>; protected: Set<number> }> {
+  const supabase = createServiceClient()
+  const { data } = await supabase
+    .from('questions')
+    .select('question_number, status')
+    .eq('exam_id', exam_id)
+  const all = new Set<number>()
+  const protectedNumbers = new Set<number>()
+  for (const q of data ?? []) {
+    all.add(q.question_number as number)
+    if (!OVERWRITABLE_STATUSES.has((q.status as string) ?? '')) {
+      protectedNumbers.add(q.question_number as number)
+    }
+  }
+  return { all, protected: protectedNumbers }
+}
 
 type ExtractedImage = {
   scope: string
@@ -187,8 +222,30 @@ Recursos visuais: ${imageContext}`
   }
 }
 
-export async function generateComment(questionId: string): Promise<void> {
+// Modelo do comentário didático: Sonnet por padrão (decisão de custo 2026-07 —
+// os comentários eram 96% do gasto de IA com Opus). Defina MM_COMMENTS_MODEL=opus
+// no .env para voltar ao Opus em lotes específicos, se desejar qualidade máxima.
+function commentsModel(): ClaudeModel {
+  return process.env.MM_COMMENTS_MODEL === 'opus' ? MODELS.opus : MODELS.sonnet
+}
+
+export async function generateComment(
+  questionId: string,
+  opts: { force?: boolean } = {}
+): Promise<void> {
   const supabase = createServiceClient()
+
+  // Idempotência: re-executar o pipeline NÃO deve pagar Opus de novo nem
+  // duplicar comentários (já havia questões com 2 'explicacao' no banco).
+  if (!opts.force) {
+    const { data: existing } = await supabase
+      .from('question_comments')
+      .select('id')
+      .eq('question_id', questionId)
+      .eq('comment_type', 'explicacao')
+      .limit(1)
+    if (existing && existing.length > 0) return
+  }
 
   const { data: question, error: qErr } = await supabase
     .from('questions')
@@ -249,9 +306,10 @@ Regras de estilo:
 Retorne APENAS o texto do comentário seguindo a estrutura acima.`
 
   let commentText: string
+  const model = commentsModel()
   try {
     const raw = await complete({
-      model: MODELS.opus,
+      model,
       messages: [{ role: 'user', content: prompt }],
       maxTokens: 4096,
     })
@@ -269,7 +327,7 @@ Retorne APENAS o texto do comentário seguindo a estrutura acima.`
     question_id: questionId,
     comment_type: 'explicacao',
     content: commentText.trim(),
-    ai_model: MODELS.opus,
+    ai_model: model,
     created_by_ai: true,
   })
 
@@ -373,9 +431,10 @@ Regras de estilo:
 Retorne APENAS o texto da dica, seguindo a estrutura acima.`
 
   let tipText: string
+  const tipModel = commentsModel()
   try {
     const raw = await complete({
-      model: MODELS.opus,
+      model: tipModel,
       messages: [{ role: 'user', content: prompt }],
       maxTokens: 2048,
     })
@@ -393,7 +452,7 @@ Retorne APENAS o texto da dica, seguindo a estrutura acima.`
     question_id: questionId,
     comment_type: 'dica_professor',
     content: tipText,
-    ai_model: MODELS.opus,
+    ai_model: tipModel,
     created_by_ai: true,
   })
 
@@ -500,8 +559,15 @@ async function persistQuestionImages(
       continue
     }
 
-    const page = batch[item.page_index ?? 0] ?? batch[0]
+    // page_index fora do lote enviado = associação de página inválida.
+    // Antes caía silenciosamente em batch[0], ancorando a figura na página
+    // errada (causa de "figura da questão errada"). Agora pula com log.
+    const pageIdx = item.page_index ?? 0
+    const page = batch[pageIdx]
     if (!page) {
+      console.warn(
+        `[extract ${exam_id}] Q${questionNumber} ${scope}: page_index ${pageIdx} fora do lote (${batch.length} páginas) — figura ignorada`
+      )
       hadError = true
       continue
     }
@@ -509,6 +575,19 @@ async function persistQuestionImages(
     const imageType = banca.vocabImagens.includes(item.type ?? '')
       ? (item.type as string)
       : 'outro'
+
+    // figure_number calculado ANTES dos uploads para compor o nome do arquivo.
+    // Antes, duas figuras do mesmo scope+página gravavam no MESMO path e o
+    // segundo upload sobrescrevia o primeiro (figura trocada silenciosamente).
+    const { data: lastFig } = await supabase
+      .from('question_images')
+      .select('figure_number')
+      .eq('question_id', questionId)
+      .eq('image_scope', scope)
+      .order('figure_number', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const nextFigureNumber = ((lastFig?.figure_number as number | null) ?? 0) + 1
 
     const fullPath = `${baseDir}/page_${page.pageNumber}.jpg`
     try {
@@ -547,7 +626,7 @@ async function persistQuestionImages(
       if (matchIdx >= 0) {
         const emb = embCandidates[matchIdx]
         const ext = emb.mime === 'image/png' ? 'png' : 'jpg'
-        const embPath = `${baseDir}/${scope}_p${page.pageNumber}_emb.${ext}`
+        const embPath = `${baseDir}/${scope}_f${nextFigureNumber}_p${page.pageNumber}_emb.${ext}`
         try {
           await uploadFile('question-images', embPath, emb.buffer, emb.mime)
           used.add(matchIdx)
@@ -578,7 +657,7 @@ async function persistQuestionImages(
     if (!croppedPath && hasBbox) {
       try {
         const crop = await cropPageByBbox(page.jpegBuffer, item.bbox_pct)
-        croppedPath = `${baseDir}/${scope}_p${page.pageNumber}.jpg`
+        croppedPath = `${baseDir}/${scope}_f${nextFigureNumber}_p${page.pageNumber}.jpg`
         await uploadFile('question-images', croppedPath, crop.buffer, 'image/jpeg')
         bboxPxJson = { ...crop.bbox_px, source: 'raster_crop' }
       } catch (err) {
@@ -591,17 +670,6 @@ async function persistQuestionImages(
         bboxPxJson = null
       }
     }
-
-    const { data: lastFig } = await supabase
-      .from('question_images')
-      .select('figure_number')
-      .eq('question_id', questionId)
-      .eq('image_scope', scope)
-      .order('figure_number', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    const nextFigureNumber = ((lastFig?.figure_number as number | null) ?? 0) + 1
 
     const { error: imgInsertError } = await supabase.from('question_images').insert({
       question_id: questionId,
@@ -728,7 +796,7 @@ Retorne APENAS array JSON. Se não achar uma das questões, omita.`
             alternatives: q.alternatives,
             has_images: q.has_images,
             extraction_confidence: conf,
-            status: 'extracted',
+            status: STATUS_FRESH_EXTRACTION,
             extraction_method: 'recovery',
           },
           { onConflict: 'exam_id,question_number' }
@@ -765,7 +833,7 @@ async function runClassification(exam_id: string): Promise<void> {
     .from('questions')
     .select('id')
     .eq('exam_id', exam_id)
-    .in('status', ['extracted'])
+    .in('status', [STATUS_FRESH_EXTRACTION])
 
   if (!questions || questions.length === 0) {
     await setProgress(exam_id, 'classifying', 0, 0, 'Nenhuma questão para classificar')
@@ -988,6 +1056,10 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     )
   }
 
+  // Questões com trabalho humano (status além de pending_*) não são sobrescritas.
+  const existing = await loadExistingQuestionNumbers(exam_id)
+  const protectedNumbers = existing.protected
+
   // ── Fase text-first ──────────────────────────────────────────────────────
   await setProgress(
     exam_id,
@@ -1025,6 +1097,11 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
     for (const q of textResult.questions) {
       if (!isAcceptedByTextFirst(q)) continue
       if (q.page_hint && pagesWithRejectedQuestion.has(q.page_hint)) continue
+      // Não sobrescreve questão já revisada/aprovada por humano.
+      if (protectedNumbers.has(q.question_number)) {
+        if (q.page_hint) pagesNeedingVision.delete(q.page_hint)
+        continue
+      }
 
       const conf5 = Math.max(1, Math.min(5, Math.round(q.confidence * 5)))
       const { error } = await supabase
@@ -1037,7 +1114,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
             alternatives: q.alternatives,
             has_images: false,
             extraction_confidence: conf5,
-            status: 'extracted',
+            status: STATUS_FRESH_EXTRACTION,
             extraction_method: 'text',
           },
           { onConflict: 'exam_id,question_number' }
@@ -1046,6 +1123,29 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
         savedFromText++
         if (q.page_hint) pagesNeedingVision.delete(q.page_hint)
       }
+    }
+    // Re-execução: não re-paga Vision de páginas cujas questões (detectadas na
+    // camada de texto) JÁ existem no banco de runs anteriores. As faltantes
+    // ainda são cobertas pelo recovery.
+    const numbersByPage = new Map<number, number[]>()
+    for (const q of textResult.questions) {
+      if (!q.page_hint) continue
+      const list = numbersByPage.get(q.page_hint) ?? []
+      list.push(q.question_number)
+      numbersByPage.set(q.page_hint, list)
+    }
+    let skippedExistingPages = 0
+    for (const [pageNum, nums] of numbersByPage.entries()) {
+      if (!pagesNeedingVision.has(pageNum)) continue
+      if (nums.length > 0 && nums.every((n) => existing.all.has(n))) {
+        pagesNeedingVision.delete(pageNum)
+        skippedExistingPages++
+      }
+    }
+    if (skippedExistingPages > 0) {
+      console.log(
+        `[extract ${exam_id}] Re-run: ${skippedExistingPages} páginas puladas (questões já no banco)`
+      )
     }
     console.log(
       `[extract ${exam_id}] Text-first: ${textResult.questions.length} detectadas, ${savedFromText} salvas direto (sem IA)`
@@ -1123,6 +1223,8 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
 
     for (const q of extracted) {
       if (!q.is_complete) continue
+      // Não sobrescreve questão já revisada/aprovada por humano.
+      if (protectedNumbers.has(q.question_number)) continue
 
       const extractionConfidence = Math.max(1, Math.min(5, Math.round(q.confidence)))
 
@@ -1136,7 +1238,7 @@ export async function runExtractionPipeline(exam_id: string): Promise<void> {
             alternatives: q.alternatives,
             has_images: q.has_images,
             extraction_confidence: extractionConfidence,
-            status: 'extracted',
+            status: STATUS_FRESH_EXTRACTION,
             extraction_method: 'vision',
           },
           { onConflict: 'exam_id,question_number' }
@@ -1246,7 +1348,11 @@ export type ReextractResult =
   | { ok: false; question_number: number | null; error: string }
 
 export async function reextractQuestionImages(
-  questionId: string
+  questionId: string,
+  // Re-extração em LOTE: o chamador pode passar o PDF já baixado do caderno
+  // (evita 1 download do mesmo arquivo por questão — eram 90 downloads num
+  // caderno de 90 questões).
+  preloaded?: { pdfBuffer?: Buffer }
 ): Promise<ReextractResult> {
   const supabase = createServiceClient()
 
@@ -1312,15 +1418,20 @@ export async function reextractQuestionImages(
     if (pairs.length > 0) centerPage = pairs[0].page
   }
 
-  const { data: fileData, error: dlErr } = await supabase.storage
-    .from('exam-pdfs')
-    .download(examRaw.source_pdf_path)
+  let pdfBuffer: Buffer
+  if (preloaded?.pdfBuffer) {
+    pdfBuffer = preloaded.pdfBuffer
+  } else {
+    const { data: fileData, error: dlErr } = await supabase.storage
+      .from('exam-pdfs')
+      .download(examRaw.source_pdf_path)
 
-  if (dlErr || !fileData) {
-    return { ok: false, question_number: question.question_number as number, error: `Download PDF: ${dlErr?.message ?? 'no data'}` }
+    if (dlErr || !fileData) {
+      return { ok: false, question_number: question.question_number as number, error: `Download PDF: ${dlErr?.message ?? 'no data'}` }
+    }
+
+    pdfBuffer = Buffer.from(await fileData.arrayBuffer())
   }
-
-  const pdfBuffer = Buffer.from(await fileData.arrayBuffer())
 
   // Caderno inteiro sem âncora de página (a extração original falhou em TODAS
   // as questões, então nem as vizinhas têm figura): estima a página pela posição
@@ -1393,6 +1504,21 @@ export async function reextractQuestionImages(
   }
 
   const imagesCount = target.images?.length ?? (target.image_scope ? 1 : 0)
+
+  // Semântica de SUBSTITUIÇÃO: remove as figuras antigas antes de persistir as
+  // novas. Antes, cada re-extração ADICIONAVA um novo conjunto (figure_number+1)
+  // e a questão acumulava a mesma figura 2–3x na tela e nos exports.
+  if (imagesCount > 0) {
+    const { error: delErr } = await supabase
+      .from('question_images')
+      .delete()
+      .eq('question_id', questionId)
+    if (delErr) {
+      console.warn(
+        `[reextract ${questionId}] limpeza de figuras antigas falhou: ${delErr.message}`
+      )
+    }
+  }
 
   const result = await persistQuestionImages({
     exam_id: question.exam_id as string,

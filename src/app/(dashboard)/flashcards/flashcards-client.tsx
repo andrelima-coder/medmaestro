@@ -171,7 +171,7 @@ export function FlashcardsClient({
         setFeedback(
           `${res.created} flashcard(s) criado(s)` +
             (res.failed > 0 ? ` · ${res.failed} questão(ões) falharam` : '') +
-            '. Já estão disponíveis na lista e para exportação.'
+            '. Enviados para o gate humano em Revisão de Flashcards — após aprovar, entram na exportação.'
         )
         setSelected(new Set())
         router.refresh()

@@ -224,3 +224,26 @@ export function parseJSON<T>(text: string): T {
     .trim()
   return JSON.parse(cleaned) as T
 }
+
+/**
+ * Parse tolerante: tenta `parseJSON` direto e, se falhar (modelo às vezes
+ * adiciona prosa antes/depois do JSON), extrai o primeiro valor balanceado
+ * `[...]` ou `{...}` do texto. Evita descartar uma chamada já paga por causa
+ * de um prefixo/sufixo de texto.
+ */
+export function parseJsonLoose<T>(text: string): T {
+  try {
+    return parseJSON<T>(text)
+  } catch {
+    const open = text.search(/[[{]/)
+    if (open >= 0) {
+      const openChar = text[open]
+      const closeChar = openChar === '[' ? ']' : '}'
+      const close = text.lastIndexOf(closeChar)
+      if (close > open) {
+        return JSON.parse(text.slice(open, close + 1)) as T
+      }
+    }
+    throw new Error('Resposta da IA não contém JSON válido')
+  }
+}

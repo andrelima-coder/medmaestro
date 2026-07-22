@@ -1,27 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { complete, parseJSON, MODELS, recordUsage } from '@/lib/ai/claude'
-
-/**
- * Parse tolerante: tenta `parseJSON` direto e, se falhar (modelo às vezes
- * adiciona prosa antes/depois do JSON), extrai o primeiro valor balanceado
- * `[...]` ou `{...}` do texto.
- */
-function parseJsonLoose<T>(text: string): T {
-  try {
-    return parseJSON<T>(text)
-  } catch {
-    const open = text.search(/[[{]/)
-    if (open >= 0) {
-      const openChar = text[open]
-      const closeChar = openChar === '[' ? ']' : '}'
-      const close = text.lastIndexOf(closeChar)
-      if (close > open) {
-        return JSON.parse(text.slice(open, close + 1)) as T
-      }
-    }
-    throw new Error('Resposta da IA não contém JSON válido')
-  }
-}
+import { complete, parseJsonLoose, MODELS, recordUsage } from '@/lib/ai/claude'
 
 export type CardType = 'qa' | 'cloze'
 export type GenerateOptions = {
@@ -234,7 +212,10 @@ export async function generateFlashcardsForQuestion(
     difficulty: Math.max(1, Math.min(5, Math.round(c.difficulty ?? 3))),
     ai_model: MODELS.sonnet,
     created_by_ai: true,
-    approved: true,
+    // AUDITORIA 2026-07: cards de IA nascem NÃO aprovados — passam pelo gate
+    // humano em /revisao-flashcards antes de aparecer no export padrão (Anki).
+    // Antes nasciam approved:true e a tela de revisão nunca recebia nada.
+    approved: false,
   }))
 
   const { data: inserted, error: insErr } = await supabase

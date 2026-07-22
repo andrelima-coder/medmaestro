@@ -41,6 +41,9 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
 
   function reject() {
     if (!card || pending) return
+    // Descartar é DELETE definitivo — confirmação evita perda por toque
+    // acidental na tecla D.
+    if (!window.confirm('Descartar este flashcard definitivamente?')) return
     startTransition(async () => {
       await rejectFlashcardAction(card.id)
       next()
@@ -58,12 +61,22 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
   function saveEdit() {
     if (!card || pending) return
     startTransition(async () => {
-      await editFlashcardAction(card.id, {
+      // Checa cada etapa: antes, uma falha silenciosa deixava o card
+      // editado-mas-pendente e o revisor avançava achando que aprovou.
+      const edited = await editFlashcardAction(card.id, {
         front: sanitizeHtml(editFront),
         back: sanitizeHtml(editBack),
         difficulty: editDifficulty,
       })
-      await approveFlashcardAction(card.id)
+      if (!edited.ok) {
+        window.alert('Falha ao salvar a edição — o card NÃO foi aprovado.')
+        return
+      }
+      const approved = await approveFlashcardAction(card.id)
+      if (!approved.ok) {
+        window.alert('Edição salva, mas a aprovação falhou — card continua pendente.')
+        return
+      }
       next()
     })
   }

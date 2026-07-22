@@ -62,8 +62,11 @@ questions                 # Questão original
                           # (exam_id, question_number) UNIQUE
                           # stem text + stem_html + stem_tsv (full-text)
                           # alternatives JSONB {"A":"...","B":"...",...} + alternatives_html
-                          # status enum question_status (8 estados)
-                          # has_images bool, extraction_confidence smallint 0-100
+                          # status enum question_status (10 estados: pending_extraction,
+                          #   pending_review, in_review, pending_approval, approved,
+                          #   published, rejected, needs_attention, draft, flagged)
+                          # has_images bool, extraction_confidence smallint 1-5
+                          #   (CHECK 1..5 em produção — NÃO é 0-100)
                           # extraction_method text default 'vision'
 
 question_images           # Imagens das questões
@@ -81,7 +84,9 @@ tags                      # Tags com hierarquia parent_tag_id
                           # dimension enum (modulo, tipo_questao, recurso_visual,
                           #                 dificuldade, habilidade, topico_edital)
 question_tags             # m2m. (question_id, tag_id) UNIQUE
-                          # added_by_type ('ai'/'human'), ai_confidence smallint
+                          # added_by_type CHECK ('ai_auto'/'human_review') — produção
+                          # (flashcard_tags e question_variation_tags aceitam também 'inherited')
+                          # ai_confidence smallint CHECK 1..5
 
 question_comments         # Múltiplos por questão!
                           # comment_type enum (explicacao, pegadinha, referencia,
@@ -93,7 +98,7 @@ question_revisions        # Histórico de versões de questions
 review_assignments        # Atribuição de revisão a usuários
 
 question_variations       # Variações geradas por IA da source_question_id
-                          # difficulty_delta smallint (signed: -1 mais fácil, +1 mais difícil)
+                          # difficulty_delta smallint CHECK 0..2 (0=igual, +1/+2 mais difícil)
                           # approved bool, promoted_question_id (vira questions ao promover)
 question_variation_tags   # tags das variações (espelho de question_tags)
 
@@ -123,12 +128,12 @@ audit_logs                # Trilha imutável (701+ rows). Trigger audit_log_trig
 
 | Enum | Valores |
 |---|---|
-| `question_status` | `pending_extraction`, `pending_review`, `in_review`, `pending_approval`, `approved`, `published`, `rejected`, `needs_attention` |
+| `question_status` | `pending_extraction`, `pending_review`, `in_review`, `pending_approval`, `approved`, `published`, `rejected`, `needs_attention`, `draft`, `flagged` — ⚠ NÃO existe `extracted` |
 | `image_scope_enum` | `statement`, `alternative_a`, `alternative_b`, `alternative_c`, `alternative_d`, `alternative_e` |
 | `image_type_enum` | `ecg`, `radiografia`, `tomografia`, `ultrassom`, `grafico_pv`, `grafico_guyton`, `grafico_ventilacao`, `capnografia`, `rotem`, `eeg`, `tabela`, `esquema`, `outro` |
 | `tag_dimension` | `modulo`, `tipo_questao`, `recurso_visual`, `dificuldade`, `habilidade`, `topico_edital` |
 | `taxonomy_scope` | `internal`, `edital` |
-| `comment_type` | `explicacao`, `pegadinha`, `referencia`, `mnemonico`, `atualizacao_conduta` |
+| `comment_type` | `explicacao`, `pegadinha`, `referencia`, `mnemonico`, `atualizacao_conduta`, `dica_professor` |
 
 ### Funções existentes
 
@@ -222,7 +227,7 @@ Nomes que diferem do que pode estar em planos antigos:
 | `statement` | `stem` (+ `stem_html`, `stem_tsv`) |
 | `alternative_a..e` (5 colunas) | `alternatives` (1 JSONB) |
 | `correct_answer` em questions | `answer_keys` (tabela separada) |
-| `confidence` 0.0-1.0 | `extraction_confidence` smallint **0-100** |
+| `confidence` 0.0-1.0 | `extraction_confidence` smallint **1-5** (CHECK em produção) |
 | `precisa_vision` + `motivo_vision` | `extraction_method` text default `'vision'` |
 | `generated_questions` | `question_variations` |
 | `mock_exams` | `simulados` |

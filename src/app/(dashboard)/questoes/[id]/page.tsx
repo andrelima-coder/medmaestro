@@ -193,7 +193,7 @@ export default async function QuestaoDetailPage({
                 </Badge>
                 {(question.extraction_confidence as number | null) != null && (
                   <span className="text-xs tabular-nums text-[var(--mm-muted)]">
-                    {question.extraction_confidence}% conf.
+                    conf. {question.extraction_confidence}/5
                   </span>
                 )}
               </div>

@@ -3,7 +3,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { sanitizeHtml } from '@/lib/sanitize-html'
+// Sanitizador que PRESERVA <img> (proxy interno/data:) e tabelas — o antigo
+// '@/lib/sanitize-html' apagava silenciosamente imagens coladas nos cards.
+import { sanitizeRichTextHtml as sanitizeHtml } from '@/lib/utils/sanitize-html'
 import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 export type BancoFilter = {

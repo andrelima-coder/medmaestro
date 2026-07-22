@@ -1,0 +1,78 @@
+name: Deploy (Coolify)
+
+# CD puro: todo push em `main` dispara o deploy no Coolify e verifica /api/health.
+# Substitui o passo manual (painel Coolify "Redeploy" / scripts mm_deploy.command),
+# já que o webhook nativo do Coolify NÃO dispara neste setup.
+#
+# Pré-requisito (Settings → Secrets and variables → Actions → New repository secret):
+#   - COOLIFY_API_TOKEN   (Coolify → Keys & Tokens → API tokens; formato "N|xxxx", com | literal)
+#
+# Os demais valores não são sigilosos (já constam em app/.env.coolify.example versionado)
+# e ficam inline em `env` abaixo. Para pausar o auto-deploy sem apagar o arquivo:
+# comente o bloco `push` ou desative em Settings → Actions.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Só o deploy mais recente importa: se vier push novo enquanto um deploy roda,
+# cancela o anterior e segue com o mais novo (evita publicar código velho por último).
+concurrency:
+  group: deploy-coolify
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      COOLIFY_BASE: http://187.77.250.197:8000
+      COOLIFY_APP_UUID: ldtodn3k88mw50ortjjw8ib0
+      HEALTH_URL: https://medmaestro.com.br/api/health
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+    steps:
+      - name: Disparar deploy no Coolify
+        run: |
+          if [ -z "$COOLIFY_API_TOKEN" ]; then
+            echo "::error::COOLIFY_API_TOKEN não configurado nas secrets do repositório"
+            exit 1
+          fi
+
+          echo "Disparando deploy do app $COOLIFY_APP_UUID ..."
+          response=$(curl -fsSL --max-time 60 \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN" \
+            -w "\n__HTTP_STATUS__:%{http_code}" \
+            "$COOLIFY_BASE/api/v1/deploy?uuid=$COOLIFY_APP_UUID&force=true")
+
+          http_status=$(echo "$response" | grep '__HTTP_STATUS__' | cut -d':' -f2)
+          body=$(echo "$response" | grep -v '__HTTP_STATUS__')
+
+          echo "Status: $http_status"
+          echo "Resposta: $body"
+
+          if [ "$http_status" != "200" ]; then
+            echo "::error::trigger de deploy falhou com HTTP $http_status"
+            exit 1
+          fi
+
+      - name: Aguardar /api/health responder ok
+        run: |
+          echo "Aguardando o app subir em $HEALTH_URL ..."
+          ok=0
+          for i in $(seq 1 40); do
+            sleep 8
+            out=$(curl -fsSL --max-time 10 "$HEALTH_URL" 2>/dev/null || true)
+            if echo "$out" | grep -q '"status":"ok"'; then
+              echo "✅ [$i] Health OK: $out"
+              ok=1
+              break
+            else
+              echo "… [$i] ainda subindo"
+            fi
+          done
+
+          if [ "$ok" != "1" ]; then
+            echo "::error::/api/health não respondeu \"status\":\"ok\" após ~5min — verifique os logs no Coolify"
+            exit 1
+          fi

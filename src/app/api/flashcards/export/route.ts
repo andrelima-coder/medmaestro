@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { buildFlashcardsDocx, buildFlashcardsPdf } from '@/lib/exports/flashcards'
+import { examLabel } from '@/lib/exams/label'
+import { isHtml, htmlToPlainText } from '@/lib/utils/sanitize-html'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,9 +50,11 @@ function escapeTsv(value: string): string {
 function buildExamLabel(row: FlashcardRow): string {
   const exam = row.questions?.exams
   if (!exam) return ''
-  const spec = exam.specialties?.name ?? ''
-  const color = exam.booklet_color ? ` ${exam.booklet_color}` : ''
-  return `${spec} ${exam.year ?? ''}${color}`.trim()
+  return examLabel({
+    name: exam.specialties?.name,
+    year: exam.year,
+    bookletColor: exam.booklet_color,
+  })
 }
 
 function buildTagsField(row: FlashcardRow): string {
@@ -113,32 +117,39 @@ export async function GET(req: NextRequest) {
   if (approvedOnly) query = query.eq('approved', true)
   if (ids && ids.length > 0) query = query.in('id', ids)
 
+  // Filtro de exame aplicado NA QUERY (antes era em memória, depois do
+  // limit(5000) — cards do exame podiam sumir do export sem aviso).
+  if (examId) {
+    const { data: qs } = await service
+      .from('questions')
+      .select('id')
+      .eq('exam_id', examId)
+    const allowedIds = (qs ?? []).map((q) => q.id as string)
+    if (allowedIds.length === 0) {
+      query = query.eq('source_question_id', '00000000-0000-0000-0000-000000000000')
+    } else {
+      query = query.in('source_question_id', allowedIds)
+    }
+  }
+
   const { data, error } = await query
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  let rows = (data ?? []) as unknown as FlashcardRow[]
-
-  if (examId) {
-    const service2 = createServiceClient()
-    const { data: qs } = await service2
-      .from('questions')
-      .select('id')
-      .eq('exam_id', examId)
-    const allowed = new Set((qs ?? []).map((q) => q.id as string))
-    rows = rows.filter((r) =>
-      r.source_question_id ? allowed.has(r.source_question_id) : false
-    )
-  }
+  const rows = (data ?? []) as unknown as FlashcardRow[]
 
   const stamp = new Date().toISOString().slice(0, 10)
   const filename = `medmaestro-flashcards-${stamp}.${format}`
 
   if (format === 'docx' || format === 'pdf') {
+    // DOCX/PDF não renderizam HTML — cards com formatação rica saíam com
+    // "<p>...</p>" literal no documento. Converte para texto puro.
+    const asPlain = (s: string | null | undefined): string =>
+      isHtml(s) ? htmlToPlainText(s) : (s ?? '')
     const cards = rows.map((r) => ({
-      front: r.front ?? '',
-      back: r.back ?? '',
+      front: asPlain(r.front),
+      back: asPlain(r.back),
       cardType: r.card_type,
       difficulty: r.difficulty,
       examLabel: buildExamLabel(r),

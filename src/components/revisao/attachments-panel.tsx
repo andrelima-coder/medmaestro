@@ -65,7 +65,7 @@ export function AttachmentsPanel({
         </h3>
         {!readOnly && (
           <span className="text-[10px] text-muted-foreground">
-            PNG, JPG, WebP ou PDF · até 10 MB
+            PNG, JPG, WebP ou PDF · até 25 MB
           </span>
         )}
       </div>

@@ -72,9 +72,31 @@ export async function POST(request: Request) {
     })
   }
 
+  // Cache de PDF por exame: o mesmo caderno é baixado UMA vez, não uma vez por
+  // questão (num lote de 90 questões, eram 90 downloads idênticos).
+  const pdfByExam = new Map<string, Buffer | null>()
+  async function pdfForExam(examId: string): Promise<Buffer | undefined> {
+    if (pdfByExam.has(examId)) return pdfByExam.get(examId) ?? undefined
+    const { data: exam } = await supabase
+      .from('exams')
+      .select('source_pdf_path')
+      .eq('id', examId)
+      .single()
+    const path = exam?.source_pdf_path as string | null
+    if (!path) {
+      pdfByExam.set(examId, null)
+      return undefined
+    }
+    const { data: fileData } = await supabase.storage.from('exam-pdfs').download(path)
+    const buf = fileData ? Buffer.from(await fileData.arrayBuffer()) : null
+    pdfByExam.set(examId, buf)
+    return buf ?? undefined
+  }
+
   const results: ReextractResult[] = []
   for (const t of targets) {
-    const r = await reextractQuestionImages(t.id)
+    const pdfBuffer = await pdfForExam(t.exam_id)
+    const r = await reextractQuestionImages(t.id, pdfBuffer ? { pdfBuffer } : undefined)
     results.push(r)
   }
 

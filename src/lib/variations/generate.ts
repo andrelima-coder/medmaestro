@@ -1,5 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { complete, parseJSON, MODELS, type ClaudeModel } from '@/lib/ai/claude'
+import { complete, parseJsonLoose, recordUsage, MODELS, type ClaudeModel } from '@/lib/ai/claude'
 
 export type DifficultyDelta = 0 | 1 | 2
 
@@ -85,9 +85,16 @@ GABARITO ORIGINAL: ${q.correct_answer ?? 'não informado'}`
       system: buildPrompt(opts),
       cacheSystem: true,
       messages: [{ role: 'user', content: userMsg }],
-      maxTokens: 4096,
+      // maxTokens proporcional: 10 variações completas não cabiam em 4096
+      // tokens → JSON truncado → chamada paga e descartada.
+      maxTokens: Math.min(16384, 1024 + count * 900),
     })
-    variations = parseJSON<GeneratedVariation[]>(raw.text)
+    // Registra o custo em api_usage (antes este fluxo era invisível no tracking).
+    await recordUsage(raw.model, raw.usage, {
+      operation: 'variations_generate',
+      question_id: questionId,
+    })
+    variations = parseJsonLoose<GeneratedVariation[]>(raw.text)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[variations ${questionId}] geração falhou: ${msg}`)
@@ -201,12 +208,29 @@ export async function promoteVariationToQuestion(
       has_images: false,
       extraction_confidence: 5,
       status: 'pending_review',
-      extraction_method: 'vision',
+      // Nota: o CHECK de extraction_method em produção só aceita
+      // vision|text|ocr|recovery|import. 'import' é o menos enganoso para
+      // conteúdo que não veio de extração de caderno.
+      extraction_method: 'import',
     })
     .select('id')
     .single()
 
   if (insErr || !newQ) return { ok: false, error: insErr?.message }
+
+  // Mantém a fonte de verdade do gabarito em answer_keys (regra do projeto:
+  // não gravar somente em questions.correct_answer).
+  if (v.correct_answer) {
+    await supabase.from('answer_keys').upsert(
+      {
+        exam_id: sourceExam.exam_id,
+        question_number: nextNumber,
+        correct_answer: v.correct_answer,
+        notes: 'Variação promovida (gerada por IA)',
+      },
+      { onConflict: 'exam_id,question_number' }
+    )
+  }
 
   // Herda tags
   const { data: vtags } = await supabase

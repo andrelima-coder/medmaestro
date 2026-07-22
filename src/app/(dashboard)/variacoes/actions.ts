@@ -12,6 +12,11 @@ import {
 import { logAudit } from '@/lib/audit'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 import { requireUser, requireReviewer } from '@/lib/auth/guards'
+import { examLabel } from '@/lib/exams/label'
+
+// Questões promovidas a partir de variações recebem question_number >= 1000.
+// Elas NÃO devem realimentar a geração ("variação de variação").
+const PROMOTED_NUMBER_FLOOR = 1000
 
 const BATCH_CONCURRENCY = 2
 
@@ -93,6 +98,7 @@ export async function listQuestionsForVariations(
       'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))',
       { count: 'exact' }
     )
+    .lt('question_number', PROMOTED_NUMBER_FLOOR)
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
 
@@ -133,14 +139,16 @@ export async function listQuestionsForVariations(
       booklet_color: string | null
       specialties: { name: string } | null
     } | null
-    const specName = exam?.specialties?.name ?? 'Exame'
-    const color = exam?.booklet_color ? ` · ${exam.booklet_color}` : ''
     return {
       id: r.id as string,
       question_number: r.question_number as number,
       stem: ((r.stem as string | null) ?? '').slice(0, 120),
       exam_id: r.exam_id as string,
-      exam_label: `${specName} ${exam?.year ?? ''}${color}`.trim(),
+      exam_label: examLabel({
+        name: exam?.specialties?.name,
+        year: exam?.year,
+        bookletColor: exam?.booklet_color,
+      }),
       variations_count: counts[r.id as string] ?? 0,
       extraction_confidence: (r.extraction_confidence as number | null) ?? null,
     }
@@ -164,6 +172,7 @@ export async function listFilteredVariationQuestionIds(filter: {
   let query = supabase
     .from('questions')
     .select('id, exams!inner(year)')
+    .lt('question_number', PROMOTED_NUMBER_FLOOR)
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
     .limit(5000)
@@ -197,10 +206,13 @@ export async function listExamsForVariationsFilter(): Promise<
     .limit(100)
   return (data ?? []).map((e) => {
     const sp = e.specialties as unknown as { name: string } | null
-    const color = e.booklet_color ? ` · ${e.booklet_color}` : ''
     return {
       id: e.id as string,
-      label: `${sp?.name ?? 'Exame'} ${e.year}${color}`,
+      label: examLabel({
+        name: sp?.name,
+        year: e.year as number,
+        bookletColor: e.booklet_color as string | null,
+      }),
     }
   })
 }
@@ -243,8 +255,6 @@ export async function listPendingVariations(): Promise<PendingVariation[]> {
       } | null
     } | null
     const exam = q?.exams ?? null
-    const specName = exam?.specialties?.name ?? 'Exame'
-    const color = exam?.booklet_color ? ` · ${exam.booklet_color}` : ''
     return {
       id: v.id as string,
       stem: v.stem as string,
@@ -255,14 +265,20 @@ export async function listPendingVariations(): Promise<PendingVariation[]> {
       source_question_id: v.source_question_id as string,
       source_question_number: q?.question_number ?? null,
       source_stem: ((q?.stem as string | null) ?? '').slice(0, 200),
-      exam_label: exam ? `${specName} ${exam.year}${color}` : '—',
+      exam_label: exam
+        ? examLabel({
+            name: exam.specialties?.name,
+            year: exam.year,
+            bookletColor: exam.booklet_color,
+          })
+        : '—',
     }
   })
 }
 
 export async function approveVariationAction(
   id: string
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; questionId?: string; error?: string }> {
   const auth = await requireReviewer()
   if (!auth.ok) return { ok: false }
   const supabase = await createClient()
@@ -281,7 +297,17 @@ export async function approveVariationAction(
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-  return { ok: !error }
+  if (error) return { ok: false, error: error.message }
+
+  // AUDITORIA 2026-07: aprovar agora PROMOVE automaticamente. Antes, a variação
+  // aprovada saía da fila de revisão mas não existia em nenhuma outra tela nem
+  // podia entrar em simulado — caía num limbo invisível.
+  const promoted = await promoteVariationToQuestion(id)
+  if (!promoted.ok) {
+    // Aprovação ficou registrada; promoção pode ser refeita depois.
+    return { ok: true, error: `Aprovada, mas promoção falhou: ${promoted.error}` }
+  }
+  return { ok: true, questionId: promoted.questionId }
 }
 
 export async function rejectVariationAction(id: string): Promise<{ ok: boolean }> {

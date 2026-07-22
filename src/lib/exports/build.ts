@@ -381,7 +381,9 @@ export async function buildDocxBuffer(data: ExportData): Promise<Buffer> {
         new TableCell({
           children: [
             new Paragraph({
-              children: [new TextRun({ text: `Q${q.position}`, bold: true, size: 18 })],
+              // "Questão N" do export (posição), não o nº do caderno — evita
+              // cruzar o gabarito com a questão errada quando os números diferem.
+              children: [new TextRun({ text: `Questão ${q.position}`, bold: true, size: 18 })],
               alignment: AlignmentType.CENTER,
             }),
           ],
@@ -474,8 +476,15 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
           ? await pdf.embedPng(fig.data)
           : await pdf.embedJpg(fig.data)
         const ratio = img.width / img.height
-        const w = Math.min(maxW, img.width)
-        const h = w / ratio
+        let w = Math.min(maxW, img.width)
+        let h = w / ratio
+        // Limita a altura à área útil da página — imagem muito alta (recorte
+        // vertical de tabela/ECG) era desenhada para fora da página.
+        const maxH = PAGE_H - 2 * MARGIN - 20
+        if (h > maxH) {
+          h = maxH
+          w = h * ratio
+        }
         ensureSpace(h + 10)
         const cx = MARGIN + indent + (CONTENT_W - indent - w) / 2
         page.drawImage(img, { x: cx, y: y - h, width: w, height: h })
@@ -728,7 +737,7 @@ export async function buildPdfBuffer(data: ExportData): Promise<Uint8Array> {
           borderWidth: 0.5,
           color: rgb(0.97, 0.97, 0.99),
         })
-        const label = chunk[j] ? `Q${chunk[j].position}` : ''
+        const label = chunk[j] ? `Questão ${chunk[j].position}` : ''
         if (label) {
           const w = fontBold.widthOfTextAtSize(label, 10)
           page.drawText(label, {

@@ -71,7 +71,11 @@ export const GABARITO_MAX_BYTES = 100 * MB
 export const GABARITO_ACCEPT_DISPLAY = 'PDF, DOCX, TXT, MD'
 
 /* ── Anexos de revisão (documentos + imagens) ─────────────────────────────── */
-export const ATTACHMENT_EXTS = ['pdf', 'docx', 'pptx', 'png', 'jpg', 'jpeg', 'webp']
+// AUDITORIA 2026-07: docx/pptx removidos — o CHECK `mime_allowed` da tabela
+// question_attachments em produção só aceita png/jpeg/webp/pdf. Com docx o
+// upload subia pro Storage e o INSERT falhava, deixando arquivo órfão.
+// Para voltar a aceitar Office, criar migration relaxando o CHECK primeiro.
+export const ATTACHMENT_EXTS = ['pdf', 'png', 'jpg', 'jpeg', 'webp']
 export const ATTACHMENT_ACCEPT = buildAccept(ATTACHMENT_EXTS)
 export const ATTACHMENT_MAX_BYTES = 25 * MB
 export const ATTACHMENT_ALLOWED_MIME: string[] = ATTACHMENT_EXTS.map((e) => MIME_BY_EXT[e]).filter(

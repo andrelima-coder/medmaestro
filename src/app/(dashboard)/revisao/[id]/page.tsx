@@ -302,7 +302,7 @@ export default async function RevisaoItemPage({
                 </Badge>
                 {(question.extraction_confidence as number | null) !== null && (
                   <span className="text-xs tabular-nums text-[var(--mm-muted)]">
-                    {(question.extraction_confidence as number) * 20}% confiança
+                    conf. {question.extraction_confidence as number}/5
                   </span>
                 )}
               </div>

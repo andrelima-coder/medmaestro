@@ -60,7 +60,9 @@ export async function buildPptxBuffer(data: ExportData): Promise<Uint8Array> {
   data.questions.forEach((q) => {
     addQuestionSlide(pptx, q, c.enunciado, c.alternativas, c.figuras, c.gabarito)
     if (c.gabarito || c.coment_alt || c.coment_compilado) {
-      addAnswerSlide(pptx, q, c.coment_alt, c.coment_compilado)
+      // showGabarito respeitado: com a flag desmarcada, o slide de comentário
+      // não imprime mais a resposta (antes o gabarito vazava sempre).
+      addAnswerSlide(pptx, q, c.coment_alt, c.coment_compilado, c.gabarito)
     }
     if (c.dica_professor && q.teacherTips.length > 0) {
       addTeacherSlide(pptx, q)
@@ -140,13 +142,29 @@ function addQuestionSlide(
     slide.addShape(pptx.ShapeType.roundRect, {
       x: 8.25, y: 1.2, w: 4.45, h: 5.0, fill: { color: PANEL }, line: { color: '2a3550', width: 1 },
     })
+    // Figura do enunciado é renderizada MESMO quando há figuras nas alternativas
+    // (antes o ECG do enunciado sumia se as alternativas fossem imagens).
+    let gy = 1.4
+    let availH = 5.0 - 0.4
+    if (hasStmtFig) {
+      const fig = stmtFigs[0]
+      const stmtH = hasAltFigs ? 1.5 : availH
+      slide.addImage({
+        data: dataUri(fig.contentType, fig.data),
+        x: 8.45, y: gy, w: 4.05, h: stmtH,
+        sizing: { type: 'contain', w: 4.05, h: stmtH },
+      })
+      gy += stmtH + 0.15
+      availH -= stmtH + 0.15
+    }
     if (hasAltFigs) {
-      // Alternativas em imagem: grade 2 colunas, cada figura rotulada (A–D).
+      // Grade 2 colunas; altura da célula calculada para caber TODAS as linhas
+      // no slide (antes a 3ª linha — alternativa E — era desenhada fora).
       const cols = 2
+      const rows = Math.ceil(altFigEntries.length / cols)
       const cellW = 2.0
-      const cellH = 2.3
+      const cellH = Math.min(2.3, (availH - (rows - 1) * 0.1) / rows)
       const gx = 8.45
-      const gy = 1.4
       altFigEntries.forEach((e, i) => {
         const r = Math.floor(i / cols)
         const c = i % cols
@@ -163,13 +181,6 @@ function addQuestionSlide(
           sizing: { type: 'contain', w: cellW, h: cellH - 0.28 },
         })
       })
-    } else {
-      const fig = stmtFigs[0]
-      slide.addImage({
-        data: dataUri(fig.contentType, fig.data),
-        x: 8.45, y: 1.4, w: 4.05, h: 4.6,
-        sizing: { type: 'contain', w: 4.05, h: 4.6 },
-      })
     }
   }
 }
@@ -178,30 +189,35 @@ function addAnswerSlide(
   pptx: pptxgen,
   q: QuestionData,
   showCommentAlt: boolean,
-  showCommentMerged: boolean
+  showCommentMerged: boolean,
+  showGabarito: boolean
 ) {
   const slide = pptx.addSlide()
   slide.background = { color: BG }
-  header(slide, pptx, q, 'Gabarito e comentário')
+  header(slide, pptx, q, showGabarito ? 'Gabarito e comentário' : 'Comentário')
 
-  const correct = q.correctAnswer ?? '—'
-  const correctText =
-    q.correctAnswer && q.alternatives[q.correctAnswer]
-      ? `Gabarito: ${correct} — ${q.alternatives[q.correctAnswer]}`
-      : `Gabarito: ${correct}`
-  slide.addShape(pptx.ShapeType.roundRect, {
-    x: 0.6, y: 1.2, w: 12.1, h: 0.7, fill: { color: '12251a' }, line: { color: GREEN, width: 1 },
-  })
-  slide.addText(correctText, {
-    x: 0.8, y: 1.2, w: 11.7, h: 0.7,
-    fontFace: 'Arial', fontSize: 16, bold: true, color: GREEN, valign: 'middle',
-  })
+  let commentY = 1.2
+  if (showGabarito) {
+    const correct = q.correctAnswer ?? '—'
+    const correctText =
+      q.correctAnswer && q.alternatives[q.correctAnswer]
+        ? `Gabarito: ${correct} — ${q.alternatives[q.correctAnswer]}`
+        : `Gabarito: ${correct}`
+    slide.addShape(pptx.ShapeType.roundRect, {
+      x: 0.6, y: 1.2, w: 12.1, h: 0.7, fill: { color: '12251a' }, line: { color: GREEN, width: 1 },
+    })
+    slide.addText(correctText, {
+      x: 0.8, y: 1.2, w: 11.7, h: 0.7,
+      fontFace: 'Arial', fontSize: 16, bold: true, color: GREEN, valign: 'middle',
+    })
+    commentY = 2.1
+  }
 
   const comments = q.comments
   if ((showCommentAlt || showCommentMerged) && comments.length > 0) {
     const merged = comments.map((cm) => cm.content).join('\n\n')
     slide.addText(merged, {
-      x: 0.6, y: 2.1, w: 12.1, h: 4.9,
+      x: 0.6, y: commentY, w: 12.1, h: 7.0 - commentY,
       fontFace: 'Arial', fontSize: 12, color: TEXT, valign: 'top', autoFit: true,
     })
   }

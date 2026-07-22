@@ -9,11 +9,16 @@ import {
   type CardType,
 } from '@/lib/flashcards/generate'
 import { logAudit } from '@/lib/audit'
-import { sanitizeHtml } from '@/lib/sanitize-html'
+// Sanitizador que PRESERVA <img> (proxy interno/data:) e tabelas — o antigo
+// '@/lib/sanitize-html' apagava silenciosamente imagens coladas nos cards.
+import { sanitizeRichTextHtml as sanitizeHtml } from '@/lib/utils/sanitize-html'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
 import { requireUser, requireReviewer } from '@/lib/auth/guards'
+import { examLabel } from '@/lib/exams/label'
 
 const BATCH_CONCURRENCY = 3
+// Questões promovidas de variações (nº >= 1000) não realimentam a geração.
+const PROMOTED_NUMBER_FLOOR = 1000
 
 export type SuggestCountsResult = {
   ok: boolean
@@ -142,6 +147,7 @@ export async function listQuestionsForFlashcards(
       'id, question_number, stem, exam_id, extraction_confidence, exams!inner(year, booklet_color, specialties(name))',
       { count: 'exact' }
     )
+    .lt('question_number', PROMOTED_NUMBER_FLOOR)
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
 
@@ -183,14 +189,16 @@ export async function listQuestionsForFlashcards(
       booklet_color: string | null
       specialties: { name: string } | null
     } | null
-    const specName = exam?.specialties?.name ?? 'Exame'
-    const color = exam?.booklet_color ? ` · ${exam.booklet_color}` : ''
     return {
       id: r.id as string,
       question_number: r.question_number as number,
       stem: ((r.stem as string | null) ?? '').slice(0, 120),
       exam_id: r.exam_id as string,
-      exam_label: `${specName} ${exam?.year ?? ''}${color}`.trim(),
+      exam_label: examLabel({
+        name: exam?.specialties?.name,
+        year: exam?.year,
+        bookletColor: exam?.booklet_color,
+      }),
       flashcards_count: counts[r.id as string] ?? 0,
       extraction_confidence: (r.extraction_confidence as number | null) ?? null,
     }
@@ -215,6 +223,7 @@ export async function listFilteredFlashcardQuestionIds(filter: {
   let query = supabase
     .from('questions')
     .select('id, exams!inner(year)')
+    .lt('question_number', PROMOTED_NUMBER_FLOOR)
     .order('exam_id', { ascending: false })
     .order('question_number', { ascending: true })
     .limit(5000)
@@ -249,10 +258,13 @@ export async function listExamsForFlashcardsFilter(): Promise<
     .limit(100)
   return (data ?? []).map((e) => {
     const sp = e.specialties as unknown as { name: string } | null
-    const color = e.booklet_color ? ` · ${e.booklet_color}` : ''
     return {
       id: e.id as string,
-      label: `${sp?.name ?? 'Exame'} ${e.year}${color}`,
+      label: examLabel({
+        name: sp?.name,
+        year: e.year as number,
+        bookletColor: e.booklet_color as string | null,
+      }),
     }
   })
 }
@@ -291,8 +303,6 @@ export async function listPendingFlashcards(): Promise<PendingCard[]> {
       } | null
     } | null
     const exam = q?.exams ?? null
-    const specName = exam?.specialties?.name ?? 'Exame'
-    const color = exam?.booklet_color ? ` · ${exam.booklet_color}` : ''
     return {
       id: c.id as string,
       front: c.front as string,
@@ -301,7 +311,13 @@ export async function listPendingFlashcards(): Promise<PendingCard[]> {
       difficulty: c.difficulty as number,
       source_question_id: (c.source_question_id as string | null) ?? null,
       question_number: q?.question_number ?? null,
-      exam_label: exam ? `${specName} ${exam.year}${color}` : '—',
+      exam_label: exam
+        ? examLabel({
+            name: exam.specialties?.name,
+            year: exam.year,
+            bookletColor: exam.booklet_color,
+          })
+        : '—',
     }
   })
 }
