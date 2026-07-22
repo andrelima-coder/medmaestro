@@ -511,13 +511,27 @@ export default async function AnalisePage({
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
-        <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
-          Análise 80/20
-        </h1>
-        <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
-          Distribuição e incidência por módulo — Regra de Pareto
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-[family-name:var(--font-syne)] text-xl font-bold text-foreground">
+            Análise 80/20
+          </h1>
+          <p className="mt-1 text-[13px] text-[var(--mm-muted)]">
+            Distribuição e incidência por módulo — Regra de Pareto
+          </p>
+        </div>
+        <Link
+          href="/analise/previsao"
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12px] font-bold no-underline"
+          style={{
+            background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
+            color: '#0a0a0a',
+            fontFamily: 'var(--font-syne)',
+            boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+          }}
+        >
+          Previsão de prova →
+        </Link>
       </div>
 
       {/* Card de filtros */}

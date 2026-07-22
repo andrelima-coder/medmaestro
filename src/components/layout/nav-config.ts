@@ -52,6 +52,9 @@ export function buildNavSections(role: UserRole): NavSectionDef[] {
 
   const analise: NavItemDef[] = [
     { label: 'Análise', href: '/analise', iconKey: 'BarChart2' },
+    ...(can(role, 'admin')
+      ? [{ label: 'Previsão de prova', href: '/analise/previsao', iconKey: 'TrendingUp' }]
+      : []),
   ]
 
   // Captação (camada do aluno — feature 001), admin+.
