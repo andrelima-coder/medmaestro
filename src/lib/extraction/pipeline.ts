@@ -6,3 +6,4 @@ export {
   generateTeacherTips,
   ensureTeacherTips,
 } from '@/lib/extrator/core/pipeline'
+export type { CommentsModelKey } from '@/lib/extrator/core/pipeline'

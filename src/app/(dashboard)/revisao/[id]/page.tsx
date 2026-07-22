@@ -302,7 +302,7 @@ export default async function RevisaoItemPage({
                 </Badge>
                 {(question.extraction_confidence as number | null) !== null && (
                   <span className="text-xs tabular-nums text-[var(--mm-muted)]">
-                    conf. {question.extraction_confidence as number}/5
+                    {(question.extraction_confidence as number) * 20}% confiança
                   </span>
                 )}
               </div>
@@ -340,7 +340,7 @@ export default async function RevisaoItemPage({
             </CardBody>
           </Card>
 
-          <CommentList comments={comments} />
+          <CommentList comments={comments} questionId={id} />
         </div>
 
         {/* Direito: ações + tags */}

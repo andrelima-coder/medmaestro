@@ -1,10 +1,9 @@
 'use server'
 
 import { createServiceClient } from '@/lib/supabase/service'
-import { createClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/audit'
-import { generateComment } from '@/lib/extraction/pipeline'
-import { requireUser } from '@/lib/auth/guards'
+import { generateComment, type CommentsModelKey } from '@/lib/extraction/pipeline'
+import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 export interface QuestionComment {
   id: string
@@ -15,6 +14,15 @@ export interface QuestionComment {
   status: string
   created_at: string
 }
+
+// Modelos de IA que o professor pode escolher ao gerar um comentário, com
+// rótulo amigável e nota de custo/qualidade. Fonte única para UI + validação.
+export const COMMENT_MODEL_OPTIONS: { key: CommentsModelKey; label: string; hint: string }[] = [
+  { key: 'sonnet', label: 'Claude Sonnet', hint: 'Equilíbrio custo/qualidade (padrão)' },
+  { key: 'opus', label: 'Claude Opus', hint: 'Máxima qualidade, mais caro' },
+  { key: 'haiku', label: 'Claude Haiku', hint: 'Rápido e econômico' },
+]
+const ALLOWED_MODELS = new Set<CommentsModelKey>(COMMENT_MODEL_OPTIONS.map((o) => o.key))
 
 export async function getQuestionComments(questionId: string): Promise<QuestionComment[]> {
   const auth = await requireUser()
@@ -28,20 +36,29 @@ export async function getQuestionComments(questionId: string): Promise<QuestionC
   return (data ?? []) as QuestionComment[]
 }
 
+/**
+ * Gera um comentário didático por IA. O professor escolhe o modelo; quando um
+ * modelo é informado, força a criação de um NOVO comentário (permite comparar
+ * a saída de modelos diferentes na mesma questão). Só revisores (professor+).
+ */
 export async function generateAiComment(
-  questionId: string
+  questionId: string,
+  model?: CommentsModelKey
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { ok: false, error: 'Não autenticado' }
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
+
+  if (model && !ALLOWED_MODELS.has(model)) {
+    return { ok: false, error: 'Modelo de IA não permitido' }
+  }
 
   try {
-    await generateComment(questionId)
+    // Com modelo explícito: force=true (gera novo, para comparação).
+    await generateComment(questionId, model ? { model, force: true } : {})
 
-    await logAudit(user.id, 'question', questionId, 'comment_generated', null, {
-      triggered_by: user.id,
+    await logAudit(auth.user.id, 'question', questionId, 'comment_generated', null, {
+      triggered_by: auth.user.id,
+      model: model ?? 'default',
     })
 
     return { ok: true }

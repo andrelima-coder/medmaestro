@@ -1,4 +1,5 @@
 import type { QuestionComment } from '@/app/(dashboard)/questoes/[id]/comment-actions'
+import { GenerateCommentButton } from '@/components/revisao/generate-comment-button'
 
 const COMMENT_TYPE_LABELS: Record<string, string> = {
   explicacao: 'Explicação',
@@ -6,13 +7,15 @@ const COMMENT_TYPE_LABELS: Record<string, string> = {
   referencia: 'Referência',
   mnemonico: 'Mnemônico',
   atualizacao_conduta: 'Atualização de Conduta',
+  dica_professor: 'Dica para o professor',
 }
 
 interface CommentListProps {
   comments: QuestionComment[]
+  questionId: string
 }
 
-export function CommentList({ comments }: CommentListProps) {
+export function CommentList({ comments, questionId }: CommentListProps) {
   return (
     <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
@@ -24,6 +27,7 @@ export function CommentList({ comments }: CommentListProps) {
             </span>
           )}
         </h3>
+        <GenerateCommentButton questionId={questionId} />
       </div>
 
       {comments.length === 0 ? (
@@ -37,7 +41,8 @@ export function CommentList({ comments }: CommentListProps) {
           }}
         >
           <p className="text-xs text-muted-foreground">
-            Nenhum comentário gerado ainda. Use a página de Questões para gerar uma explicação por IA.
+            Nenhum comentário ainda. Use o botão <strong>Gerar comentário</strong> acima e
+            escolha o modelo de IA.
           </p>
         </div>
       ) : (

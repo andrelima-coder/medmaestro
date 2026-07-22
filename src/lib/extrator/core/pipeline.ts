@@ -229,9 +229,14 @@ function commentsModel(): ClaudeModel {
   return process.env.MM_COMMENTS_MODEL === 'opus' ? MODELS.opus : MODELS.sonnet
 }
 
+export type CommentsModelKey = 'sonnet' | 'opus' | 'haiku'
+
 export async function generateComment(
   questionId: string,
-  opts: { force?: boolean } = {}
+  // `model` permite ao professor escolher qual IA gera o comentário (Sonnet /
+  // Opus / Haiku) — usado no botão "Gerar comentário" da revisão. Sem `model`,
+  // usa o padrão do pipeline (MM_COMMENTS_MODEL, hoje Sonnet).
+  opts: { force?: boolean; model?: CommentsModelKey } = {}
 ): Promise<void> {
   const supabase = createServiceClient()
 
@@ -306,7 +311,7 @@ Regras de estilo:
 Retorne APENAS o texto do comentário seguindo a estrutura acima.`
 
   let commentText: string
-  const model = commentsModel()
+  const model: ClaudeModel = opts.model ? MODELS[opts.model] : commentsModel()
   try {
     const raw = await complete({
       model,
