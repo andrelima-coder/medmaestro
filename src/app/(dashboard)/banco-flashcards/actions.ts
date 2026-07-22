@@ -3,10 +3,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-// Sanitizador que PRESERVA <img> (proxy interno/data:) e tabelas — o antigo
-// '@/lib/sanitize-html' apagava silenciosamente imagens coladas nos cards.
-import { sanitizeRichTextHtml as sanitizeHtml } from '@/lib/utils/sanitize-html'
+import { sanitizeHtml } from '@/lib/sanitize-html'
 import { requireUser, requireReviewer } from '@/lib/auth/guards'
+import { uploadFile, getQuestionImageUrls } from '@/lib/storage/signed-urls'
 
 export type BancoFilter = {
   examId?: string
@@ -286,4 +285,158 @@ export async function deleteBancoFlashcardAction(
   const service = createServiceClient()
   const { error } = await service.from('flashcards').delete().eq('id', id)
   return { ok: !error }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Studio Anki: criação manual, upload/colagem de imagem e figuras da questão.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+// ID aceito pelo proxy /api/qa-image (8–64 [a-zA-Z0-9_-]).
+const OWNER_ID_RE = /^[a-zA-Z0-9_-]{8,64}$/
+
+/** Cria um flashcard manual (feito por humano → nasce aprovado). */
+export async function createBancoFlashcardAction(input: {
+  front: string
+  back: string
+  difficulty?: number
+  cardType?: 'qa' | 'cloze'
+  sourceQuestionId?: string | null
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { ok: false, error: auth.error }
+
+  const front = sanitizeHtml(input.front ?? '').slice(0, 4000)
+  const back = sanitizeHtml(input.back ?? '').slice(0, 8000)
+  if (!front.trim() || !back.trim()) {
+    return { ok: false, error: 'Preencha frente e verso' }
+  }
+
+  const service = createServiceClient()
+  const { data, error } = await service
+    .from('flashcards')
+    .insert({
+      source_question_id: input.sourceQuestionId ?? null,
+      front,
+      back,
+      card_type: input.cardType === 'cloze' ? 'cloze' : 'qa',
+      difficulty: Math.max(1, Math.min(5, Math.round(input.difficulty ?? 3))),
+      created_by_ai: false,
+      approved: true,
+      approved_by: auth.user.id,
+      approved_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) return { ok: false, error: error?.message ?? 'Falha ao criar' }
+  return { ok: true, id: data.id as string }
+}
+
+/**
+ * Sobe uma imagem (upload ou colada) para o bucket de anexos e devolve uma URL
+ * servida pelo proxy interno /api/qa-image — o ÚNICO esquema que o sanitizador
+ * aceita além de data:. `ownerId` = id da questão de origem ou do card.
+ */
+export async function uploadFlashcardImageAction(
+  ownerId: string,
+  formData: FormData
+): Promise<{ url?: string; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { error: auth.error }
+  if (!OWNER_ID_RE.test(ownerId)) return { error: 'Destino inválido' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File)) return { error: 'Arquivo inválido' }
+  if (file.size <= 0) return { error: 'Arquivo vazio' }
+  if (file.size > 8 * 1024 * 1024) return { error: 'Imagem maior que 8 MB' }
+  const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    return { error: 'Formato não suportado (use PNG, JPG ou WebP)' }
+  }
+
+  const buffer = Buffer.from(await file.arrayBuffer())
+  const stamp = buffer.byteLength.toString(36)
+  const name = `fc_${stamp}_${Math.round(buffer[0] ?? 0)}${Math.round(buffer[buffer.length - 1] ?? 0)}.${ext}`
+  const path = `inline/${ownerId}/${name}`
+  try {
+    await uploadFile('question-attachments', path, buffer, file.type)
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Falha no upload' }
+  }
+  return { url: `/api/qa-image/${path}` }
+}
+
+export type SourceFigure = { id: string; scope: string; url: string }
+
+/** Lista as figuras da questão de origem para o seletor do editor. */
+export async function listSourceFiguresAction(questionId: string): Promise<SourceFigure[]> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return []
+  if (!OWNER_ID_RE.test(questionId)) return []
+  const service = createServiceClient()
+  const { data } = await service
+    .from('question_images')
+    .select('id, image_scope, full_page_path, cropped_path, use_cropped')
+    .eq('question_id', questionId)
+    .order('image_scope')
+
+  const rows = data ?? []
+  const paths = rows.map((r) =>
+    r.use_cropped && r.cropped_path ? (r.cropped_path as string) : (r.full_page_path as string)
+  )
+  if (paths.length === 0) return []
+  let urls: Record<string, string> = {}
+  try {
+    urls = await getQuestionImageUrls(paths)
+  } catch {
+    urls = {}
+  }
+  return rows
+    .map((r) => {
+      const p = r.use_cropped && r.cropped_path ? (r.cropped_path as string) : (r.full_page_path as string)
+      const url = urls[p]
+      return url ? { id: r.id as string, scope: r.image_scope as string, url } : null
+    })
+    .filter((x): x is SourceFigure => x !== null)
+}
+
+/**
+ * Copia uma figura da questão (bucket question-images) para o bucket de anexos
+ * e devolve a URL do proxy — para embutir de forma persistente no card.
+ */
+export async function attachSourceFigureAction(
+  questionImageId: string,
+  ownerId: string
+): Promise<{ url?: string; error?: string }> {
+  const auth = await requireReviewer()
+  if (!auth.ok) return { error: auth.error }
+  if (!OWNER_ID_RE.test(ownerId)) return { error: 'Destino inválido' }
+
+  const service = createServiceClient()
+  const { data: img } = await service
+    .from('question_images')
+    .select('full_page_path, cropped_path, use_cropped')
+    .eq('id', questionImageId)
+    .single()
+  if (!img) return { error: 'Figura não encontrada' }
+
+  const srcPath = img.use_cropped && img.cropped_path
+    ? (img.cropped_path as string)
+    : (img.full_page_path as string)
+  const ext = srcPath.toLowerCase().endsWith('.png') ? 'png' : 'jpg'
+  const ct = ext === 'png' ? 'image/png' : 'image/jpeg'
+
+  const { data: blob, error: dlErr } = await service.storage
+    .from('question-images')
+    .download(srcPath)
+  if (dlErr || !blob) return { error: `Falha ao ler figura: ${dlErr?.message ?? 'sem dados'}` }
+
+  const buffer = Buffer.from(await blob.arrayBuffer())
+  const destPath = `inline/${ownerId}/qfig_${questionImageId.slice(0, 8)}.${ext}`
+  try {
+    await uploadFile('question-attachments', destPath, buffer, ct)
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Falha ao copiar figura' }
+  }
+  return { url: `/api/qa-image/${destPath}` }
 }

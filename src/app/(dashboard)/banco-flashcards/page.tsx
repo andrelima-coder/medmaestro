@@ -6,6 +6,7 @@ import {
   listBancoTemas,
   type BancoFilter,
 } from './actions'
+import Link from 'next/link'
 import { BancoFlashcardsClient } from './banco-flashcards-client'
 import { ExportFlashcardsButton } from '@/components/flashcards/export-button'
 
@@ -73,14 +74,32 @@ export default async function BancoFlashcardsPage({
             Banco de flashcards
           </h1>
           <p style={{ fontSize: 13, color: 'var(--mm-muted)', marginTop: 2 }}>
-            {result.total} flashcard{result.total === 1 ? '' : 's'} no banco — clique para
-            editar inline (rich text)
+            {result.total} flashcard{result.total === 1 ? '' : 's'} no banco — clique num card
+            para estudar/editar, ou crie um novo
           </p>
         </div>
-        <ExportFlashcardsButton
-          examId={filter.examId}
-          approvedOnly={filter.status !== 'pending'}
-        />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Link
+            href="/flashcards"
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              padding: '9px 16px',
+              borderRadius: 8,
+              textDecoration: 'none',
+              fontFamily: 'var(--font-syne)',
+              background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
+              color: '#0a0a0a',
+              boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+            }}
+          >
+            Gerar em massa →
+          </Link>
+          <ExportFlashcardsButton
+            examId={filter.examId}
+            approvedOnly={filter.status !== 'pending'}
+          />
+        </div>
       </div>
 
       <BancoFlashcardsClient

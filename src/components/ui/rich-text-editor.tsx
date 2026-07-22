@@ -10,6 +10,14 @@ type RichTextEditorProps = {
   minHeight?: number
   ariaLabel?: string
   onUploadImage?: (file: File) => Promise<{ url: string } | { error: string }>
+  /**
+   * Botões extras na barra de ferramentas. Recebe uma função `insertImage(url)`
+   * que insere um <img> no ponto do cursor — usada, por ex., para inserir uma
+   * figura da questão original no card.
+   */
+  extraButtons?: (insertImage: (url: string) => void) => React.ReactNode
+  /** Aceita colar imagens (Ctrl+V) — sobe via onUploadImage. */
+  allowPaste?: boolean
 }
 
 const TOOLBAR_BUTTONS: Array<{
@@ -36,6 +44,8 @@ export function RichTextEditor({
   minHeight = 80,
   ariaLabel,
   onUploadImage,
+  extraButtons,
+  allowPaste,
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null)
   const lastValueRef = useRef<string>(value)
@@ -76,9 +86,8 @@ export function RichTextEditor({
     emit()
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !onUploadImage) return
+  async function uploadAndInsert(file: File) {
+    if (!onUploadImage) return
     setUploading(true)
     setUploadError(null)
     try {
@@ -90,8 +99,23 @@ export function RichTextEditor({
       }
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) await uploadAndInsert(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  async function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    if (!allowPaste || !onUploadImage) return
+    const item = Array.from(e.clipboardData.items).find((it) => it.type.startsWith('image/'))
+    if (!item) return
+    const file = item.getAsFile()
+    if (!file) return
+    e.preventDefault()
+    await uploadAndInsert(file)
   }
 
   return (
@@ -136,6 +160,12 @@ export function RichTextEditor({
             )}
           </>
         )}
+        {extraButtons && (
+          <>
+            <span className="mx-1 h-4 w-px bg-white/10" aria-hidden />
+            {extraButtons(insertImage)}
+          </>
+        )}
       </div>
       <div
         ref={editorRef}
@@ -147,6 +177,7 @@ export function RichTextEditor({
         data-placeholder={placeholder}
         onInput={emit}
         onBlur={emit}
+        onPaste={handlePaste}
         className="rich-editor-content px-3 py-2 text-sm text-foreground outline-none whitespace-pre-wrap"
         style={{ minHeight }}
         dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(value) }}

@@ -9,8 +9,8 @@ import {
   type BancoListResult,
   type TemaOption,
 } from './actions'
-import { RichEditor } from '@/components/ui/rich-editor'
 import { ExportFlashcardsButton } from '@/components/flashcards/export-button'
+import { FlashcardStudio } from '@/components/flashcards/flashcard-studio'
 import { sanitizeHtml, isHtml, htmlToPlainText } from '@/lib/sanitize-html'
 
 type Filter = {
@@ -38,14 +38,14 @@ export function BancoFlashcardsClient({
   initialFilter: Filter
 }) {
   const router = useRouter()
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editFront, setEditFront] = useState('')
-  const [editBack, setEditBack] = useState('')
-  const [editDifficulty, setEditDifficulty] = useState(3)
   const [searchInput, setSearchInput] = useState(initialFilter.query)
   const [pending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // Estúdio Anki (ver / editar / criar)
+  const [studio, setStudio] = useState<{ index: number; mode: 'view' | 'edit' | 'create' } | null>(
+    null
+  )
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize))
 
@@ -91,34 +91,9 @@ export function BancoFlashcardsClient({
     })
   }
 
-  function startEdit(c: BancoFlashcard) {
-    setEditingId(c.id)
-    setEditFront(toEditableHtml(c.front))
-    setEditBack(toEditableHtml(c.back))
-    setEditDifficulty(c.difficulty ?? 3)
+  function openStudio(index: number, mode: 'view' | 'edit') {
     setFeedback(null)
-  }
-
-  function cancelEdit() {
-    setEditingId(null)
-    setFeedback(null)
-  }
-
-  function save(card: BancoFlashcard) {
-    startTransition(async () => {
-      const res = await updateBancoFlashcardAction(card.id, {
-        front: sanitizeHtml(editFront),
-        back: sanitizeHtml(editBack),
-        difficulty: editDifficulty,
-      })
-      if (res.ok) {
-        setFeedback('Salvo.')
-        setEditingId(null)
-        router.refresh()
-      } else {
-        setFeedback(`Erro: ${res.error ?? 'falha ao salvar'}`)
-      }
-    })
+    setStudio({ index, mode })
   }
 
   function toggleApproval(card: BancoFlashcard) {
@@ -277,6 +252,9 @@ export function BancoFlashcardsClient({
             : 'Selecione flashcards para exportar somente eles'}
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => setStudio({ index: 0, mode: 'create' })} style={btnPrimary(true)}>
+            + Novo card
+          </button>
           {selectedIds.size > 0 && (
             <button onClick={() => setSelectedIds(new Set())} style={btnGhost}>
               Limpar seleção
@@ -341,8 +319,7 @@ export function BancoFlashcardsClient({
               </tr>
             </thead>
             <tbody>
-              {result.rows.map((c) => {
-                const isEditing = editingId === c.id
+              {result.rows.map((c, rowIndex) => {
                 return (
                   <tr key={c.id} style={{ borderBottom: '1px solid var(--mm-line)' }}>
                     <td style={{ ...td(), width: 36, paddingRight: 0, verticalAlign: 'top' }}>
@@ -378,42 +355,16 @@ export function BancoFlashcardsClient({
                     </td>
                     <td style={td()}>{c.difficulty ?? '—'}</td>
                     <td
-                      style={{
-                        ...td(),
-                        maxWidth: isEditing ? undefined : 280,
-                        verticalAlign: 'top',
-                      }}
+                      style={{ ...td(), maxWidth: 280, verticalAlign: 'top', cursor: 'pointer' }}
+                      onClick={() => openStudio(rowIndex, 'view')}
                     >
-                      {isEditing ? (
-                        <RichEditor
-                          value={editFront}
-                          onChange={setEditFront}
-                          placeholder="Pergunta…"
-                          minRows={3}
-                          ariaLabel="Editar front"
-                        />
-                      ) : (
-                        <PreviewCell html={c.front} />
-                      )}
+                      <PreviewCell html={c.front} />
                     </td>
                     <td
-                      style={{
-                        ...td(),
-                        maxWidth: isEditing ? undefined : 360,
-                        verticalAlign: 'top',
-                      }}
+                      style={{ ...td(), maxWidth: 360, verticalAlign: 'top', cursor: 'pointer' }}
+                      onClick={() => openStudio(rowIndex, 'view')}
                     >
-                      {isEditing ? (
-                        <RichEditor
-                          value={editBack}
-                          onChange={setEditBack}
-                          placeholder="Resposta…"
-                          minRows={4}
-                          ariaLabel="Editar back"
-                        />
-                      ) : (
-                        <PreviewCell html={c.back} />
-                      )}
+                      <PreviewCell html={c.back} />
                     </td>
                     <td
                       style={{
@@ -423,71 +374,43 @@ export function BancoFlashcardsClient({
                         verticalAlign: 'top',
                       }}
                     >
-                      {isEditing ? (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 6,
-                            alignItems: 'flex-end',
-                          }}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 4,
+                          alignItems: 'flex-end',
+                        }}
+                      >
+                        <button
+                          onClick={() => openStudio(rowIndex, 'view')}
+                          style={btnSecondary}
+                          disabled={pending}
                         >
-                          <select
-                            value={editDifficulty}
-                            onChange={(e) => setEditDifficulty(Number(e.target.value))}
-                            style={selectStyle}
-                          >
-                            {[1, 2, 3, 4, 5].map((n) => (
-                              <option key={n} value={n}>
-                                Dif {n}
-                              </option>
-                            ))}
-                          </select>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button
-                              onClick={() => save(c)}
-                              disabled={pending}
-                              style={btnPrimary(!pending)}
-                            >
-                              Salvar
-                            </button>
-                            <button onClick={cancelEdit} style={btnGhost}>
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 4,
-                            alignItems: 'flex-end',
-                          }}
+                          Estudar
+                        </button>
+                        <button
+                          onClick={() => openStudio(rowIndex, 'edit')}
+                          style={btnSecondary}
+                          disabled={pending}
                         >
-                          <button
-                            onClick={() => startEdit(c)}
-                            style={btnSecondary}
-                            disabled={pending}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => toggleApproval(c)}
-                            style={btnGhost}
-                            disabled={pending}
-                          >
-                            {c.approved ? 'Despublicar' : 'Aprovar'}
-                          </button>
-                          <button
-                            onClick={() => remove(c)}
-                            style={btnDanger}
-                            disabled={pending}
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      )}
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => toggleApproval(c)}
+                          style={btnGhost}
+                          disabled={pending}
+                        >
+                          {c.approved ? 'Despublicar' : 'Aprovar'}
+                        </button>
+                        <button
+                          onClick={() => remove(c)}
+                          style={btnDanger}
+                          disabled={pending}
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -534,6 +457,16 @@ export function BancoFlashcardsClient({
           </button>
         </div>
       )}
+
+      {studio && (
+        <FlashcardStudio
+          cards={result.rows}
+          startIndex={studio.index}
+          initialMode={studio.mode}
+          onClose={() => setStudio(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
     </div>
   )
 }
@@ -560,15 +493,6 @@ function PreviewCell({ html }: { html: string }) {
       {html}
     </span>
   )
-}
-
-function toEditableHtml(text: string): string {
-  if (!text) return ''
-  if (isHtml(text)) return text
-  return text
-    .split(/\n{2,}/)
-    .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-    .join('')
 }
 
 const checkboxStyle: React.CSSProperties = {
