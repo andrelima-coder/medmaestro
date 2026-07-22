@@ -50,3 +50,4 @@ backups/
 
 # Local dev .next em /tmp (NEXT_DIST_DIR fora da working tree)
 tmp/
+_to_delete/
