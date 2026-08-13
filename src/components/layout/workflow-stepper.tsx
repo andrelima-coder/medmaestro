@@ -102,13 +102,13 @@ export function WorkflowStepper() {
                 background: isActive
                   ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
                   : isPast
-                    ? 'rgba(102, 187, 106, 0.15)'
+                    ? 'rgba(0, 96, 72, 0.15)'
                     : 'var(--mm-bg2)',
-                color: isActive ? '#0a0a0a' : color,
+                color: isActive ? '#FFFFFF' : color,
                 border: isActive
                   ? 'none'
                   : isPast
-                    ? '1px solid rgba(102, 187, 106, 0.45)'
+                    ? '1px solid rgba(0, 96, 72, 0.45)'
                     : '1px solid var(--mm-line2)',
               }}
             >

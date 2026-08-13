@@ -42,7 +42,7 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
   const hasComments = initialComments.length > 0
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-sm font-semibold text-foreground">
           Comentários
@@ -59,7 +59,7 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
             background: isPending
               ? 'var(--mm-bg2)'
               : 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-            color: isPending ? 'var(--mm-muted)' : '#0a0a0a',
+            color: isPending ? 'var(--mm-muted)' : '#FFFFFF',
             fontFamily: 'var(--font-syne)',
             fontSize: 12,
             fontWeight: 700,
@@ -70,7 +70,7 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            boxShadow: isPending ? 'none' : '0 2px 12px rgba(212,168,67,0.25)',
+            boxShadow: isPending ? 'none' : '0 2px 12px rgba(212,7,84,0.25)',
             transition: 'all 0.15s',
           }}
         >
@@ -98,13 +98,13 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+        <div className="rounded-lg border border-[rgba(211,64,42,0.3)] bg-[rgba(211,64,42,0.1)] px-3 py-2 text-xs text-[#D3402A]">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-green-400">
+        <div className="rounded-lg border border-[rgba(0,96,72,0.3)] bg-[rgba(0,96,72,0.1)] px-3 py-2 text-xs text-[#006048]">
           ✓ Comentário gerado com sucesso.
         </div>
       )}
@@ -130,7 +130,7 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
         {initialComments.map((comment) => (
           <div
             key={comment.id}
-            className="flex flex-col gap-1.5 rounded-lg border border-white/5 bg-white/2 p-4"
+            className="flex flex-col gap-1.5 rounded-lg border border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)] p-4"
           >
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-[var(--mm-gold)]">
@@ -140,8 +140,8 @@ export function CommentSection({ questionId, initialComments }: CommentSectionPr
                 <span
                   className="text-xs px-1.5 py-0.5 rounded"
                   style={{
-                    background: 'rgba(79,195,247,0.1)',
-                    color: '#4FC3F7',
+                    background: 'rgba(32,105,115,0.1)',
+                    color: '#206973',
                     fontWeight: 600,
                   }}
                 >

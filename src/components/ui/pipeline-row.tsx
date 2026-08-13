@@ -29,8 +29,8 @@ function PipelineRow({
     <div
       data-slot="pipeline-row"
       className={cn(
-        "flex items-center gap-3 border-b border-[rgba(255,255,255,0.03)] py-2.5 last:border-b-0",
-        highlighted && "rounded-lg bg-[rgba(255,107,53,0.04)] px-1 py-2",
+        "flex items-center gap-3 border-b border-[rgba(14,40,65,0.03)] py-2.5 last:border-b-0",
+        highlighted && "rounded-lg bg-[rgba(242,107,67,0.04)] px-1 py-2",
         className
       )}
       {...props}
@@ -47,7 +47,7 @@ function PipelineRow({
           aria-valuenow={Math.round(clamped)}
           aria-valuemin={0}
           aria-valuemax={100}
-          className="h-[5px] overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]"
+          className="h-[5px] overflow-hidden rounded-full bg-[rgba(14,40,65,0.06)]"
         >
           <div
             className="h-full rounded-full transition-[width] duration-700 ease-out"

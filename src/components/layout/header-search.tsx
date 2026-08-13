@@ -47,7 +47,7 @@ export function HeaderSearch() {
         name="q"
         placeholder="Buscar questão…"
         defaultValue={searchParams.get('q') ?? ''}
-        className="h-8 w-48 rounded-lg border border-white/[0.08] bg-white/[0.04] pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
+        className="h-8 w-48 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
       />
     </form>
   )

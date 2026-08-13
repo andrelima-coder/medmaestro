@@ -56,9 +56,9 @@ export function GenerateCommentButton({ questionId }: { questionId: string }) {
           fontWeight: 600,
           padding: '6px 12px',
           borderRadius: 8,
-          border: '1px solid rgba(79,195,247,0.3)',
-          background: 'rgba(79,195,247,0.08)',
-          color: '#4FC3F7',
+          border: '1px solid rgba(32,105,115,0.3)',
+          background: 'rgba(32,105,115,0.08)',
+          color: '#206973',
           cursor: busy ? 'default' : 'pointer',
           opacity: busy ? 0.7 : 1,
         }}
@@ -75,14 +75,14 @@ export function GenerateCommentButton({ questionId }: { questionId: string }) {
             top: 'calc(100% + 6px)',
             zIndex: 30,
             minWidth: 230,
-            background: '#12121A',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: '#FFFFFF',
+            border: '1px solid rgba(14,40,65,0.08)',
             borderRadius: 10,
             boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '8px 12px', fontSize: 10, letterSpacing: '0.4px', textTransform: 'uppercase', color: '#9AA0AA', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '8px 12px', fontSize: 10, letterSpacing: '0.4px', textTransform: 'uppercase', color: '#5F7288', borderBottom: '1px solid rgba(14,40,65,0.06)' }}>
             Escolha o modelo de IA
           </div>
           {COMMENT_MODEL_OPTIONS.map((opt) => (
@@ -96,15 +96,15 @@ export function GenerateCommentButton({ questionId }: { questionId: string }) {
                 padding: '9px 12px',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                borderBottom: '1px solid rgba(14,40,65,0.04)',
                 cursor: 'pointer',
-                color: '#E8E8EA',
+                color: '#0E2841',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(14,40,65,0.04)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <div style={{ fontSize: 12, fontWeight: 600 }}>{opt.label}</div>
-              <div style={{ fontSize: 10.5, color: '#9AA0AA', marginTop: 1 }}>{opt.hint}</div>
+              <div style={{ fontSize: 10.5, color: '#5F7288', marginTop: 1 }}>{opt.hint}</div>
             </button>
           ))}
         </div>
@@ -121,9 +121,9 @@ export function GenerateCommentButton({ questionId }: { questionId: string }) {
             fontSize: 11,
             padding: '8px 12px',
             borderRadius: 8,
-            background: feedback.ok ? 'rgba(102,187,106,0.1)' : 'rgba(239,83,80,0.1)',
-            border: `1px solid ${feedback.ok ? 'rgba(102,187,106,0.3)' : 'rgba(239,83,80,0.3)'}`,
-            color: feedback.ok ? '#66BB6A' : '#EF5350',
+            background: feedback.ok ? 'rgba(0,96,72,0.1)' : 'rgba(211,64,42,0.1)',
+            border: `1px solid ${feedback.ok ? 'rgba(0,96,72,0.3)' : 'rgba(211,64,42,0.3)'}`,
+            color: feedback.ok ? '#006048' : '#D3402A',
           }}
         >
           {feedback.msg}

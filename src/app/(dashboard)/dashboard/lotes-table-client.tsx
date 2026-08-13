@@ -25,19 +25,19 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; border: string }> = {
   done: {
-    bg: 'rgba(102,187,106,0.12)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.3)',
+    bg: 'rgba(0,96,72,0.12)',
+    color: '#006048',
+    border: 'rgba(0,96,72,0.3)',
   },
   published: {
-    bg: 'rgba(102,187,106,0.12)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.3)',
+    bg: 'rgba(0,96,72,0.12)',
+    color: '#006048',
+    border: 'rgba(0,96,72,0.3)',
   },
   extracting: {
-    bg: 'rgba(79,195,247,0.12)',
-    color: '#4FC3F7',
-    border: 'rgba(79,195,247,0.3)',
+    bg: 'rgba(32,105,115,0.12)',
+    color: '#206973',
+    border: 'rgba(32,105,115,0.3)',
   },
   classifying: {
     bg: 'var(--mm-gold-bg)',
@@ -45,14 +45,14 @@ const STATUS_STYLES: Record<string, { bg: string; color: string; border: string 
     border: 'var(--mm-gold-border)',
   },
   pending: {
-    bg: 'rgba(255,152,0,0.12)',
-    color: '#FF9800',
-    border: 'rgba(255,152,0,0.3)',
+    bg: 'rgba(251,174,64,0.12)',
+    color: '#9E6606',
+    border: 'rgba(251,174,64,0.3)',
   },
   error: {
-    bg: 'rgba(239,83,80,0.12)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.3)',
+    bg: 'rgba(211,64,42,0.12)',
+    color: '#D3402A',
+    border: 'rgba(211,64,42,0.3)',
   },
 }
 
@@ -155,14 +155,14 @@ export function LotesTableClient({ exams }: { exams: LoteRow[] }) {
           href="/lotes/novo"
           style={{
             background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-            color: '#0a0a0a',
+            color: '#FFFFFF',
             fontFamily: 'var(--font-syne)',
             fontSize: 12,
             fontWeight: 700,
             padding: '8px 16px',
             borderRadius: 8,
             border: 'none',
-            boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+            boxShadow: '0 4px 20px rgba(212,7,84,0.25)',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
@@ -431,7 +431,7 @@ function btnPager(active: boolean, primary = false): React.CSSProperties {
   if (primary && active) {
     return {
       background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-      color: '#0a0a0a',
+      color: '#FFFFFF',
       fontFamily: 'var(--font-syne)',
       fontSize: 11,
       fontWeight: 700,

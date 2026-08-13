@@ -45,7 +45,7 @@ function Card({ card, onDominado }: { card: ErrorCard; onDominado: () => void })
         </button>
       ) : (
         <div className="mt-4 rounded-lg bg-muted/50 p-3 text-sm">
-          <p className="text-emerald-600">Gabarito: {card.correctAnswer ?? '—'}</p>
+          <p className="text-[#006048]">Gabarito: {card.correctAnswer ?? '—'}</p>
           {card.comment && (
             <p className="mt-2 whitespace-pre-line text-foreground">{card.comment}</p>
           )}

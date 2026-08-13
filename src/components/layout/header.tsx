@@ -14,10 +14,10 @@ export function Header({ fullName, email, role }: HeaderProps) {
     <header
       className={[
         'relative flex h-14 items-center justify-between gap-4 px-5 shrink-0',
-        'bg-[linear-gradient(180deg,rgba(14,11,28,0.96)_0%,rgba(10,8,22,0.92)_100%)]',
-        'border-b border-[rgba(255,255,255,0.06)] backdrop-blur-md',
+        'bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(255,255,255,0.92)_100%)]',
+        'border-b border-[rgba(14,40,65,0.06)] backdrop-blur-md',
         "after:content-[''] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px",
-        'after:bg-[linear-gradient(90deg,transparent,rgba(139,92,246,0.20),rgba(201,168,76,0.15),transparent)]',
+        'after:bg-[linear-gradient(90deg,transparent,rgba(123,63,160,0.20),rgba(212,7,84,0.15),transparent)]',
       ].join(' ')}
     >
       <div className="min-w-0 flex-1">

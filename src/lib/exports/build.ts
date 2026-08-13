@@ -330,9 +330,9 @@ export async function buildDocxBuffer(data: ExportData): Promise<Buffer> {
     if (data.content.dica_professor && q.teacherTips.length > 0) {
       sectionChildren.push(
         new Paragraph({
-          children: [new TextRun({ text: '🎓 Para o professor', bold: true, size: 20, color: 'B8860B' })],
+          children: [new TextRun({ text: '🎓 Para o professor', bold: true, size: 20, color: 'D40754' })],
           spacing: { before: 180, after: 80 },
-          shading: { type: 'clear', fill: 'FBF6E6' },
+          shading: { type: 'clear', fill: 'F6E3EF' },
         })
       )
       for (const tip of q.teacherTips) {
@@ -347,7 +347,7 @@ export async function buildDocxBuffer(data: ExportData): Promise<Buffer> {
                   text: trimmed,
                   size: 19,
                   bold: isHeader,
-                  color: isHeader ? '7A5C00' : '333333',
+                  color: isHeader ? 'B6014F' : '333333',
                 }),
               ],
               indent: { left: isHeader ? 240 : 360 },

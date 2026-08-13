@@ -11,7 +11,7 @@ export function SimuladoDelete({ simuladoId }: { simuladoId: string }) {
     return (
       <button
         onClick={() => setConfirm(true)}
-        className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
+        className="text-xs text-muted-foreground hover:text-[#D3402A] transition-colors"
       >
         Excluir simulado
       </button>
@@ -28,7 +28,7 @@ export function SimuladoDelete({ simuladoId }: { simuladoId: string }) {
           })
         }
         disabled={isPending}
-        className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-40"
+        className="text-xs text-[#D3402A] hover:text-[#D3402A] transition-colors disabled:opacity-40"
       >
         {isPending ? 'Excluindo…' : 'Sim, excluir'}
       </button>

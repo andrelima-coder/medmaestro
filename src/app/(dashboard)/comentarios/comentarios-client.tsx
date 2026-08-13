@@ -113,17 +113,17 @@ export function ComentariosClient({
   return (
     <div className="flex flex-col gap-4">
       {/* AI banner purple */}
-      <div className="flex items-center gap-3 rounded-[10px] border border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.08)] px-4 py-3">
+      <div className="flex items-center gap-3 rounded-[10px] border border-[rgba(123,63,160,0.20)] bg-[rgba(123,63,160,0.08)] px-4 py-3">
         <div
           className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg"
           style={{
-            background: 'linear-gradient(135deg, #7B3FCE, var(--mm-gold))',
+            background: 'linear-gradient(135deg, #7B3FA0, var(--mm-gold))',
           }}
         >
           <Sparkles className="size-4 text-white" />
         </div>
         <div className="flex-1">
-          <div className="text-xs font-semibold text-[#A78BFA]">
+          <div className="text-xs font-semibold text-[#7B3FA0]">
             Geração por IA · Claude Opus
           </div>
           <div className="mt-0.5 text-[11px] text-[var(--mm-muted)]">
@@ -140,7 +140,7 @@ export function ComentariosClient({
           <select
             value={initialFilter.examId}
             onChange={(e) => router.push(filterUrl({ examId: e.target.value }))}
-            className="min-w-[220px] rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 py-1.5 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)]"
+            className="min-w-[220px] rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 py-1.5 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)]"
           >
             <option value="">Todos os exames</option>
             {exams.map((e) => (
@@ -187,16 +187,16 @@ export function ComentariosClient({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg px-4 py-2 font-[family-name:var(--font-syne)] text-xs font-bold transition-all',
               canGenerate
-                ? 'text-[#0A0A0A] hover:-translate-y-px'
+                ? 'text-[#FFFFFF] hover:-translate-y-px'
                 : 'cursor-not-allowed border border-[var(--mm-border-default)] bg-transparent text-[var(--mm-muted)]'
             )}
             style={
               canGenerate
                 ? {
                     background:
-                      'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                      'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
                     boxShadow:
-                      '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                      '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
                   }
                 : undefined
             }
@@ -220,7 +220,7 @@ export function ComentariosClient({
 
       {/* Seleção entre páginas */}
       {hasMorePages && (allSelected || allFilteredSelected) && (
-        <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[rgba(201,168,76,0.25)] bg-[rgba(201,168,76,0.06)] px-4 py-2.5 text-[12px] text-[var(--mm-text2)]">
+        <div className="flex items-center justify-center gap-2 rounded-[10px] border border-[rgba(212,7,84,0.25)] bg-[rgba(212,7,84,0.06)] px-4 py-2.5 text-[12px] text-[var(--mm-text2)]">
           {allFilteredSelected ? (
             <>
               <span>
@@ -277,7 +277,7 @@ export function ComentariosClient({
                 {rows.map((r) => (
                   <tr
                     key={r.id}
-                    className="cursor-pointer border-b border-[var(--mm-border-default)] transition-colors hover:bg-white/[0.02]"
+                    className="cursor-pointer border-b border-[var(--mm-border-default)] transition-colors hover:bg-[rgba(14,40,65,0.02)]"
                     onClick={(e) => {
                       if ((e.target as HTMLElement).closest('input,a')) return
                       window.location.href = `/questoes/${r.id}`

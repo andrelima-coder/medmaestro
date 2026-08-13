@@ -91,7 +91,7 @@ export default async function AnalyticsCampanhasPage() {
                     {piores.map((p) => (
                       <li key={p.label} className="flex justify-between">
                         <span className="text-foreground">{p.label}</span>
-                        <span className="text-red-500">{p.pct}%</span>
+                        <span className="text-[#D3402A]">{p.pct}%</span>
                       </li>
                     ))}
                   </ul>

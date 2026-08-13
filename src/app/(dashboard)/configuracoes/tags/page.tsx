@@ -61,7 +61,7 @@ export default async function TagsPage() {
       </div>
 
       {/* Info banner purple — explica que tags são injetadas no system prompt */}
-      <div className="flex items-center gap-3 rounded-[10px] border border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.08)] px-4 py-3">
+      <div className="flex items-center gap-3 rounded-[10px] border border-[rgba(123,63,160,0.20)] bg-[rgba(123,63,160,0.08)] px-4 py-3">
         <svg
           width="16"
           height="16"

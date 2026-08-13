@@ -36,16 +36,16 @@ export default async function PrevisaoPage({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Link href="/analise" style={{ fontSize: 12, color: 'var(--mm-muted, #9AA0AA)', textDecoration: 'none' }}>
+            <Link href="/analise" style={{ fontSize: 12, color: 'var(--mm-muted, #5F7288)', textDecoration: 'none' }}>
               Análise
             </Link>
-            <span style={{ color: 'var(--mm-muted, #9AA0AA)', fontSize: 12 }}>/</span>
-            <span style={{ fontSize: 12, color: 'var(--mm-gold, #C9A84C)' }}>Previsão</span>
+            <span style={{ color: 'var(--mm-muted, #5F7288)', fontSize: 12 }}>/</span>
+            <span style={{ fontSize: 12, color: 'var(--mm-gold, #D40754)' }}>Previsão</span>
           </div>
-          <h1 className="font-[family-name:var(--font-syne)]" style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text, #E8E8EA)' }}>
+          <h1 className="font-[family-name:var(--font-syne)]" style={{ fontSize: 20, fontWeight: 700, color: 'var(--mm-text, #0E2841)' }}>
             Previsão de prova {data.meta.generatedAtYear}
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--mm-muted, #9AA0AA)', marginTop: 2 }}>
+          <p style={{ fontSize: 13, color: 'var(--mm-muted, #5F7288)', marginTop: 2 }}>
             Priorização de estudo por tópico, a partir do histórico de {data.years.length} provas.
           </p>
         </div>
@@ -72,9 +72,9 @@ function DimTab({ href, active, label }: { href: string; active: boolean; label:
         padding: '6px 14px',
         borderRadius: 8,
         textDecoration: 'none',
-        border: `1px solid ${active ? 'var(--mm-gold, #C9A84C)' : 'rgba(255,255,255,0.08)'}`,
-        background: active ? 'rgba(201,168,76,0.12)' : 'transparent',
-        color: active ? 'var(--mm-gold, #C9A84C)' : 'var(--mm-muted, #9AA0AA)',
+        border: `1px solid ${active ? 'var(--mm-gold, #D40754)' : 'rgba(14,40,65,0.08)'}`,
+        background: active ? 'rgba(212,7,84,0.12)' : 'transparent',
+        color: active ? 'var(--mm-gold, #D40754)' : 'var(--mm-muted, #5F7288)',
       }}
     >
       {label}

@@ -193,7 +193,7 @@ export function ProvaRuntime({
                 : i === current
                   ? 'border-primary text-foreground'
                   : 'border-border text-muted-foreground'
-              const flag = flagged[qq.id] ? ' ring-2 ring-amber-400' : ''
+              const flag = flagged[qq.id] ? ' ring-2 ring-[#FBAE40]' : ''
               return (
                 <button
                   key={qq.id}
@@ -219,7 +219,7 @@ export function ProvaRuntime({
         <button
           onClick={finish}
           disabled={isPending}
-          className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+          className="w-full rounded-lg bg-[#006048] px-3 py-2 text-sm font-semibold text-white"
         >
           Finalizar prova
         </button>
@@ -245,7 +245,7 @@ export function ProvaRuntime({
             type="button"
             onClick={toggleFlag}
             className={`rounded-md border px-2 py-1 text-xs ${
-              flagged[q.id] ? 'border-amber-400 text-amber-600' : 'border-border text-foreground'
+              flagged[q.id] ? 'border-[#FBAE40] text-[#9E6606]' : 'border-border text-foreground'
             }`}
           >
             {flagged[q.id] ? 'Sinalizada' : 'Sinalizar'}
@@ -303,9 +303,9 @@ export function ProvaRuntime({
           })}
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
+        {error && <p className="mt-3 text-sm text-[#D3402A]">{error}</p>}
         {locked && (
-          <p className="mt-3 text-sm text-emerald-600">Resposta salva e travada.</p>
+          <p className="mt-3 text-sm text-[#006048]">Resposta salva e travada.</p>
         )}
 
         <div className="mt-6 flex items-center justify-between">

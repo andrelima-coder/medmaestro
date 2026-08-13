@@ -218,7 +218,7 @@ export function ImageModal({
                 key={img.id}
                 onClick={() => openModal(i)}
                 title="Clique para ampliar"
-                className="group block overflow-hidden rounded-lg border border-white/10 bg-white/5 transition-colors hover:border-[var(--mm-gold)]/50"
+                className="group block overflow-hidden rounded-lg border border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.05)] transition-colors hover:border-[var(--mm-gold)]/50"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -238,7 +238,7 @@ export function ImageModal({
             <button
               key={img.id}
               onClick={() => openModal(i)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-400 hover:bg-purple-500/20 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[rgba(123,63,160,0.3)] bg-[rgba(123,63,160,0.1)] px-2.5 py-1 text-xs font-medium text-[#7B3FA0] hover:bg-[rgba(123,63,160,0.2)] transition-colors"
             >
               🖼 {SCOPE_LABELS[img.image_scope] ?? img.image_scope}
             </button>
@@ -254,7 +254,7 @@ export function ImageModal({
         >
           <div
             data-modal-box
-            className={`relative flex flex-col gap-3 rounded-xl border border-white/10 bg-[var(--mm-surface)] p-4 mx-4 ${
+            className={`relative flex flex-col gap-3 rounded-xl border border-[rgba(14,40,65,0.12)] bg-[var(--mm-surface)] p-4 mx-4 ${
               modalSize ? '' : 'max-w-3xl w-full max-h-[90vh]'
             }`}
             style={
@@ -277,7 +277,7 @@ export function ImageModal({
                         key={i}
                         onClick={() => switchImage(i)}
                         className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                          i === activeIndex ? 'bg-[var(--mm-gold)]' : 'bg-white/20 hover:bg-white/40'
+                          i === activeIndex ? 'bg-[var(--mm-gold)]' : 'bg-[rgba(14,40,65,0.2)] hover:bg-[rgba(14,40,65,0.4)]'
                         }`}
                       />
                     ))}
@@ -285,7 +285,7 @@ export function ImageModal({
                 )}
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-1 py-0.5">
+                <div className="flex items-center gap-1 rounded-md border border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.05)] px-1 py-0.5">
                   <button
                     onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
                     disabled={zoom <= ZOOM_MIN}
@@ -331,7 +331,7 @@ export function ImageModal({
 
             {/* Imagem */}
             <div
-              className="flex-1 overflow-hidden flex items-center justify-center min-h-0 rounded-lg bg-black/30 select-none touch-none"
+              className="flex-1 overflow-hidden flex items-center justify-center min-h-0 rounded-lg bg-[rgba(14,40,65,0.06)] select-none touch-none"
               style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
               onWheel={(e) => {
                 if (!signedUrl) return
@@ -363,7 +363,7 @@ export function ImageModal({
                   draggable={false}
                 />
               ) : (
-                <p className="text-sm text-red-400">Erro ao carregar imagem.</p>
+                <p className="text-sm text-[#D3402A]">Erro ao carregar imagem.</p>
               )}
             </div>
 
@@ -391,7 +391,7 @@ export function ImageModal({
                 style={{ touchAction: 'none' }}
                 aria-hidden
               >
-                <span className="pointer-events-none absolute inset-1 rounded-sm border border-white/40" />
+                <span className="pointer-events-none absolute inset-1 rounded-sm border border-[rgba(14,40,65,0.3)]" />
               </div>
             ))}
           </div>

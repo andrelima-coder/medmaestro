@@ -21,7 +21,7 @@ export function CadastroForm() {
         <Field label="Senha (mín. 8 caracteres)" name="password" type="password" autoComplete="new-password" />
 
         {state?.error && (
-          <p role="alert" className="text-sm text-red-500">
+          <p role="alert" className="text-sm text-[#D3402A]">
             {state.error}
           </p>
         )}

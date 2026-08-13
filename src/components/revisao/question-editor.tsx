@@ -136,7 +136,7 @@ export function QuestionEditor({
         </div>
         {readOnly ? (
           <div
-            className="rounded-lg border border-white/5 bg-white/2 px-3 py-2 text-sm text-foreground"
+            className="rounded-lg border border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)] px-3 py-2 text-sm text-foreground"
             dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(stem) || '<em>(sem enunciado)</em>' }}
           />
         ) : (
@@ -169,13 +169,13 @@ export function QuestionEditor({
                 key={letter}
                 className={`flex gap-3 rounded-lg border px-3 py-2.5 text-sm ${
                   isCorrect
-                    ? 'border-green-500/30 bg-green-500/8'
-                    : 'border-white/5 bg-white/2'
+                    ? 'border-[rgba(0,96,72,0.3)] bg-[rgba(0,96,72,0.08)]'
+                    : 'border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)]'
                 }`}
               >
                 <span
                   className={`font-semibold shrink-0 pt-1 ${
-                    isCorrect ? 'text-green-400' : 'text-muted-foreground'
+                    isCorrect ? 'text-[#006048]' : 'text-muted-foreground'
                   }`}
                   style={{ minWidth: 22 }}
                 >
@@ -223,11 +223,11 @@ function SaveStatus({
   savedAt: Date | null
   error: string | null
 }) {
-  if (error) return <span className="text-xs text-red-400">{error}</span>
+  if (error) return <span className="text-xs text-[#D3402A]">{error}</span>
   if (pending) return <span className="text-xs text-muted-foreground">Salvando…</span>
   if (savedAt)
     return (
-      <span className="text-xs text-green-400/80">
+      <span className="text-xs text-[#006048]/80">
         Salvo às {savedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </span>
     )

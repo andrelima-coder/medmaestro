@@ -9,16 +9,16 @@ import { IncidenciaTemaClient, type TemaRow } from './incidencia-tema-client'
 export const metadata = { title: 'Dashboard — MedMaestro' }
 
 const MODULOS = [
-  { label: 'Cardiovascular', color: '#EF5350' },
-  { label: 'Respiratório', color: '#42A5F5' },
-  { label: 'Neurológico', color: '#AB47BC' },
-  { label: 'Renal e Distúrbios HE', color: '#26A69A' },
-  { label: 'Infectologia e Sepse', color: '#FF7043' },
-  { label: 'Gastro e Nutrição', color: '#66BB6A' },
-  { label: 'Hemato e Oncologia', color: '#EC407A' },
+  { label: 'Cardiovascular', color: '#D3402A' },
+  { label: 'Respiratório', color: '#2B5A9C' },
+  { label: 'Neurológico', color: '#7B3FA0' },
+  { label: 'Renal e Distúrbios HE', color: '#319498' },
+  { label: 'Infectologia e Sepse', color: '#F26B43' },
+  { label: 'Gastro e Nutrição', color: '#006048' },
+  { label: 'Hemato e Oncologia', color: '#B6014F' },
   { label: 'Trauma e Cirurgia', color: '#8D6E63' },
-  { label: 'Medicina Perioperatória', color: '#FFA726' },
-  { label: 'Ética e Qualidade', color: '#78909C' },
+  { label: 'Medicina Perioperatória', color: '#9E6606' },
+  { label: 'Ética e Qualidade', color: '#5F7288' },
 ]
 
 export default async function DashboardPage() {

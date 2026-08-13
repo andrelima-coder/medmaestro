@@ -106,7 +106,7 @@ export function GerarSimuladoForm({
           name="title"
           required
           defaultValue={suggestedTitle}
-          className="h-10 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--mm-border-active)]"
+          className="h-10 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--mm-border-active)]"
         />
       </div>
 
@@ -123,7 +123,7 @@ export function GerarSimuladoForm({
             max={poolCount}
             value={total}
             onChange={(e) => setTotal(parseInt(e.target.value, 10) || 0)}
-            className="h-10 w-28 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--mm-border-active)]"
+            className="h-10 w-28 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground outline-none transition-colors focus:border-[var(--mm-border-active)]"
           />
           <input
             type="range"
@@ -198,7 +198,7 @@ export function GerarSimuladoForm({
       </div>
 
       {state?.error && (
-        <p className="rounded-lg border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] p-3 text-sm text-[var(--mm-red)]">
+        <p className="rounded-lg border border-[rgba(211,64,42,0.30)] bg-[rgba(211,64,42,0.08)] p-3 text-sm text-[var(--mm-red)]">
           {state.error}
         </p>
       )}
@@ -211,14 +211,14 @@ export function GerarSimuladoForm({
             'inline-flex h-10 items-center rounded-lg px-5 text-sm font-bold transition-all',
             pending || poolCount === 0
               ? 'cursor-not-allowed border border-[var(--mm-border-default)] text-[var(--mm-muted)]'
-              : 'text-[#0A0A0A] hover:-translate-y-px'
+              : 'text-[#FFFFFF] hover:-translate-y-px'
           )}
           style={
             pending || poolCount === 0
               ? undefined
               : {
-                  background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-                  boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                  background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
+                  boxShadow: '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }
           }
         >

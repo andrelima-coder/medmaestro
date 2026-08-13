@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  "relative overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[var(--mm-card-bg)] backdrop-blur-md transition-[border-color,box-shadow] duration-200 hover:border-[rgba(255,255,255,0.12)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]",
+  "relative overflow-hidden rounded-[14px] border border-[rgba(14,40,65,0.07)] bg-[var(--mm-card-bg)] backdrop-blur-md transition-[border-color,box-shadow] duration-200 hover:border-[rgba(14,40,65,0.12)] hover:shadow-[0_4px_32px_rgba(0,0,0,0.3)]",
   {
     variants: {
       glow: {

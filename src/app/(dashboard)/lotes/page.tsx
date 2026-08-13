@@ -19,14 +19,14 @@ const STATUS_LABELS: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; color: string; border: string }> = {
     done: {
-      bg: 'rgba(102,187,106,0.1)',
-      color: '#66BB6A',
-      border: 'rgba(102,187,106,0.25)',
+      bg: 'rgba(0,96,72,0.1)',
+      color: '#006048',
+      border: 'rgba(0,96,72,0.25)',
     },
     extracting: {
-      bg: 'rgba(79,195,247,0.1)',
-      color: '#4FC3F7',
-      border: 'rgba(79,195,247,0.25)',
+      bg: 'rgba(32,105,115,0.1)',
+      color: '#206973',
+      border: 'rgba(32,105,115,0.25)',
     },
     classifying: {
       bg: 'var(--mm-gold-bg)',
@@ -34,14 +34,14 @@ function StatusBadge({ status }: { status: string }) {
       border: 'var(--mm-gold-border)',
     },
     pending: {
-      bg: 'rgba(255,152,0,0.1)',
-      color: '#FF9800',
-      border: 'rgba(255,152,0,0.25)',
+      bg: 'rgba(251,174,64,0.1)',
+      color: '#9E6606',
+      border: 'rgba(251,174,64,0.25)',
     },
     error: {
-      bg: 'rgba(239,83,80,0.1)',
-      color: '#EF5350',
-      border: 'rgba(239,83,80,0.25)',
+      bg: 'rgba(211,64,42,0.1)',
+      color: '#D3402A',
+      border: 'rgba(211,64,42,0.25)',
     },
   }
   const s = styles[status] ?? styles.pending
@@ -119,14 +119,14 @@ export default async function LotesPage() {
           href="/lotes/novo"
           style={{
             background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-            color: '#0a0a0a',
+            color: '#FFFFFF',
             fontFamily: 'var(--font-syne)',
             fontSize: 12,
             fontWeight: 700,
             padding: '10px 20px',
             borderRadius: 8,
             border: 'none',
-            boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+            boxShadow: '0 4px 20px rgba(212,7,84,0.25)',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
@@ -141,10 +141,10 @@ export default async function LotesPage() {
       {allExams.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {[
-            { label: 'Concluídos', value: statsDone, color: '#66BB6A' },
-            { label: 'Em processo', value: statsProcessing, color: '#4FC3F7' },
-            { label: 'Pendentes', value: statsPending, color: '#FF9800' },
-            { label: 'Com erro', value: statsError, color: '#EF5350' },
+            { label: 'Concluídos', value: statsDone, color: '#006048' },
+            { label: 'Em processo', value: statsProcessing, color: '#206973' },
+            { label: 'Pendentes', value: statsPending, color: '#9E6606' },
+            { label: 'Com erro', value: statsError, color: '#D3402A' },
           ].map((s) => (
             <div
               key={s.label}

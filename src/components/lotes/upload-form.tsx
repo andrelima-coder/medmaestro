@@ -109,8 +109,8 @@ function SelectField({
           padding: '0 14px',
           borderRadius: 10,
           border: open
-            ? '1px solid rgba(212,168,67,0.5)'
-            : '1px solid rgba(255,255,255,0.10)',
+            ? '1px solid rgba(212,7,84,0.5)'
+            : '1px solid rgba(14,40,65,0.10)',
           background: 'var(--mm-bg2)',
           color: selected ? 'var(--mm-text)' : 'var(--mm-muted)',
           fontSize: 13,
@@ -147,7 +147,7 @@ function SelectField({
             marginTop: 4,
             zIndex: 50,
             borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.10)',
+            border: '1px solid rgba(14,40,65,0.10)',
             background: 'var(--mm-surface-elevated)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
             overflow: 'hidden',
@@ -165,14 +165,14 @@ function SelectField({
                   padding: '10px 14px',
                   fontSize: 13,
                   color: opt.value === value ? 'var(--mm-gold)' : 'var(--mm-text)',
-                  background: opt.value === value ? 'rgba(212,168,67,0.08)' : 'transparent',
+                  background: opt.value === value ? 'rgba(212,7,84,0.08)' : 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'background 100ms',
                 }}
                 onMouseEnter={(e) => {
                   if (opt.value !== value)
-                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)'
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(14,40,65,0.04)'
                 }}
                 onMouseLeave={(e) => {
                   if (opt.value !== value)
@@ -262,8 +262,8 @@ function ColorSelectWithCustom({
               height: 44,
               padding: '0 14px 0 40px',
               borderRadius: 10,
-              border: '1px solid rgba(212,168,67,0.4)',
-              background: 'rgba(212,168,67,0.04)',
+              border: '1px solid rgba(212,7,84,0.4)',
+              background: 'rgba(212,7,84,0.04)',
               color: 'var(--mm-text)',
               fontSize: 13,
               boxSizing: 'border-box',
@@ -380,8 +380,8 @@ function YearSelectWithCustom({
               height: 44,
               padding: '0 14px 0 40px',
               borderRadius: 10,
-              border: '1px solid rgba(212,168,67,0.4)',
-              background: 'rgba(212,168,67,0.04)',
+              border: '1px solid rgba(212,7,84,0.4)',
+              background: 'rgba(212,7,84,0.04)',
               color: 'var(--mm-text)',
               fontSize: 13,
               boxSizing: 'border-box',
@@ -547,16 +547,16 @@ function DropZone({
           borderRadius: 12,
           border: `2px dashed ${
             dragging
-              ? 'rgba(212,168,67,0.6)'
+              ? 'rgba(212,7,84,0.6)'
               : file
-              ? 'rgba(212,168,67,0.3)'
-              : 'rgba(255,255,255,0.12)'
+              ? 'rgba(212,7,84,0.3)'
+              : 'rgba(14,40,65,0.12)'
           }`,
           background: dragging
-            ? 'rgba(212,168,67,0.05)'
+            ? 'rgba(212,7,84,0.05)'
             : file
-            ? 'rgba(212,168,67,0.03)'
-            : 'rgba(255,255,255,0.02)',
+            ? 'rgba(212,7,84,0.03)'
+            : 'rgba(14,40,65,0.02)',
           cursor: 'pointer',
           transition: 'all 200ms',
           padding: 20,
@@ -621,7 +621,7 @@ function DropZone({
       </div>
 
       {error && (
-        <p style={{ fontSize: 11, color: 'var(--mm-red, #ff6b6b)', marginTop: 8 }}>{error}</p>
+        <p style={{ fontSize: 11, color: 'var(--mm-red, #D3402A)', marginTop: 8 }}>{error}</p>
       )}
     </div>
   )
@@ -654,9 +654,9 @@ function RadioGroup({
               padding: '11px 14px',
               borderRadius: 10,
               border: active
-                ? '1px solid rgba(212,168,67,0.4)'
-                : '1px solid rgba(255,255,255,0.07)',
-              background: active ? 'rgba(212,168,67,0.06)' : 'transparent',
+                ? '1px solid rgba(212,7,84,0.4)'
+                : '1px solid rgba(14,40,65,0.07)',
+              background: active ? 'rgba(212,7,84,0.06)' : 'transparent',
               cursor: 'pointer',
               transition: 'all 150ms',
               textAlign: 'left',
@@ -667,7 +667,7 @@ function RadioGroup({
                 width: 16,
                 height: 16,
                 borderRadius: '50%',
-                border: active ? '4px solid var(--mm-gold)' : '1.5px solid rgba(255,255,255,0.25)',
+                border: active ? '4px solid var(--mm-gold)' : '1.5px solid rgba(14,40,65,0.25)',
                 flexShrink: 0,
                 transition: 'all 150ms',
                 background: 'transparent',
@@ -750,16 +750,16 @@ export function UploadForm({ boards }: { boards: Board[] }) {
             alignItems: 'flex-start',
             gap: 10,
             borderRadius: 10,
-            border: '1px solid rgba(239,83,80,0.25)',
-            background: 'rgba(239,83,80,0.08)',
+            border: '1px solid rgba(211,64,42,0.25)',
+            background: 'rgba(211,64,42,0.08)',
             padding: '12px 16px',
             marginBottom: 20,
           }}
         >
-          <svg style={{ width: 16, height: 16, color: '#EF5350', flexShrink: 0, marginTop: 1 }} viewBox="0 0 16 16" fill="currentColor">
+          <svg style={{ width: 16, height: 16, color: '#D3402A', flexShrink: 0, marginTop: 1 }} viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4.5zm0 7a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75z" />
           </svg>
-          <p style={{ fontSize: 13, color: '#EF5350' }}>{state.error}</p>
+          <p style={{ fontSize: 13, color: '#D3402A' }}>{state.error}</p>
         </div>
       )}
 
@@ -870,8 +870,8 @@ export function UploadForm({ boards }: { boards: Board[] }) {
                 height: 44,
                 padding: '0 14px',
                 borderRadius: 10,
-                border: '1px dashed rgba(255,255,255,0.10)',
-                background: 'rgba(255,255,255,0.015)',
+                border: '1px dashed rgba(14,40,65,0.10)',
+                background: 'rgba(14,40,65,0.015)',
                 color: 'var(--mm-muted)',
                 fontSize: 13,
                 boxSizing: 'border-box',
@@ -964,9 +964,9 @@ export function UploadForm({ boards }: { boards: Board[] }) {
                 borderRadius: 10,
                 border: 'none',
                 background: pending
-                  ? 'rgba(212,168,67,0.4)'
+                  ? 'rgba(212,7,84,0.4)'
                   : 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-                color: '#0a0a0a',
+                color: '#FFFFFF',
                 fontFamily: 'var(--font-syne)',
                 fontSize: 13,
                 fontWeight: 700,
@@ -975,7 +975,7 @@ export function UploadForm({ boards }: { boards: Board[] }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                boxShadow: pending ? 'none' : '0 4px 20px rgba(212,168,67,0.25)',
+                boxShadow: pending ? 'none' : '0 4px 20px rgba(212,7,84,0.25)',
                 transition: 'all 150ms',
               }}
             >
@@ -993,7 +993,7 @@ export function UploadForm({ boards }: { boards: Board[] }) {
                 height: 48,
                 padding: '0 20px',
                 borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.10)',
+                border: '1px solid rgba(14,40,65,0.10)',
                 background: 'transparent',
                 color: 'var(--mm-text2)',
                 fontSize: 13,

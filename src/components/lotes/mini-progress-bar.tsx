@@ -35,14 +35,14 @@ const PHASE_SHORT: Record<string, string> = {
 }
 
 const PHASE_COLOR: Record<string, string> = {
-  idle: '#FF9800',
-  downloading_pdf: '#4FC3F7',
-  rasterizing: '#4FC3F7',
-  extracting: '#4FC3F7',
-  classifying: '#D4A843',
-  commenting: '#B388FF',
-  done: '#66BB6A',
-  error: '#EF5350',
+  idle: '#9E6606',
+  downloading_pdf: '#206973',
+  rasterizing: '#206973',
+  extracting: '#206973',
+  classifying: '#B6014F',
+  commenting: '#7B3FA0',
+  done: '#006048',
+  error: '#D3402A',
 }
 
 export function MiniProgressBar({
@@ -82,12 +82,12 @@ export function MiniProgressBar({
   const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
   const indeterminate =
     (status === 'extracting' || status === 'classifying') && total === 0
-  const color = PHASE_COLOR[phase] ?? '#FF9800'
+  const color = PHASE_COLOR[phase] ?? '#9E6606'
   const isActive = status === 'extracting' || status === 'classifying'
 
   if (status === 'done') {
     return (
-      <span style={{ fontSize: 11, color: '#66BB6A', fontWeight: 600 }}>
+      <span style={{ fontSize: 11, color: '#006048', fontWeight: 600 }}>
         ✓ Concluído
       </span>
     )
@@ -100,7 +100,7 @@ export function MiniProgressBar({
         title={msg}
         style={{
           fontSize: 11,
-          color: '#EF5350',
+          color: '#D3402A',
           fontWeight: 600,
           maxWidth: 220,
           overflow: 'hidden',
@@ -117,7 +117,7 @@ export function MiniProgressBar({
 
   if (status === 'pending') {
     return (
-      <span style={{ fontSize: 11, color: '#FF9800', fontWeight: 600 }}>
+      <span style={{ fontSize: 11, color: '#9E6606', fontWeight: 600 }}>
         Aguardando início
       </span>
     )

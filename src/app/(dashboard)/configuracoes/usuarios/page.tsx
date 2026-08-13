@@ -50,24 +50,24 @@ export default async function UsuariosPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/7">
+            <tr className="border-b border-[rgba(14,40,65,0.1)]">
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Usuário</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Email</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Desde</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Role</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-[rgba(14,40,65,0.08)]">
             {(profiles ?? []).map((p) => {
               const isSelf = p.id === user.id
               const date = new Date(p.created_at as string).toLocaleDateString('pt-BR', {
                 day: '2-digit', month: '2-digit', year: '2-digit',
               })
               return (
-                <tr key={p.id as string} className={isSelf ? 'bg-white/2' : 'hover:bg-white/2 transition-colors'}>
+                <tr key={p.id as string} className={isSelf ? 'bg-[rgba(14,40,65,0.02)]' : 'hover:bg-[rgba(14,40,65,0.02)] transition-colors'}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-foreground">

@@ -33,7 +33,7 @@ export default function NovoSimuladoPage() {
       </div>
 
       <form action={formAction} className="flex flex-col gap-4">
-        <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
+        <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-muted-foreground">Título</label>
             <input
@@ -41,12 +41,12 @@ export default function NovoSimuladoPage() {
               required
               autoFocus
               placeholder="Ex: Simulado TEMI 2024 — Módulo Cardiologia"
-              className="h-10 rounded-lg border border-white/8 bg-white/4 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
+              className="h-10 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
             />
           </div>
 
           {state?.error && (
-            <p className="text-xs text-red-400">{state.error}</p>
+            <p className="text-xs text-[#D3402A]">{state.error}</p>
           )}
         </div>
 
@@ -60,7 +60,7 @@ export default function NovoSimuladoPage() {
           </button>
           <Link
             href="/simulados"
-            className="rounded-lg border border-white/8 px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors"
+            className="rounded-lg border border-[rgba(14,40,65,0.1)] px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.04)] transition-colors"
           >
             Cancelar
           </Link>

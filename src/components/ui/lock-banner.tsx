@@ -19,7 +19,7 @@ function LockBanner({
       role="status"
       aria-live="polite"
       className={cn(
-        "flex items-center gap-2 rounded-lg border border-[rgba(79,195,247,0.20)] bg-[rgba(79,195,247,0.08)] px-3.5 py-2 text-xs text-[var(--mm-info)]",
+        "flex items-center gap-2 rounded-lg border border-[rgba(32,105,115,0.20)] bg-[rgba(32,105,115,0.08)] px-3.5 py-2 text-xs text-[var(--mm-info)]",
         className
       )}
       {...props}

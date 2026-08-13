@@ -15,9 +15,9 @@ const ROLE_LABELS: Record<Role, string> = {
 
 const ROLE_COLORS: Record<Role, string> = {
   analista: 'text-muted-foreground',
-  professor: 'text-blue-400',
+  professor: 'text-[#2B5A9C]',
   admin: 'text-[var(--mm-gold)]',
-  superadmin: 'text-red-400',
+  superadmin: 'text-[#D3402A]',
 }
 
 export function UserRoleSelect({
@@ -51,7 +51,7 @@ export function UserRoleSelect({
         value={role}
         onChange={(e) => handleChange(e.target.value as Role)}
         disabled={isPending}
-        className={`h-7 rounded border border-white/8 bg-[var(--mm-surface)] px-2 text-xs outline-none transition-colors disabled:opacity-50 ${ROLE_COLORS[role]}`}
+        className={`h-7 rounded border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)] px-2 text-xs outline-none transition-colors disabled:opacity-50 ${ROLE_COLORS[role]}`}
       >
         {ROLES.map((r) => {
           const rRank = ['analista', 'professor', 'admin', 'superadmin'].indexOf(r)

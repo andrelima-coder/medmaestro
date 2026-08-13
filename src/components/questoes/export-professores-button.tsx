@@ -123,7 +123,7 @@ export function ExportProfessoresButton({ filters, poolCount }: Props) {
               max={poolCount}
               value={qty}
               onChange={(e) => setQty(parseInt(e.target.value, 10) || 0)}
-              className="h-8 w-20 rounded-md border border-[var(--mm-border-default)] bg-white/[0.04] px-2 text-sm text-foreground outline-none focus:border-[var(--mm-border-active)]"
+              className="h-8 w-20 rounded-md border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-2 text-sm text-foreground outline-none focus:border-[var(--mm-border-active)]"
             />
             <input
               type="range"
@@ -184,11 +184,11 @@ export function ExportProfessoresButton({ filters, poolCount }: Props) {
               onClick={handleClick}
               disabled={pending}
               className={cn(
-                'flex-1 rounded-md px-3 py-1.5 text-xs font-bold text-[#0A0A0A] transition-all',
+                'flex-1 rounded-md px-3 py-1.5 text-xs font-bold text-[#FFFFFF] transition-all',
                 pending ? 'opacity-60' : 'hover:-translate-y-px'
               )}
               style={{
-                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
               }}
             >
               {pending ? 'Gerando…' : (

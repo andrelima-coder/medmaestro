@@ -38,14 +38,14 @@ const STATUS_LABELS: Record<ExamStatus, string> = {
 
 const STATUS_STYLES: Record<ExamStatus, { bg: string; color: string; border: string }> = {
   pending: {
-    bg: 'rgba(255,152,0,0.1)',
-    color: '#FF9800',
-    border: 'rgba(255,152,0,0.25)',
+    bg: 'rgba(251,174,64,0.1)',
+    color: '#9E6606',
+    border: 'rgba(251,174,64,0.25)',
   },
   extracting: {
-    bg: 'rgba(79,195,247,0.1)',
-    color: '#4FC3F7',
-    border: 'rgba(79,195,247,0.25)',
+    bg: 'rgba(32,105,115,0.1)',
+    color: '#206973',
+    border: 'rgba(32,105,115,0.25)',
   },
   classifying: {
     bg: 'var(--mm-gold-bg)',
@@ -53,14 +53,14 @@ const STATUS_STYLES: Record<ExamStatus, { bg: string; color: string; border: str
     border: 'var(--mm-gold-border)',
   },
   done: {
-    bg: 'rgba(102,187,106,0.1)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.25)',
+    bg: 'rgba(0,96,72,0.1)',
+    color: '#006048',
+    border: 'rgba(0,96,72,0.25)',
   },
   error: {
-    bg: 'rgba(239,83,80,0.1)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.25)',
+    bg: 'rgba(211,64,42,0.1)',
+    color: '#D3402A',
+    border: 'rgba(211,64,42,0.25)',
   },
 }
 
@@ -239,11 +239,11 @@ export function InlineProgress({ examId }: { examId: string }) {
         <div
           style={{
             borderRadius: 8,
-            border: '1px solid rgba(239,83,80,0.25)',
-            background: 'rgba(239,83,80,0.08)',
+            border: '1px solid rgba(211,64,42,0.25)',
+            background: 'rgba(211,64,42,0.08)',
             padding: '10px 14px',
             fontSize: 12,
-            color: '#EF5350',
+            color: '#D3402A',
           }}
         >
           {extractError}

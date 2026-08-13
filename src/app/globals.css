@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-dm-sans);
-  --font-heading: var(--font-syne);
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -45,7 +45,19 @@
   --radius-xl: calc(var(--radius) * 2);
   --radius-2xl: calc(var(--radius) * 2.5);
 
-  /* MedMaestro brand tokens */
+  /* Marca Afya — tokens expostos ao Tailwind */
+  --color-afya-magenta: var(--afya-magenta);
+  --color-afya-magenta-deep: var(--afya-magenta-deep);
+  --color-afya-navy: var(--afya-navy);
+  --color-afya-pink-tint: var(--afya-pink-tint);
+  --color-afya-teal: var(--afya-teal);
+  --color-afya-teal-deep: var(--afya-teal-deep);
+  --color-afya-amber: var(--afya-amber);
+  --color-afya-orange: var(--afya-orange);
+  --color-afya-green: var(--afya-green);
+  --color-afya-mint: var(--afya-mint);
+
+  /* Aliases legados MedMaestro (mantidos para não quebrar usos existentes) */
   --color-mm-gold: var(--mm-gold);
   --color-mm-gold2: var(--mm-gold2);
   --color-mm-surface: var(--mm-surface);
@@ -59,109 +71,144 @@
 
 :root {
   /* ================================================================
-     MedMaestro design system — purple-aurora palette (mockup.html)
-     Paleta gold/purple deep · Fontes: Syne (heading) + DM Sans (body)
+     Design System — Afya Medicina Intensiva
+     Base clara (branco/cinza-100) com magenta #D40754 como assinatura.
+     Dominância: branco/navy 60% · teal 20% · magenta 12% · âmbar 5%.
+     Magenta é destaque, NUNCA fundo de área extensa.
+     Tipografia: Afya Sans (oficial) → Figtree (fallback web)
   ================================================================ */
 
-  /* shadcn/Tailwind aliases */
-  --background: #07060F;
-  --foreground: #EDF0F7;
-  --card: #0E0C22;
-  --card-foreground: #EDF0F7;
-  --popover: #0E0C22;
-  --popover-foreground: #EDF0F7;
-  --primary: #C9A84C;
-  --primary-foreground: #0A0A0A;
-  --secondary: #09071A;
-  --secondary-foreground: #A8B4CC;
-  --muted: #120F2A;
-  --muted-foreground: #525E76;
-  --accent: rgba(201, 168, 76, 0.12);
-  --accent-foreground: #C9A84C;
-  --destructive: #EF5350;
-  --border: rgba(255, 255, 255, 0.07);
-  --input: rgba(255, 255, 255, 0.10);
-  --ring: rgba(201, 168, 76, 0.45);
-  --radius: 8px;
+  /* --- Paleta oficial da marca --- */
+  --afya-magenta: #D40754;
+  --afya-magenta-deep: #B6014F;
+  --afya-magenta-soft: #E8407D;
+  --afya-navy: #0E2841;
+  --afya-ink: #14213D;
+  --afya-pink-tint: #F6E3EF;
+  --afya-teal: #43C3C4;
+  --afya-teal-mid: #319498;
+  --afya-teal-deep: #206973;
+  --afya-teal-tint: #D9F2F3;
+  --afya-amber: #FBAE40;
+  --afya-amber-deep: #9E6606;
+  --afya-orange: #F26B43;
+  --afya-green: #006048;
+  --afya-mint: #CEEDD7;
+  --afya-gray-100: #F4F6F9;
+  --afya-gray-200: #E8E8E8;
+  --afya-gray-400: #A4A3A4;
+  --afya-white: #FFFFFF;
 
-  /* Charts — ordem Pareto dos módulos TEMI */
-  --chart-1: #C9A84C; /* M1 Respiratório — gold */
-  --chart-2: #4FC3F7; /* M2 Cardiovascular — blue */
-  --chart-3: #FF6B35; /* M3 Infecções — orange */
-  --chart-4: #5DC264; /* M4 Neuro — green */
-  --chart-5: #8B5CF6; /* M5+ outros — purple */
+  /* --- Tipografia --- */
+  --font-body: "Afya Sans", var(--font-figtree), "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Afya Sans", var(--font-figtree), "Helvetica Neue", Arial, sans-serif;
+  /* Aliases legados: arquivos antigos usam var(--font-syne)/var(--font-dm-sans) */
+  --font-syne: var(--font-display);
+  --font-dm-sans: var(--font-body);
 
-  /* Sidebar */
-  --sidebar: #09071A;
-  --sidebar-foreground: #A8B4CC;
-  --sidebar-primary: #C9A84C;
-  --sidebar-primary-foreground: #0A0A0A;
-  --sidebar-accent: rgba(201, 168, 76, 0.12);
-  --sidebar-accent-foreground: #C9A84C;
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-ring: rgba(201, 168, 76, 0.45);
+  /* --- Aliases shadcn/Tailwind --- */
+  --background: #F4F6F9;
+  --foreground: #0E2841;
+  --card: #FFFFFF;
+  --card-foreground: #0E2841;
+  --popover: #FFFFFF;
+  --popover-foreground: #0E2841;
+  --primary: #D40754;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #3F5A75;
+  --muted: #F4F6F9;
+  --muted-foreground: #5F7288;
+  --accent: rgba(212, 7, 84, 0.08);
+  --accent-foreground: #D40754;
+  --destructive: #D3402A;
+  --border: rgba(14, 40, 65, 0.10);
+  --input: rgba(14, 40, 65, 0.18);
+  --ring: rgba(212, 7, 84, 0.40);
+  --radius: 12px;
 
-  /* MedMaestro brand — espelham o mockup.html */
-  --mm-gold: #C9A84C;
-  --mm-gold-light: #FFD54F;
-  --mm-gold2: #E8C35A;
-  --mm-gold-bg: rgba(201, 168, 76, 0.12);
-  --mm-gold-border: rgba(201, 168, 76, 0.25);
+  /* --- Charts — legíveis sobre branco, na ordem Pareto dos módulos TEMI --- */
+  --chart-1: #D40754; /* M1 Respiratório — magenta (assinatura) */
+  --chart-2: #206973; /* M2 Cardiovascular — teal profundo */
+  --chart-3: #F26B43; /* M3 Infecções — laranja */
+  --chart-4: #006048; /* M4 Neuro — verde */
+  --chart-5: #0E2841; /* M5+ outros — navy */
 
-  /* Backgrounds em camadas (purple-aurora) */
-  --mm-bg-primary: #07060F;
-  --mm-bg-secondary: #09071A;
-  --mm-surface: #0E0C22;
-  --mm-surface-elevated: #120F2A;
-  --mm-bg2: #09071A;
-  --mm-bg3: #120F2A;
-  --mm-card-bg: rgba(13, 10, 28, 0.92);
+  /* --- Sidebar --- */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #3F5A75;
+  --sidebar-primary: #D40754;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(212, 7, 84, 0.08);
+  --sidebar-accent-foreground: #D40754;
+  --sidebar-border: rgba(14, 40, 65, 0.10);
+  --sidebar-ring: rgba(212, 7, 84, 0.40);
 
-  /* Texto */
-  --mm-text: #EDF0F7;
-  --mm-text2: #A8B4CC;
-  --mm-muted: #525E76;
+  /* ================================================================
+     Tokens mm-* (legado) remapeados para a paleta Afya.
+     Os nomes foram mantidos porque são usados em ~1.000 pontos do app;
+     o VALOR agora é Afya. "gold" = magenta de assinatura.
+  ================================================================ */
+  --mm-accent: #D40754;
+  --mm-accent-deep: #B6014F;
+  --mm-gold: var(--mm-accent);
+  --mm-gold-light: #E8407D;
+  --mm-gold2: #B6014F;
+  --mm-gold-bg: rgba(212, 7, 84, 0.08);
+  --mm-gold-border: rgba(212, 7, 84, 0.22);
 
-  /* Bordas — incluindo variantes acentuadas */
-  --mm-line: rgba(255, 255, 255, 0.07);
-  --mm-line2: rgba(255, 255, 255, 0.14);
-  --mm-line3: rgba(255, 255, 255, 0.22);
-  --mm-border-default: rgba(255, 255, 255, 0.07);
-  --mm-border-hover: rgba(255, 255, 255, 0.14);
-  --mm-border-active: rgba(201, 168, 76, 0.45);
-  --mm-border-purple: rgba(139, 92, 246, 0.35);
-  --mm-border-orange: rgba(255, 107, 53, 0.40);
+  /* Superfícies em camadas — elevação = mais branco */
+  --mm-bg-primary: #F4F6F9;
+  --mm-bg-secondary: #FFFFFF;
+  --mm-surface: #FFFFFF;
+  --mm-surface-elevated: #F7F9FC;
+  --mm-bg2: #FFFFFF;
+  --mm-bg3: #F4F6F9;
+  --mm-card-bg: #FFFFFF;
+
+  /* Texto — navy forte, secundário e apagado (todos AA sobre branco) */
+  --mm-text: #0E2841;
+  --mm-text2: #3F5A75;
+  --mm-muted: #5F7288;
+
+  /* Bordas — navy translúcido no lugar do branco translúcido */
+  --mm-line: rgba(14, 40, 65, 0.10);
+  --mm-line2: rgba(14, 40, 65, 0.16);
+  --mm-line3: rgba(14, 40, 65, 0.24);
+  --mm-border-default: rgba(14, 40, 65, 0.10);
+  --mm-border-hover: rgba(14, 40, 65, 0.20);
+  --mm-border-active: rgba(212, 7, 84, 0.45);
+  --mm-border-purple: rgba(123, 63, 160, 0.30);
+  --mm-border-orange: rgba(242, 107, 67, 0.35);
 
   /* Acentos semânticos */
-  --mm-purple: #8B5CF6;
-  --mm-orange: #FF6B35;
-  --mm-blue: #4FC3F7;
-  --mm-green: #5DC264;
-  --mm-red: #EF5350;
-  --mm-warning: #FFA726;
-  --mm-info: #4FC3F7;
+  --mm-purple: #7B3FA0;  /* reservado a indicadores de IA */
+  --mm-orange: #F26B43;
+  --mm-blue: #206973;    /* informação — teal profundo da marca */
+  --mm-green: #006048;
+  --mm-red: #D3402A;     /* laranja-avermelhado: não compete com o magenta */
+  --mm-warning: #9E6606; /* âmbar escurecido para texto legível */
+  --mm-amber: #FBAE40;   /* âmbar oficial — apenas preenchimento/alerta */
+  --mm-info: #206973;
 
-  /* Glows nomeados — para uso em cards e elementos em destaque */
-  --mm-glow-purple: rgba(139, 92, 246, 0.18);
-  --mm-glow-orange: rgba(255, 107, 53, 0.18);
-  --mm-glow-gold: rgba(201, 168, 76, 0.15);
-}
+  /* Fundos suaves para estados */
+  --mm-green-bg: rgba(0, 96, 72, 0.08);
+  --mm-red-bg: rgba(211, 64, 42, 0.08);
+  --mm-amber-bg: rgba(251, 174, 64, 0.16);
+  --mm-teal-bg: rgba(67, 195, 196, 0.14);
 
-/* Noise texture overlay — mantido idêntico (subtle grain) */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.4;
+  /* Sombras no lugar dos glows (fundo claro não comporta brilho) */
+  --mm-shadow-sm: 0 1px 2px rgba(14, 40, 65, 0.06);
+  --mm-shadow: 0 4px 16px rgba(14, 40, 65, 0.08);
+  --mm-shadow-lg: 0 10px 34px rgba(14, 40, 65, 0.10);
+  --mm-glow-purple: rgba(123, 63, 160, 0.14);
+  --mm-glow-orange: rgba(242, 107, 67, 0.14);
+  --mm-glow-gold: rgba(212, 7, 84, 0.14);
 }
 
 /* ================================================================
-   Aurora orbs — ambient background light (mockup.html)
-   - app-shell: orbe purple top-left + orbe orange bottom-right
-   - body::before: haze purple top-center
+   Ambiente de fundo — washes muito sutis (pink tint + teal tint).
+   Substituem as "aurora orbs" do tema escuro; sem noise/grain.
 ================================================================ */
 .app-shell {
   position: relative;
@@ -173,14 +220,14 @@ body::after {
 .app-shell::before {
   content: '';
   position: fixed;
-  top: -120px;
+  top: -140px;
   left: -180px;
-  width: 700px;
-  height: 700px;
+  width: 720px;
+  height: 720px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%,
-    rgba(139, 92, 246, 0.16) 0%,
-    rgba(100, 50, 200, 0.07) 40%,
+    rgba(212, 7, 84, 0.05) 0%,
+    rgba(246, 227, 239, 0.35) 40%,
     transparent 70%);
   pointer-events: none;
   z-index: 0;
@@ -188,38 +235,24 @@ body::after {
 .app-shell::after {
   content: '';
   position: fixed;
-  bottom: -180px;
-  right: -120px;
-  width: 680px;
-  height: 680px;
+  bottom: -200px;
+  right: -140px;
+  width: 700px;
+  height: 700px;
   border-radius: 50%;
   background: radial-gradient(circle at 70% 70%,
-    rgba(255, 107, 53, 0.14) 0%,
-    rgba(200, 80, 20, 0.06) 40%,
+    rgba(67, 195, 196, 0.10) 0%,
+    rgba(217, 242, 243, 0.30) 40%,
     transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
-body::before {
-  content: '';
-  position: fixed;
-  top: 48px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 900px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse,
-    rgba(100, 40, 200, 0.07) 0%,
-    transparent 65%);
-  pointer-events: none;
-  z-index: 0;
-}
 
-/* Login page — aurora dupla horizontal (orange esq + purple dir) */
+/* Login — wash duplo horizontal (magenta esq. + teal dir.) */
 .login-aurora {
   position: relative;
   overflow: hidden;
+  background: #FFFFFF;
 }
 .login-aurora::before {
   content: '';
@@ -229,7 +262,7 @@ body::before {
   width: 700px;
   height: 700px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(220, 90, 30, 0.22) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(212, 7, 84, 0.10) 0%, transparent 62%);
   pointer-events: none;
 }
 .login-aurora::after {
@@ -240,7 +273,7 @@ body::before {
   width: 650px;
   height: 650px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(120, 50, 230, 0.22) 0%, transparent 60%);
+  background: radial-gradient(circle, rgba(67, 195, 196, 0.14) 0%, transparent 62%);
   pointer-events: none;
 }
 .login-aurora-top {
@@ -251,30 +284,29 @@ body::before {
   width: 600px;
   height: 400px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(100, 40, 200, 0.12) 0%, transparent 65%);
+  background: radial-gradient(ellipse, rgba(246, 227, 239, 0.55) 0%, transparent 65%);
   pointer-events: none;
 }
 
-/* Scrollbar custom purple — todos os scrolls */
+/* Scrollbar — magenta discreto */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.2);
+  background: rgba(212, 7, 84, 0.22);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.35);
+  background: rgba(212, 7, 84, 0.40);
 }
 
 /* ================================================================
-   Foco acessível — keyboard focus visível em qualquer elemento
-   interativo, mesmo quando o componente usa outline-none.
-   - Aparece SOMENTE com :focus-visible (não em cliques de mouse)
+   Foco acessível — visível em qualquer elemento interativo,
+   mesmo quando o componente usa outline-none. Só com :focus-visible.
 ================================================================ */
 button:focus-visible,
 a:focus-visible,
@@ -283,29 +315,28 @@ select:focus-visible,
 textarea:focus-visible,
 [role='button']:focus-visible,
 [role='link']:focus-visible {
-  outline: 2px solid var(--mm-gold);
+  outline: 2px solid var(--afya-magenta);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* Inputs com border interno mantêm o ring sem deslocar layout */
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline-offset: 0;
-  box-shadow: 0 0 0 2px var(--mm-gold);
+  box-shadow: 0 0 0 2px var(--afya-magenta);
 }
 
-/* Skip-link para usuários de teclado / leitores de tela */
+/* Skip-link para teclado / leitores de tela */
 .skip-to-content {
   position: absolute;
   top: -40px;
   left: 8px;
   z-index: 10000;
   padding: 8px 14px;
-  background: var(--mm-gold);
-  color: #0a0a0a;
-  font-weight: 600;
+  background: var(--afya-magenta);
+  color: #FFFFFF;
+  font-weight: 700;
   font-size: 13px;
   border-radius: 6px;
   text-decoration: none;
@@ -315,7 +346,7 @@ textarea:focus-visible {
   top: 8px;
 }
 
-/* Reduce motion — respeita preferência de acessibilidade */
+/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -327,37 +358,37 @@ textarea:focus-visible {
   }
 }
 
-/* Sidebar item ativo — pill gold com borda + barra inset (mockup) */
+/* Sidebar item ativo — pill magenta com barra inset */
 .sidebar-item-active {
-  background: linear-gradient(90deg, rgba(201, 168, 76, 0.12), rgba(201, 168, 76, 0.05)) !important;
-  border: 1px solid rgba(201, 168, 76, 0.18) !important;
-  color: #C9A84C !important;
-  box-shadow: inset 3px 0 0 #C9A84C;
+  background: linear-gradient(90deg, rgba(212, 7, 84, 0.10), rgba(212, 7, 84, 0.03)) !important;
+  border: 1px solid rgba(212, 7, 84, 0.20) !important;
+  color: #D40754 !important;
+  box-shadow: inset 3px 0 0 #D40754;
 }
 
-/* Card glows — variantes para destaque visual */
+/* Destaques de card — sombra suave no lugar do glow */
 .glow-gold {
-  box-shadow: 0 0 40px var(--mm-glow-gold);
-  border-color: rgba(201, 168, 76, 0.28) !important;
+  box-shadow: 0 8px 28px var(--mm-glow-gold);
+  border-color: rgba(212, 7, 84, 0.28) !important;
 }
 .glow-purple {
-  box-shadow: 0 0 40px var(--mm-glow-purple);
+  box-shadow: 0 8px 28px var(--mm-glow-purple);
   border-color: var(--mm-border-purple) !important;
 }
 .glow-orange {
-  box-shadow: 0 0 40px var(--mm-glow-orange);
+  box-shadow: 0 8px 28px var(--mm-glow-orange);
   border-color: var(--mm-border-orange) !important;
 }
 
-/* Glow variants — top accent line (mockup pattern) */
+/* Linha de acento no topo do card */
 .glow-purple::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.6), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(123, 63, 160, 0.55), transparent);
   pointer-events: none;
 }
 .glow-orange::before {
@@ -366,12 +397,11 @@ textarea:focus-visible {
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.6), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(242, 107, 67, 0.6), transparent);
   pointer-events: none;
 }
 
-/* Card accent bar — barra inferior gradient roxa (semantic highlight) */
 .card-accent-purple::after {
   content: '';
   position: absolute;
@@ -384,24 +414,24 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
-/* Pulse orange — usado pelo LiveBadge (dot pulsante) */
+/* Pulse — usado pelo LiveBadge (dot pulsante), agora em magenta */
 @keyframes pulse-orange {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.5);
+    box-shadow: 0 0 0 0 rgba(212, 7, 84, 0.45);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(255, 107, 53, 0);
+    box-shadow: 0 0 0 5px rgba(212, 7, 84, 0);
   }
 }
 
-/* Badge IA — purple reservado para indicadores de IA */
+/* Badge IA — roxo do gradiente da marca, reservado a indicadores de IA */
 .ai-badge {
   display: inline-flex;
   align-items: center;
   font-size: 8px;
   padding: 2px 6px;
   border-radius: 3px;
-  background: rgba(139, 92, 246, 0.15);
+  background: rgba(123, 63, 160, 0.12);
   color: var(--mm-purple);
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -418,5 +448,5 @@ textarea:focus-visible {
 
 /* Tabelas extraídas via Docling (extracted_tables) */
 .mm-doc-table table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0; }
-.mm-doc-table th, .mm-doc-table td { border: 1px solid rgba(255,255,255,0.12); padding: 4px 8px; text-align: left; vertical-align: top; }
-.mm-doc-table th { background: rgba(255,255,255,0.05); font-weight: 600; }
+.mm-doc-table th, .mm-doc-table td { border: 1px solid rgba(14, 40, 65, 0.14); padding: 4px 8px; text-align: left; vertical-align: top; }
+.mm-doc-table th { background: #F4F6F9; font-weight: 600; }

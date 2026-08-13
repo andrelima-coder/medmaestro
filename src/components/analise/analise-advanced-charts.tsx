@@ -71,14 +71,14 @@ export type AdvancedChartsProps = {
 
 const TOOLTIP_STYLE = {
   contentStyle: {
-    background: 'rgba(18,18,30,0.96)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.96)',
+    border: '1px solid rgba(14,40,65,0.08)',
     borderRadius: '8px',
     fontSize: '12px',
-    color: '#e0e0e0',
+    color: '#A4A3A4',
   },
-  itemStyle: { color: '#e0e0e0' },
-  labelStyle: { color: '#a0a0a0', marginBottom: 4 },
+  itemStyle: { color: '#A4A3A4' },
+  labelStyle: { color: '#5F7288', marginBottom: 4 },
 } as const
 
 function ChartCard({
@@ -146,7 +146,7 @@ function DonutChart({ data, centerLabel }: { data: PieDatum[]; centerLabel: stri
         <Legend
           verticalAlign="bottom"
           iconType="circle"
-          wrapperStyle={{ fontSize: 11, color: '#bbb' }}
+          wrapperStyle={{ fontSize: 11, color: '#5F7288' }}
           formatter={(v: string) => {
             const d = data.find((x) => x.label === v)
             const pct = d ? Math.round((d.count / total) * 100) : 0
@@ -158,7 +158,7 @@ function DonutChart({ data, centerLabel }: { data: PieDatum[]; centerLabel: stri
           y="44%"
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="#f0f0f0"
+          fill="#0E2841"
           fontSize={20}
           fontWeight={700}
         >
@@ -169,7 +169,7 @@ function DonutChart({ data, centerLabel }: { data: PieDatum[]; centerLabel: stri
           y="55%"
           textAnchor="middle"
           dominantBaseline="middle"
-          fill="#8a8a8a"
+          fill="#5F7288"
           fontSize={10}
         >
           {centerLabel}
@@ -194,11 +194,11 @@ function StackedAreaShare({ area }: { area: AreaSeries }) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={area.rows} stackOffset="expand" margin={{ left: 0, right: 8, top: 4, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-        <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,40,65,0.05)" />
+        <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#5F7288' }} axisLine={false} tickLine={false} />
         <YAxis
           tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
-          tick={{ fontSize: 10, fill: '#888' }}
+          tick={{ fontSize: 10, fill: '#5F7288' }}
           axisLine={false}
           tickLine={false}
         />
@@ -246,14 +246,14 @@ function BumpChart({ bump }: { bump: BumpSeries }) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={bump.rows} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-        <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,40,65,0.05)" />
+        <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#5F7288' }} axisLine={false} tickLine={false} />
         <YAxis
           reversed
           domain={[1, n]}
           ticks={Array.from({ length: n }, (_, i) => i + 1)}
           tickFormatter={(v: number) => `${v}º`}
-          tick={{ fontSize: 10, fill: '#888' }}
+          tick={{ fontSize: 10, fill: '#5F7288' }}
           axisLine={false}
           tickLine={false}
           width={28}
@@ -294,33 +294,33 @@ function QuadrantScatter({ data }: { data: QuadrantDatum[] }) {
   return (
     <ResponsiveContainer width="100%" height={320}>
       <ScatterChart margin={{ left: 4, right: 16, top: 12, bottom: 16 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,40,65,0.05)" />
         <XAxis
           type="number"
           dataKey="shareAvg"
           name="Incidência média"
           unit="%"
-          tick={{ fontSize: 10, fill: '#888' }}
+          tick={{ fontSize: 10, fill: '#5F7288' }}
           axisLine={false}
           tickLine={false}
-          label={{ value: 'Incidência média (%)', position: 'insideBottom', offset: -8, fontSize: 10, fill: '#888' }}
+          label={{ value: 'Incidência média (%)', position: 'insideBottom', offset: -8, fontSize: 10, fill: '#5F7288' }}
         />
         <YAxis
           type="number"
           dataKey="trend"
           name="Tendência"
           unit="pp"
-          tick={{ fontSize: 10, fill: '#888' }}
+          tick={{ fontSize: 10, fill: '#5F7288' }}
           axisLine={false}
           tickLine={false}
-          label={{ value: 'Tendência (pp)', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#888' }}
+          label={{ value: 'Tendência (pp)', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#5F7288' }}
         />
         <ZAxis type="number" dataKey="total" range={[60, 400]} name="Total" />
-        <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" strokeDasharray="4 3" />
-        <ReferenceLine x={midX} stroke="rgba(255,255,255,0.18)" strokeDasharray="4 3" />
+        <ReferenceLine y={0} stroke="rgba(14,40,65,0.18)" strokeDasharray="4 3" />
+        <ReferenceLine x={midX} stroke="rgba(14,40,65,0.18)" strokeDasharray="4 3" />
         <Tooltip
           {...TOOLTIP_STYLE}
-          cursor={{ strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.15)' }}
+          cursor={{ strokeDasharray: '3 3', stroke: 'rgba(14,40,65,0.15)' }}
           formatter={(value, name) => {
             const v = Number(value)
             if (name === 'Incidência média') return [`${v.toFixed(1)}%`, String(name)]
@@ -335,7 +335,7 @@ function QuadrantScatter({ data }: { data: QuadrantDatum[] }) {
           <LabelList
             dataKey="modulo"
             position="top"
-            style={{ fontSize: 9, fill: '#cfcfcf' }}
+            style={{ fontSize: 9, fill: '#5F7288' }}
             formatter={(v) => {
               const s = String(v ?? '')
               return s.length > 14 ? s.slice(0, 13) + '…' : s
@@ -361,7 +361,7 @@ function HeatmapGrid({ heatmap }: { heatmap: HeatmapData }) {
   if (heatmap.modulos.length === 0) return null
 
   const cellColor = (count: number) => {
-    if (count === 0) return 'rgba(255,255,255,0.03)'
+    if (count === 0) return 'rgba(14,40,65,0.03)'
     const t = heatmap.max > 0 ? count / heatmap.max : 0
     // gold → orange → vermelho conforme intensidade
     const alpha = 0.15 + t * 0.8

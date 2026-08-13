@@ -298,8 +298,8 @@ const btnBase: React.CSSProperties = {
 function btnSuccess(active: boolean): React.CSSProperties {
   return {
     ...btnBase,
-    background: active ? '#66BB6A' : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    background: active ? '#006048' : 'var(--mm-bg2)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     cursor: active ? 'pointer' : 'default',
   }
 }
@@ -307,9 +307,9 @@ function btnSuccess(active: boolean): React.CSSProperties {
 function btnDanger(active: boolean): React.CSSProperties {
   return {
     ...btnBase,
-    background: active ? 'rgba(239,83,80,0.15)' : 'var(--mm-bg2)',
-    color: active ? '#EF5350' : 'var(--mm-muted)',
-    border: active ? '1px solid rgba(239,83,80,0.4)' : '1px solid var(--mm-line2)',
+    background: active ? 'rgba(211,64,42,0.15)' : 'var(--mm-bg2)',
+    color: active ? '#D3402A' : 'var(--mm-muted)',
+    border: active ? '1px solid rgba(211,64,42,0.4)' : '1px solid var(--mm-line2)',
     cursor: active ? 'pointer' : 'default',
   }
 }

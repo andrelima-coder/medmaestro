@@ -38,7 +38,7 @@ export default async function SimuladosPage() {
       </div>
 
       {!simulados || simulados.length === 0 ? (
-        <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-10 flex flex-col items-center gap-3 text-center">
+        <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-10 flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-muted-foreground">Nenhum simulado criado ainda.</p>
           <Link
             href="/simulados/novo"
@@ -48,10 +48,10 @@ export default async function SimuladosPage() {
           </Link>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/7 text-left text-xs text-muted-foreground">
+              <tr className="border-b border-[rgba(14,40,65,0.1)] text-left text-xs text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Título</th>
                 <th className="px-4 py-3 font-medium">Questões</th>
                 <th className="px-4 py-3 font-medium">Criado em</th>
@@ -69,7 +69,7 @@ export default async function SimuladosPage() {
                 return (
                   <tr
                     key={s.id}
-                    className="border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors"
+                    className="border-b border-[rgba(14,40,65,0.08)] last:border-0 hover:bg-[rgba(14,40,65,0.03)] transition-colors"
                   >
                     <td className="px-4 py-3">
                       <Link

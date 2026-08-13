@@ -80,7 +80,7 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
   }
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-4 flex flex-col gap-2.5">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-4 flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Hierarquia
@@ -127,19 +127,19 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1.5 text-xs text-red-400">
+        <div className="rounded-lg border border-[rgba(211,64,42,0.3)] bg-[rgba(211,64,42,0.1)] px-2.5 py-1.5 text-xs text-[#D3402A]">
           {error}
         </div>
       )}
 
       {editing && !confirming && (
-        <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
+        <div className="flex flex-col gap-2 pt-2 border-t border-[rgba(14,40,65,0.08)]">
           <input
             type="text"
             placeholder="Filtrar exames…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-white/8 bg-white/2 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--mm-gold)]/40"
+            className="w-full rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.02)] px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[var(--mm-gold)]/40"
           />
           <div className="max-h-48 overflow-y-auto flex flex-col gap-1">
             {filteredExams.map((exam) => {
@@ -152,7 +152,7 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
                   className={`text-left rounded-md border px-2 py-1.5 text-xs transition-colors ${
                     isSelected
                       ? 'border-[var(--mm-gold)]/40 bg-[var(--mm-gold)]/10 text-[var(--mm-gold)]'
-                      : 'border-white/5 text-muted-foreground hover:text-foreground hover:border-white/15'
+                      : 'border-[rgba(14,40,65,0.08)] text-muted-foreground hover:text-foreground hover:border-[rgba(14,40,65,0.16)]'
                   }`}
                 >
                   {formatExamLabel(exam)}
@@ -171,7 +171,7 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
           <div className="flex gap-2 pt-1">
             <button
               onClick={cancel}
-              className="flex-1 rounded-lg border border-white/8 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors"
+              className="flex-1 rounded-lg border border-[rgba(14,40,65,0.1)] px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.04)] transition-colors"
             >
               Cancelar
             </button>
@@ -187,8 +187,8 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
       )}
 
       {confirming && selectedExam && (
-        <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-300/90 leading-relaxed">
+        <div className="flex flex-col gap-3 pt-2 border-t border-[rgba(14,40,65,0.08)]">
+          <div className="rounded-lg border border-[rgba(251,174,64,0.3)] bg-[rgba(251,174,64,0.1)] px-3 py-2 text-xs text-[#9E6606]/90 leading-relaxed">
             <p className="font-semibold mb-1">Confirmar reatribuição?</p>
             <p>
               De: <span className="text-foreground">{currentExam ? formatExamLabel(currentExam) : '—'}</span>
@@ -196,7 +196,7 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
             <p>
               Para: <span className="text-foreground">{formatExamLabel(selectedExam)}</span>
             </p>
-            <p className="mt-1.5 text-[11px] text-yellow-300/70">
+            <p className="mt-1.5 text-[11px] text-[#9E6606]/70">
               A alteração será registrada no log de revisões.
             </p>
           </div>
@@ -204,14 +204,14 @@ export function ExamPanel({ questionId, currentExamId, exams }: ExamPanelProps) 
             <button
               onClick={() => setConfirming(false)}
               disabled={isPending}
-              className="flex-1 rounded-lg border border-white/8 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors disabled:opacity-40"
+              className="flex-1 rounded-lg border border-[rgba(14,40,65,0.1)] px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.04)] transition-colors disabled:opacity-40"
             >
               Voltar
             </button>
             <button
               onClick={commit}
               disabled={isPending}
-              className="flex-1 rounded-lg bg-yellow-500/20 border border-yellow-500/40 px-2.5 py-1.5 text-xs font-medium text-yellow-300 hover:bg-yellow-500/30 transition-colors disabled:opacity-40"
+              className="flex-1 rounded-lg bg-[rgba(251,174,64,0.2)] border border-[rgba(251,174,64,0.4)] px-2.5 py-1.5 text-xs font-medium text-[#9E6606] hover:bg-[rgba(251,174,64,0.3)] transition-colors disabled:opacity-40"
             >
               {isPending ? 'Salvando…' : 'Confirmar'}
             </button>

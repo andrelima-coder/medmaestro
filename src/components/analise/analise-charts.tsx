@@ -29,21 +29,21 @@ export type AnaliseChartsProps = {
 }
 
 const COLORS = [
-  '#c9a84c', '#7c6fd8', '#4caf8a', '#e07b54', '#5b9bd8',
-  '#d85b8a', '#8ac94c', '#d8c44c',
+  '#D40754', '#7B3FA0', '#006048', '#F26B43', '#2B5A9C',
+  '#B6014F', '#319498', '#9E6606',
 ]
 
 function useTooltipStyle() {
   return {
     contentStyle: {
-      background: 'rgba(18,18,30,0.95)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      background: 'rgba(255,255,255,0.95)',
+      border: '1px solid rgba(14,40,65,0.08)',
       borderRadius: '8px',
       fontSize: '12px',
-      color: '#e0e0e0',
+      color: '#A4A3A4',
     },
-    itemStyle: { color: '#e0e0e0' },
-    labelStyle: { color: '#a0a0a0', marginBottom: 4 },
+    itemStyle: { color: '#A4A3A4' },
+    labelStyle: { color: '#5F7288', marginBottom: 4 },
   }
 }
 
@@ -71,13 +71,13 @@ function BarBySpecialty({ specByYear, years }: { specByYear: SpecByYear[]; years
   if (data.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Questões por especialidade</h2>
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          className="h-7 rounded border border-white/8 bg-[var(--mm-surface)] px-2 text-xs text-foreground outline-none"
+          className="h-7 rounded border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)] px-2 text-xs text-foreground outline-none"
         >
           <option value="all">Todos os anos</option>
           {years.map((y) => (
@@ -87,25 +87,25 @@ function BarBySpecialty({ specByYear, years }: { specByYear: SpecByYear[]; years
       </div>
       <ResponsiveContainer width="100%" height={data.length * 28 + 20} minHeight={120}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 40, top: 0, bottom: 0 }}>
-          <XAxis type="number" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
+          <XAxis type="number" tick={{ fontSize: 10, fill: '#5F7288' }} axisLine={false} tickLine={false} />
           <YAxis
             type="category"
             dataKey="name"
             width={120}
-            tick={{ fontSize: 11, fill: '#ccc' }}
+            tick={{ fontSize: 11, fill: '#5F7288' }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            cursor={{ fill: 'rgba(14,40,65,0.04)' }}
             {...tt}
             formatter={(value, name) => [
               value,
               name === 'approved' ? 'Aprovadas' : 'Total',
             ]}
           />
-          <Bar dataKey="total" fill="rgba(201,168,76,0.25)" radius={[0, 3, 3, 0]} name="Total" />
-          <Bar dataKey="approved" fill="rgba(76,175,138,0.7)" radius={[0, 3, 3, 0]} name="Aprovadas" />
+          <Bar dataKey="total" fill="rgba(212,7,84,0.25)" radius={[0, 3, 3, 0]} name="Total" />
+          <Bar dataKey="approved" fill="rgba(49,148,152,0.7)" radius={[0, 3, 3, 0]} name="Aprovadas" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -137,14 +137,14 @@ function ParetoChart({ specByYear }: { specByYear: SpecByYear[] }) {
   if (data.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
       <h2 className="text-sm font-semibold text-foreground">Pareto — distribuição acumulada por especialidade</h2>
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={data} margin={{ left: 0, right: 24, top: 4, bottom: 60 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,40,65,0.05)" />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: 10, fill: '#888' }}
+            tick={{ fontSize: 10, fill: '#5F7288' }}
             axisLine={false}
             tickLine={false}
             angle={-40}
@@ -153,7 +153,7 @@ function ParetoChart({ specByYear }: { specByYear: SpecByYear[] }) {
           />
           <YAxis
             yAxisId="left"
-            tick={{ fontSize: 10, fill: '#888' }}
+            tick={{ fontSize: 10, fill: '#5F7288' }}
             axisLine={false}
             tickLine={false}
           />
@@ -162,24 +162,24 @@ function ParetoChart({ specByYear }: { specByYear: SpecByYear[] }) {
             orientation="right"
             tickFormatter={(v) => `${v}%`}
             domain={[0, 100]}
-            tick={{ fontSize: 10, fill: '#888' }}
+            tick={{ fontSize: 10, fill: '#5F7288' }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+            cursor={{ fill: 'rgba(14,40,65,0.04)' }}
             {...tt}
             formatter={(value, name) => [
               name === 'pareto' ? `${value}%` : value,
               name === 'pareto' ? 'Acumulado' : 'Questões',
             ]}
           />
-          <Bar yAxisId="left" dataKey="count" fill="rgba(201,168,76,0.55)" radius={[3, 3, 0, 0]} name="count" />
+          <Bar yAxisId="left" dataKey="count" fill="rgba(212,7,84,0.55)" radius={[3, 3, 0, 0]} name="count" />
           <Line
             yAxisId="right"
             type="monotone"
             dataKey="pareto"
-            stroke="#7c6fd8"
+            stroke="#7B3FA0"
             strokeWidth={2}
             dot={false}
             name="pareto"
@@ -212,16 +212,16 @@ function EvolutionChart({ specByYear, topSpecialties, years }: AnaliseChartsProp
   const top6 = topSpecialties.slice(0, 6)
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-5 flex flex-col gap-4">
       <h2 className="text-sm font-semibold text-foreground">Evolução por ano — top especialidades</h2>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data} margin={{ left: 0, right: 24, top: 4, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: '#888' }} axisLine={false} tickLine={false} />
-          <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)' }} {...tt} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(14,40,65,0.05)" />
+          <XAxis dataKey="year" tick={{ fontSize: 10, fill: '#5F7288' }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: '#5F7288' }} axisLine={false} tickLine={false} />
+          <Tooltip cursor={{ stroke: 'rgba(14,40,65,0.1)' }} {...tt} />
           <Legend
-            wrapperStyle={{ fontSize: 11, color: '#aaa', paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 11, color: '#5F7288', paddingTop: 8 }}
             formatter={(value) => value.length > 20 ? value.slice(0, 20) + '…' : value}
           />
           {top6.map((spec, i) => (

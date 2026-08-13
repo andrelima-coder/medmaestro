@@ -50,7 +50,7 @@ export function NewTagForm() {
               name="label"
               required
               placeholder="Nome da tag"
-              className="h-9 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-sm text-foreground placeholder:text-[var(--mm-muted)] outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-white/[0.07]"
+              className="h-9 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground placeholder:text-[var(--mm-muted)] outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-[rgba(14,40,65,0.07)]"
             />
           </div>
 
@@ -61,7 +61,7 @@ export function NewTagForm() {
             <select
               name="dimension"
               required
-              className="h-9 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-sm text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)]"
+              className="h-9 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)]"
             >
               {DIMENSIONS.map((d) => (
                 <option key={d.value} value={d.value}>
@@ -78,7 +78,7 @@ export function NewTagForm() {
             <input
               type="color"
               name="color"
-              defaultValue="#C9A84C"
+              defaultValue="#D40754"
               className="h-9 w-14 cursor-pointer rounded-lg border border-[var(--mm-border-default)] bg-transparent transition-colors hover:border-[var(--mm-border-hover)]"
             />
           </div>
@@ -90,12 +90,12 @@ export function NewTagForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 font-[family-name:var(--font-syne)] text-xs font-bold text-[#0A0A0A] transition-all hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 font-[family-name:var(--font-syne)] text-xs font-bold text-[#FFFFFF] transition-all hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50"
             style={{
               background:
-                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
               boxShadow:
-                '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}
           >
             <Plus className="size-3.5" />

@@ -17,21 +17,21 @@ import {
 } from 'recharts'
 import type { PrevisaoResult, TopicPrediction } from '@/lib/analytics/previsao'
 
-const GOLD = '#C9A84C'
-const MUTED = '#9AA0AA'
-const LINE = 'rgba(255,255,255,0.06)'
+const GOLD = '#D40754'
+const MUTED = '#5F7288'
+const LINE = 'rgba(14,40,65,0.06)'
 
 // Cor por faixa de score (verde quente = mais provável).
 function scoreColor(score: number): string {
-  if (score >= 70) return '#EF5350'
-  if (score >= 50) return '#FF7043'
-  if (score >= 30) return '#FFA726'
-  if (score >= 15) return '#66BB6A'
-  return '#4A5568'
+  if (score >= 70) return '#D3402A'
+  if (score >= 50) return '#F26B43'
+  if (score >= 30) return '#9E6606'
+  if (score >= 15) return '#006048'
+  return '#5F7288'
 }
 
 function heatColor(share: number, max: number): string {
-  if (share <= 0) return 'rgba(255,255,255,0.03)'
+  if (share <= 0) return 'rgba(14,40,65,0.03)'
   const t = Math.min(1, share / (max || 1))
   // interpola de azul-escuro frio → dourado quente
   const r = Math.round(40 + t * (201 - 40))
@@ -41,8 +41,8 @@ function heatColor(share: number, max: number): string {
 }
 
 function trendArrow(slope: number): { icon: string; color: string; label: string } {
-  if (slope > 0.3) return { icon: '▲', color: '#EF5350', label: 'em alta' }
-  if (slope < -0.3) return { icon: '▼', color: '#42A5F5', label: 'em queda' }
+  if (slope > 0.3) return { icon: '▲', color: '#D3402A', label: 'em alta' }
+  if (slope < -0.3) return { icon: '▼', color: '#2B5A9C', label: 'em queda' }
   return { icon: '→', color: MUTED, label: 'estável' }
 }
 
@@ -95,7 +95,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
     })
   }, [data.years, trendTop])
 
-  const trendColors = ['#EF5350', '#FFA726', '#42A5F5', '#66BB6A', '#AB47BC', '#26A69A']
+  const trendColors = ['#D3402A', '#9E6606', '#2B5A9C', '#006048', '#7B3FA0', '#319498']
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -103,12 +103,12 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
       {data.meta.humanReviewedTagPct < 5 && (
         <div
           style={{
-            background: 'rgba(255,152,0,0.08)',
-            border: '1px solid rgba(255,152,0,0.25)',
+            background: 'rgba(251,174,64,0.08)',
+            border: '1px solid rgba(251,174,64,0.25)',
             borderRadius: 10,
             padding: '10px 14px',
             fontSize: 12,
-            color: '#FFB74D',
+            color: '#9E6606',
             lineHeight: 1.5,
           }}
         >
@@ -132,7 +132,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
               padding: '4px 12px',
               borderRadius: 6,
               border: `1px solid ${topN === n ? GOLD : LINE}`,
-              background: topN === n ? 'rgba(201,168,76,0.12)' : 'transparent',
+              background: topN === n ? 'rgba(212,7,84,0.12)' : 'transparent',
               color: topN === n ? GOLD : MUTED,
               cursor: 'pointer',
               fontWeight: 600,
@@ -166,7 +166,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                 return (
                   <tr key={p.tagId} style={{ borderTop: `1px solid ${LINE}` }}>
                     <td style={{ ...tdStyle, color: MUTED }}>{i + 1}</td>
-                    <td style={{ ...tdStyle, color: '#E8E8EA', maxWidth: 340 }}>{p.label}</td>
+                    <td style={{ ...tdStyle, color: '#0E2841', maxWidth: 340 }}>{p.label}</td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <span
                         style={{
@@ -175,7 +175,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                           padding: '2px 8px',
                           borderRadius: 20,
                           fontWeight: 700,
-                          color: '#0A0A0A',
+                          color: '#FFFFFF',
                           background: scoreColor(p.score),
                         }}
                       >
@@ -186,14 +186,14 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                       {t.icon} {p.trendSlope > 0 ? '+' : ''}
                       {p.trendSlope} pp/ano
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center', color: '#E8E8EA' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: '#0E2841' }}>
                       <strong>{p.projMid}</strong>
                       <span style={{ color: MUTED }}>
                         {' '}
                         ({p.projLo}–{p.projHi})
                       </span>
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center', color: p.sampleSize < 4 ? '#FFA726' : MUTED }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: p.sampleSize < 4 ? '#9E6606' : MUTED }}>
                       {p.sampleSize}
                       {p.sampleSize < 4 ? ' ⚠' : ''}
                     </td>
@@ -211,7 +211,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
           <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle, position: 'sticky', left: 0, background: '#0E0E10' }}></th>
+                <th style={{ ...thStyle, position: 'sticky', left: 0, background: '#FFFFFF' }}></th>
                 {data.years.map((y) => (
                   <th key={y} style={{ ...thStyle, textAlign: 'center', minWidth: 42 }}>
                     {String(y).slice(2)}
@@ -227,8 +227,8 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                       ...tdStyle,
                       position: 'sticky',
                       left: 0,
-                      background: '#0E0E10',
-                      color: '#E8E8EA',
+                      background: '#FFFFFF',
+                      color: '#0E2841',
                       maxWidth: 240,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -246,7 +246,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                         textAlign: 'center',
                         padding: '6px 4px',
                         background: heatColor(b.share, heatMax),
-                        color: b.share > heatMax * 0.5 ? '#0A0A0A' : MUTED,
+                        color: b.share > heatMax * 0.5 ? '#FFFFFF' : MUTED,
                         fontWeight: b.count > 0 ? 600 : 400,
                         borderRadius: 3,
                       }}
@@ -289,8 +289,8 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                 if (!payload || !payload.length) return null
                 const d = payload[0].payload as { label: string; x: number; y: number; z: number; score: number }
                 return (
-                  <div style={{ background: '#12121A', border: `1px solid ${LINE}`, borderRadius: 8, padding: 10, fontSize: 12, maxWidth: 240 }}>
-                    <div style={{ color: '#E8E8EA', fontWeight: 600, marginBottom: 4 }}>{d.label}</div>
+                  <div style={{ background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 8, padding: 10, fontSize: 12, maxWidth: 240 }}>
+                    <div style={{ color: '#0E2841', fontWeight: 600, marginBottom: 4 }}>{d.label}</div>
                     <div style={{ color: MUTED }}>Peso recente: {d.x}%</div>
                     <div style={{ color: MUTED }}>Tendência: {d.y > 0 ? '+' : ''}{d.y} pp/ano</div>
                     <div style={{ color: MUTED }}>Amostra: {d.z} questões</div>
@@ -316,7 +316,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
             <XAxis dataKey="year" tick={{ fill: MUTED, fontSize: 11 }} />
             <YAxis tick={{ fill: MUTED, fontSize: 11 }} unit="%" />
             <Tooltip
-              contentStyle={{ background: '#12121A', border: `1px solid ${LINE}`, borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 8, fontSize: 11 }}
               formatter={(v) => `${v}%`}
             />
             {trendTop.map((p, i) => (
@@ -354,7 +354,7 @@ export function PrevisaoDashboard({ data }: { data: PrevisaoResult }) {
                   padding: '4px 10px',
                   borderRadius: 20,
                   border: `1px solid ${LINE}`,
-                  background: 'rgba(255,255,255,0.02)',
+                  background: 'rgba(14,40,65,0.02)',
                   color: MUTED,
                 }}
               >
@@ -372,14 +372,14 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
   return (
     <div
       style={{
-        background: 'var(--mm-surface, #12121A)',
+        background: 'var(--mm-surface, #FFFFFF)',
         border: `1px solid ${LINE}`,
         borderRadius: 12,
         padding: 18,
       }}
     >
       <div style={{ marginBottom: 14 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#E8E8EA', margin: 0 }}>{title}</h3>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0E2841', margin: 0 }}>{title}</h3>
         {subtitle && <p style={{ fontSize: 11.5, color: MUTED, margin: '3px 0 0', lineHeight: 1.5 }}>{subtitle}</p>}
       </div>
       {children}

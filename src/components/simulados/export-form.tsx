@@ -34,27 +34,27 @@ const FORMATS: Array<{
     label: 'PDF',
     description: 'Caderno de questões comentadas',
     iconLetter: 'P',
-    iconColor: '#EF5350',
-    iconBg: 'rgba(239,83,80,0.15)',
-    iconBorder: 'rgba(239,83,80,0.4)',
+    iconColor: '#D3402A',
+    iconBg: 'rgba(211,64,42,0.15)',
+    iconBorder: 'rgba(211,64,42,0.4)',
   },
   {
     value: 'docx',
     label: 'DOCX',
     description: 'Documento editável',
     iconLetter: 'W',
-    iconColor: '#5B9BF5',
-    iconBg: 'rgba(41,95,178,0.30)',
-    iconBorder: 'rgba(41,95,178,0.5)',
+    iconColor: '#2B5A9C',
+    iconBg: 'rgba(43,90,156,0.30)',
+    iconBorder: 'rgba(43,90,156,0.5)',
   },
   {
     value: 'xlsx',
     label: 'XLSX',
     description: 'Planilha analítica',
     iconLetter: 'X',
-    iconColor: '#4ADE80',
-    iconBg: 'rgba(21,128,61,0.25)',
-    iconBorder: 'rgba(21,128,61,0.4)',
+    iconColor: '#006048',
+    iconBg: 'rgba(0,96,72,0.25)',
+    iconBorder: 'rgba(0,96,72,0.4)',
   },
 ]
 
@@ -250,7 +250,7 @@ export function ExportForm({
                       'inline-flex size-4 items-center justify-center rounded-full border',
                       active
                         ? 'border-[var(--mm-gold)]'
-                        : 'border-white/20'
+                        : 'border-[rgba(14,40,65,0.2)]'
                     )}
                   >
                     {active && (
@@ -281,7 +281,7 @@ export function ExportForm({
                       ? 'cursor-not-allowed opacity-40 border-[var(--mm-border-default)]'
                       : 'cursor-pointer hover:border-[var(--mm-border-hover)]',
                     !disabled && c.emphasis && active
-                      ? 'border-[rgba(201,168,76,0.20)] bg-[rgba(201,168,76,0.03)]'
+                      ? 'border-[rgba(212,7,84,0.20)] bg-[rgba(212,7,84,0.03)]'
                       : 'border-[var(--mm-border-default)]'
                   )}
                 >
@@ -297,13 +297,13 @@ export function ExportForm({
                       'inline-flex size-4 flex-shrink-0 items-center justify-center rounded border transition-all',
                       active && !disabled
                         ? 'border-[var(--mm-gold)] bg-[var(--mm-gold)]'
-                        : 'border-white/20 bg-transparent'
+                        : 'border-[rgba(14,40,65,0.2)] bg-transparent'
                     )}
                   >
                     {active && !disabled && (
                       <svg
                         viewBox="0 0 12 12"
-                        className="size-3 text-[#0a0a0a]"
+                        className="size-3 text-[#FFFFFF]"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2.4"
@@ -328,7 +328,7 @@ export function ExportForm({
           <CardTitle>Preview do documento</CardTitle>
         </CardHeader>
         <CardBody>
-          <div className="rounded-lg border border-[var(--mm-border-default)] bg-white/[0.015] p-6">
+          <div className="rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.015)] p-6">
             <div className="mb-3 flex flex-col items-center gap-1 border-b border-[var(--mm-border-default)] pb-3">
               <p className="font-[family-name:var(--font-syne)] text-base font-semibold text-foreground">
                 Banco de Questões TEMI
@@ -358,7 +358,7 @@ export function ExportForm({
                 </p>
               )}
               {content.gabarito && (
-                <div className="rounded border-l-2 border-[var(--mm-green)] bg-[rgba(102,187,106,0.08)] px-3 py-2 text-sm">
+                <div className="rounded border-l-2 border-[var(--mm-green)] bg-[rgba(0,96,72,0.08)] px-3 py-2 text-sm">
                   <span className="font-semibold text-[var(--mm-green)]">Gabarito: A</span>
                   <span className="text-[var(--mm-muted)]">
                     {' '}— A curva P-V mostra progressiva perda de complacência…
@@ -391,7 +391,7 @@ export function ExportForm({
       </Card>
 
       {error && (
-        <div className="rounded-lg border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] p-3 text-sm text-[var(--mm-red)]">
+        <div className="rounded-lg border border-[rgba(211,64,42,0.30)] bg-[rgba(211,64,42,0.08)] p-3 text-sm text-[var(--mm-red)]">
           {error}
         </div>
       )}
@@ -404,18 +404,18 @@ export function ExportForm({
           </span>
           <Link
             href="/questoes"
-            className="inline-flex h-8 items-center rounded-full border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-xs text-foreground transition-colors hover:border-[var(--mm-border-hover)]"
+            className="inline-flex h-8 items-center rounded-full border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-xs text-foreground transition-colors hover:border-[var(--mm-border-hover)]"
           >
             ← Anterior
           </Link>
           <Link
             href="/auditoria"
-            className="inline-flex h-8 items-center rounded-full px-3.5 text-xs font-semibold text-[#0A0A0A] transition-all hover:-translate-y-px"
+            className="inline-flex h-8 items-center rounded-full px-3.5 text-xs font-semibold text-[#FFFFFF] transition-all hover:-translate-y-px"
             style={{
               background:
-                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
               boxShadow:
-                '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
             }}
           >
             Próxima →
@@ -434,15 +434,15 @@ export function ExportForm({
             'inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold transition-all',
             blocked
               ? 'cursor-not-allowed border border-[var(--mm-border-default)] bg-transparent text-[var(--mm-muted)]'
-              : 'text-[#0A0A0A] hover:-translate-y-px active:translate-y-px'
+              : 'text-[#FFFFFF] hover:-translate-y-px active:translate-y-px'
           )}
           style={
             !blocked
               ? {
                   background:
-                    'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
+                    'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
                   boxShadow:
-                    '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
                 }
               : undefined
           }

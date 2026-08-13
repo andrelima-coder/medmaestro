@@ -12,27 +12,27 @@ export const metadata = { title: 'Análise — MedMaestro' }
 const ROLE_RANK: Record<string, number> = { analista: 0, professor: 1, admin: 2, superadmin: 3 }
 
 const MODULO_COLORS: Record<string, string> = {
-  Cardiovascular: '#EF5350',
-  Respiratório: '#42A5F5',
-  Neurológico: '#AB47BC',
-  'Renal e Distúrbios HE': '#26A69A',
-  'Infectologia e Sepse': '#FF7043',
-  'Gastro e Nutrição': '#66BB6A',
-  'Hemato e Oncologia': '#EC407A',
+  Cardiovascular: '#D3402A',
+  Respiratório: '#2B5A9C',
+  Neurológico: '#7B3FA0',
+  'Renal e Distúrbios HE': '#319498',
+  'Infectologia e Sepse': '#F26B43',
+  'Gastro e Nutrição': '#006048',
+  'Hemato e Oncologia': '#B6014F',
   'Trauma e Cirurgia': '#8D6E63',
-  'Medicina Perioperatória': '#FFA726',
-  'Ética e Qualidade': '#78909C',
+  'Medicina Perioperatória': '#9E6606',
+  'Ética e Qualidade': '#5F7288',
 }
 
 const COR_DOT: Record<string, string> = {
-  azul: '#42A5F5',
-  vermelho: '#EF5350',
-  verde: '#66BB6A',
-  amarelo: '#FFD54F',
-  rosa: '#EC407A',
-  roxo: '#AB47BC',
-  laranja: '#FF7043',
-  branco: '#E0E0E0',
+  azul: '#2B5A9C',
+  vermelho: '#D3402A',
+  verde: '#006048',
+  amarelo: '#9E6606',
+  rosa: '#B6014F',
+  roxo: '#7B3FA0',
+  laranja: '#F26B43',
+  branco: '#A4A3A4',
 }
 
 type SearchParams = {
@@ -244,7 +244,7 @@ export default async function AnalisePage({
     const tag = row.tags as unknown as { label: string; color: string | null } | null
     if (!tag) continue
     const key = tag.label
-    const color = tag.color ?? MODULO_COLORS[key] ?? '#5A6880'
+    const color = tag.color ?? MODULO_COLORS[key] ?? '#5F7288'
     if (!moduloCount[key]) moduloCount[key] = { color, count: 0 }
     moduloCount[key].count++
   }
@@ -310,7 +310,7 @@ export default async function AnalisePage({
       if (!examId) continue
       const year = examYearMap[examId]
       if (!year) continue
-      const color = tag.color ?? MODULO_COLORS[tag.label] ?? '#5A6880'
+      const color = tag.color ?? MODULO_COLORS[tag.label] ?? '#5F7288'
       if (!moduloYearData[tag.label]) {
         moduloYearData[tag.label] = { modulo: tag.label, color, countByYear: {}, total: 0 }
       }
@@ -336,12 +336,12 @@ export default async function AnalisePage({
   const ERA_MAX = 2025
 
   const DIF_COLOR: Record<string, string> = {
-    Fácil: '#66BB6A',
-    Médio: '#FFA726',
-    Difícil: '#EF5350',
+    Fácil: '#006048',
+    Médio: '#9E6606',
+    Difícil: '#D3402A',
   }
   const DIF_ORDER = ['Fácil', 'Médio', 'Difícil']
-  const TIPO_PALETTE = ['#C9A84C', '#7C6FD8', '#4CAF8A', '#E07B54', '#5B9BD8', '#D85B8A']
+  const TIPO_PALETTE = ['#D40754', '#7B3FA0', '#006048', '#F26B43', '#2B5A9C', '#B6014F']
 
   const labelOf = (row: { tags: unknown }): string | null => {
     const tag = row.tags as unknown as { label: string } | null
@@ -357,7 +357,7 @@ export default async function AnalisePage({
   const pieDif = DIF_ORDER.filter((l) => difAgg[l]).map((label) => ({
     label,
     count: difAgg[label],
-    color: DIF_COLOR[label] ?? '#5A6880',
+    color: DIF_COLOR[label] ?? '#5F7288',
   }))
 
   const tipoAgg: Record<string, number> = {}
@@ -428,7 +428,7 @@ export default async function AnalisePage({
     .sort((a, b) => a - b)
   const eraModulos = Object.entries(moduloEraTotal)
     .sort((a, b) => b[1] - a[1])
-    .map(([label]) => ({ label, color: MODULO_COLORS[label] ?? '#5A6880' }))
+    .map(([label]) => ({ label, color: MODULO_COLORS[label] ?? '#5F7288' }))
 
   const areaRows = eraYears.map((y) => {
     const row: Record<string, number> = { year: y }
@@ -525,9 +525,9 @@ export default async function AnalisePage({
           className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-[12px] font-bold no-underline"
           style={{
             background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-            color: '#0a0a0a',
+            color: '#FFFFFF',
             fontFamily: 'var(--font-syne)',
-            boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+            boxShadow: '0 4px 20px rgba(212,7,84,0.25)',
           }}
         >
           Previsão de prova →
@@ -576,10 +576,10 @@ export default async function AnalisePage({
                 ...coresForFilter.map((c) => ({
                   slug: c,
                   label: c[0].toUpperCase() + c.slice(1),
-                  color: COR_DOT[c.toLowerCase()] ?? '#5A6880',
+                  color: COR_DOT[c.toLowerCase()] ?? '#5F7288',
                 })),
                 ...(hasColorlessExam
-                  ? [{ slug: COR_NONE, label: 'Sem cor', color: '#5A6880' }]
+                  ? [{ slug: COR_NONE, label: 'Sem cor', color: '#5F7288' }]
                   : []),
               ]}
             />

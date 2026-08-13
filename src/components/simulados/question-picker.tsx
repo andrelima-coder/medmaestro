@@ -66,12 +66,12 @@ export function QuestionPicker({ simuladoId, initialAddedIds }: QuestionPickerPr
         <input
           ref={inputRef}
           placeholder="Buscar questões aprovadas…"
-          className="flex-1 h-9 rounded-lg border border-white/8 bg-white/4 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
+          className="flex-1 h-9 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
         />
         <button
           type="submit"
           disabled={isPending}
-          className="h-9 px-3 rounded-lg border border-white/8 text-xs text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors disabled:opacity-40"
+          className="h-9 px-3 rounded-lg border border-[rgba(14,40,65,0.1)] text-xs text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.04)] transition-colors disabled:opacity-40"
         >
           {isPending ? '…' : 'Buscar'}
         </button>
@@ -98,7 +98,7 @@ export function QuestionPicker({ simuladoId, initialAddedIds }: QuestionPickerPr
                 className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
                   isAdded
                     ? 'border-[var(--mm-gold)]/20 bg-[var(--mm-gold)]/5'
-                    : 'border-white/5 bg-white/2 hover:bg-white/4'
+                    : 'border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)] hover:bg-[rgba(14,40,65,0.04)]'
                 }`}
               >
                 <div className="flex-1 min-w-0">
@@ -113,7 +113,7 @@ export function QuestionPicker({ simuladoId, initialAddedIds }: QuestionPickerPr
                   disabled={isLoading || (isPending && loadingId !== q.id)}
                   className={`shrink-0 text-xs rounded-md px-2.5 py-1 transition-colors disabled:opacity-40 ${
                     isAdded
-                      ? 'text-red-400 hover:bg-red-500/10 border border-red-500/20'
+                      ? 'text-[#D3402A] hover:bg-[rgba(211,64,42,0.1)] border border-[rgba(211,64,42,0.2)]'
                       : 'text-[var(--mm-gold)] hover:bg-[var(--mm-gold)]/10 border border-[var(--mm-gold)]/20'
                   }`}
                 >

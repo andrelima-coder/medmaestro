@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         primary:
-          "bg-[linear-gradient(135deg,var(--mm-gold)_0%,var(--mm-orange)_100%)] text-[#0A0A0A] font-semibold shadow-[0_4px_20px_rgba(201,120,30,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_6px_28px_rgba(201,120,30,0.5),inset_0_1px_0_rgba(255,255,255,0.20)] hover:-translate-y-px",
+          "bg-[linear-gradient(135deg,var(--mm-gold)_0%,var(--mm-gold2)_100%)] text-[#FFFFFF] font-semibold shadow-[0_4px_20px_rgba(212,7,84,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] hover:shadow-[0_6px_28px_rgba(212,7,84,0.5),inset_0_1px_0_rgba(255,255,255,0.20)] hover:-translate-y-px",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -18,9 +18,9 @@ const buttonVariants = cva(
         ghost:
           "border-[var(--mm-border-default)] bg-transparent text-[var(--mm-text2)] hover:border-[var(--mm-border-hover)] hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
-          "bg-[rgba(239,83,80,0.12)] border-[rgba(239,83,80,0.30)] text-[var(--mm-red)] hover:bg-[rgba(239,83,80,0.18)] focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
+          "bg-[rgba(211,64,42,0.12)] border-[rgba(211,64,42,0.30)] text-[var(--mm-red)] hover:bg-[rgba(211,64,42,0.18)] focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
         success:
-          "bg-[rgba(102,187,106,0.12)] border-[rgba(102,187,106,0.30)] text-[var(--mm-green)] hover:bg-[rgba(102,187,106,0.18)]",
+          "bg-[rgba(0,96,72,0.12)] border-[rgba(0,96,72,0.30)] text-[var(--mm-green)] hover:bg-[rgba(0,96,72,0.18)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

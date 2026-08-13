@@ -65,9 +65,9 @@ export default async function AlunoHomePage() {
       {weakest && (
         <a
           href={`/aluno/praticar?modulo=${weakest.tagId}`}
-          className="block rounded-2xl border border-amber-400 bg-amber-500/5 p-5 transition hover:bg-amber-500/10"
+          className="block rounded-2xl border border-[#FBAE40] bg-[rgba(251,174,64,0.05)] p-5 transition hover:bg-[rgba(251,174,64,0.1)]"
         >
-          <div className="text-xs font-semibold text-amber-600">🎯 Recomendado para você</div>
+          <div className="text-xs font-semibold text-[#9E6606]">🎯 Recomendado para você</div>
           <div className="mt-1 font-semibold text-foreground">
             Praticar seu ponto fraco: {weakest.label}
           </div>

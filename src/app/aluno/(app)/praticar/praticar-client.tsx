@@ -87,7 +87,7 @@ export function PraticarClient({
           <button
             onClick={() => iniciar(weakest.tagId)}
             disabled={isPending}
-            className="mt-3 w-full rounded-lg border border-amber-400 px-4 py-2.5 text-sm font-medium text-amber-600 disabled:opacity-60"
+            className="mt-3 w-full rounded-lg border border-[#FBAE40] px-4 py-2.5 text-sm font-medium text-[#9E6606] disabled:opacity-60"
           >
             🎯 Praticar meu ponto fraco: {weakest.label} ({weakest.pct}%)
           </button>
@@ -136,9 +136,9 @@ export function PraticarClient({
                 className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
                   result
                     ? isCorrect
-                      ? 'border-emerald-500 bg-emerald-500/10'
+                      ? 'border-[#006048] bg-[rgba(0,96,72,0.1)]'
                       : isWrongPick
-                        ? 'border-red-400 bg-red-400/10'
+                        ? 'border-[#D3402A] bg-[rgba(211,64,42,0.1)]'
                         : 'border-border'
                     : isSel
                       ? 'border-primary bg-primary/5'
@@ -163,7 +163,7 @@ export function PraticarClient({
 
         {result && (
           <div className="mt-4 rounded-lg bg-muted/50 p-3 text-sm">
-            <p className={result.isCorrect ? 'text-emerald-600' : 'text-red-500'}>
+            <p className={result.isCorrect ? 'text-[#006048]' : 'text-[#D3402A]'}>
               {result.isCorrect ? 'Você acertou!' : `Resposta correta: ${result.correctAnswer}`}
             </p>
             {result.comment && (

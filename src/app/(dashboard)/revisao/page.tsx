@@ -15,9 +15,9 @@ const STATUS_CONFIG: Record<
 > = {
   extracted: {
     label: 'Extraída',
-    bg: 'rgba(79,195,247,0.1)',
-    color: '#4FC3F7',
-    border: 'rgba(79,195,247,0.25)',
+    bg: 'rgba(32,105,115,0.1)',
+    color: '#206973',
+    border: 'rgba(32,105,115,0.25)',
   },
   reviewing: {
     label: 'Em revisão',
@@ -27,51 +27,51 @@ const STATUS_CONFIG: Record<
   },
   approved: {
     label: 'Aprovada',
-    bg: 'rgba(102,187,106,0.1)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.25)',
+    bg: 'rgba(0,96,72,0.1)',
+    color: '#006048',
+    border: 'rgba(0,96,72,0.25)',
   },
   rejected: {
     label: 'Rejeitada',
-    bg: 'rgba(239,83,80,0.1)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.25)',
+    bg: 'rgba(211,64,42,0.1)',
+    color: '#D3402A',
+    border: 'rgba(211,64,42,0.25)',
   },
   flagged: {
     label: 'Sinalizada',
-    bg: 'rgba(239,83,80,0.1)',
-    color: '#EF5350',
-    border: 'rgba(239,83,80,0.25)',
+    bg: 'rgba(211,64,42,0.1)',
+    color: '#D3402A',
+    border: 'rgba(211,64,42,0.25)',
   },
   commented: {
     label: 'Comentada',
-    bg: 'rgba(167,139,250,0.1)',
-    color: '#A78BFA',
-    border: 'rgba(167,139,250,0.25)',
+    bg: 'rgba(123,63,160,0.1)',
+    color: '#7B3FA0',
+    border: 'rgba(123,63,160,0.25)',
   },
   published: {
     label: 'Publicada',
-    bg: 'rgba(102,187,106,0.15)',
-    color: '#66BB6A',
-    border: 'rgba(102,187,106,0.3)',
+    bg: 'rgba(0,96,72,0.15)',
+    color: '#006048',
+    border: 'rgba(0,96,72,0.3)',
   },
   draft: {
     label: 'Rascunho',
-    bg: 'rgba(148,163,184,0.1)',
-    color: '#94A3B8',
-    border: 'rgba(148,163,184,0.25)',
+    bg: 'rgba(164,163,164,0.1)',
+    color: '#A4A3A4',
+    border: 'rgba(164,163,164,0.25)',
   },
 }
 
 const STATUS_DOT: Record<string, string> = {
-  extracted: '#4FC3F7',
-  reviewing: '#D4A843',
-  approved: '#66BB6A',
-  rejected: '#EF5350',
-  flagged: '#EF5350',
-  commented: '#A78BFA',
-  published: '#66BB6A',
-  draft: '#94A3B8',
+  extracted: '#206973',
+  reviewing: '#B6014F',
+  approved: '#006048',
+  rejected: '#D3402A',
+  flagged: '#D3402A',
+  commented: '#7B3FA0',
+  published: '#006048',
+  draft: '#A4A3A4',
 }
 
 const FILTER_TABS = [
@@ -263,7 +263,7 @@ export default async function RevisaoPage({
         >
           {(questions ?? []).slice(0, 40).map((q) => {
             const statusKey = (q.status as string) ?? 'extracted'
-            const dotColor = STATUS_DOT[statusKey] ?? '#5A6880'
+            const dotColor = STATUS_DOT[statusKey] ?? '#5F7288'
             return (
               <Link
                 key={q.id as string}
@@ -485,7 +485,7 @@ export default async function RevisaoPage({
                         {(q.has_images as boolean | null) ? (
                           <span
                             title="Contém imagem"
-                            style={{ color: '#AB47BC', fontSize: 12 }}
+                            style={{ color: '#7B3FA0', fontSize: 12 }}
                           >
                             ⬛
                           </span>

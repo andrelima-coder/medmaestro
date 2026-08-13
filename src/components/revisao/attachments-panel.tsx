@@ -58,7 +58,7 @@ export function AttachmentsPanel({
   }
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/40 p-4 flex flex-col gap-3">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/40 p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Anexos do revisor
@@ -71,13 +71,13 @@ export function AttachmentsPanel({
       </div>
 
       {!readOnly && (
-        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-white/10 bg-white/2 p-3">
+        <div className="flex flex-col gap-2 rounded-lg border border-dashed border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.02)] p-3">
           <input
             type="text"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Legenda opcional (ex.: ECG correto da Q12)"
-            className="w-full rounded-md border border-white/8 bg-white/4 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40"
+            className="w-full rounded-md border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40"
           />
           <div className="flex items-center gap-2">
             <input
@@ -91,11 +91,11 @@ export function AttachmentsPanel({
               type="button"
               onClick={handleSelect}
               disabled={pending}
-              className="rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="rounded-md border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.05)] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-[rgba(14,40,65,0.1)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {pending ? 'Enviando…' : 'Selecionar arquivo'}
             </button>
-            {error && <span className="text-xs text-red-400">{error}</span>}
+            {error && <span className="text-xs text-[#D3402A]">{error}</span>}
           </div>
         </div>
       )}
@@ -107,14 +107,14 @@ export function AttachmentsPanel({
           {items.map((a) => (
             <li
               key={a.id}
-              className="flex items-start gap-3 rounded-lg border border-white/7 bg-white/2 p-2.5"
+              className="flex items-start gap-3 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.02)] p-2.5"
             >
               {a.mime_type.startsWith('image/') ? (
                 <a
                   href={a.signed_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="shrink-0 block w-16 h-16 rounded-md overflow-hidden bg-black/30 border border-white/10"
+                  className="shrink-0 block w-16 h-16 rounded-md overflow-hidden bg-[rgba(14,40,65,0.06)] border border-[rgba(14,40,65,0.12)]"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -128,7 +128,7 @@ export function AttachmentsPanel({
                   href={a.signed_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="shrink-0 flex items-center justify-center w-16 h-16 rounded-md bg-red-500/10 border border-red-500/20 text-xs font-bold text-red-400"
+                  className="shrink-0 flex items-center justify-center w-16 h-16 rounded-md bg-[rgba(211,64,42,0.1)] border border-[rgba(211,64,42,0.2)] text-xs font-bold text-[#D3402A]"
                 >
                   PDF
                 </a>
@@ -160,7 +160,7 @@ export function AttachmentsPanel({
                   type="button"
                   onClick={() => handleDelete(a.id)}
                   disabled={pending}
-                  className="shrink-0 px-2 py-1 text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                  className="shrink-0 px-2 py-1 text-xs text-[#D3402A]/70 hover:text-[#D3402A] transition-colors"
                   title="Excluir anexo"
                 >
                   ×

@@ -324,7 +324,7 @@ export default async function RevisaoItemPage({
                   t?.html ? (
                     <div
                       key={i}
-                      className="mm-doc-table overflow-x-auto rounded-lg border border-white/5 bg-white/2 p-2"
+                      className="mm-doc-table overflow-x-auto rounded-lg border border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)] p-2"
                       dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(t.html) }}
                     />
                   ) : null

@@ -149,12 +149,12 @@ export function RevisaoVariacoesClient({
                     fontSize: 13,
                     padding: '8px 12px',
                     borderRadius: 8,
-                    background: isCorrect ? 'rgba(102,187,106,0.08)' : 'transparent',
-                    border: isCorrect ? '1px solid rgba(102,187,106,0.3)' : '1px solid transparent',
-                    color: isCorrect ? '#66BB6A' : 'var(--mm-text2)',
+                    background: isCorrect ? 'rgba(0,96,72,0.08)' : 'transparent',
+                    border: isCorrect ? '1px solid rgba(0,96,72,0.3)' : '1px solid transparent',
+                    color: isCorrect ? '#006048' : 'var(--mm-text2)',
                   }}
                 >
-                  <strong style={{ color: isCorrect ? '#66BB6A' : 'var(--mm-gold)' }}>
+                  <strong style={{ color: isCorrect ? '#006048' : 'var(--mm-gold)' }}>
                     {letter})
                   </strong>{' '}
                   {text}
@@ -218,7 +218,7 @@ export function RevisaoVariacoesClient({
           style={{
             fontSize: 11,
             textAlign: 'center',
-            color: feedback.startsWith('Erro') ? '#EF5350' : '#66BB6A',
+            color: feedback.startsWith('Erro') ? '#D3402A' : '#006048',
           }}
         >
           {feedback}
@@ -257,8 +257,8 @@ const btnBase: React.CSSProperties = {
 function btnSuccess(active: boolean): React.CSSProperties {
   return {
     ...btnBase,
-    background: active ? '#66BB6A' : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    background: active ? '#006048' : 'var(--mm-bg2)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     cursor: active ? 'pointer' : 'default',
   }
 }
@@ -269,7 +269,7 @@ function btnPromote(active: boolean): React.CSSProperties {
     background: active
       ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
       : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     cursor: active ? 'pointer' : 'default',
   }
 }
@@ -277,9 +277,9 @@ function btnPromote(active: boolean): React.CSSProperties {
 function btnDanger(active: boolean): React.CSSProperties {
   return {
     ...btnBase,
-    background: active ? 'rgba(239,83,80,0.15)' : 'var(--mm-bg2)',
-    color: active ? '#EF5350' : 'var(--mm-muted)',
-    border: active ? '1px solid rgba(239,83,80,0.4)' : '1px solid var(--mm-line2)',
+    background: active ? 'rgba(211,64,42,0.15)' : 'var(--mm-bg2)',
+    color: active ? '#D3402A' : 'var(--mm-muted)',
+    border: active ? '1px solid rgba(211,64,42,0.4)' : '1px solid var(--mm-line2)',
     cursor: active ? 'pointer' : 'default',
   }
 }

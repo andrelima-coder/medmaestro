@@ -159,19 +159,19 @@ export function FlashcardStudio({
           width: 'min(760px, 100%)',
           maxHeight: '90vh',
           overflowY: 'auto',
-          background: '#0E0E14',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: '#FFFFFF',
+          border: '1px solid rgba(14,40,65,0.1)',
           borderRadius: 16,
           boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
         }}
       >
         {/* Cabeçalho */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <strong style={{ fontSize: 14, color: '#E8E8EA' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid rgba(14,40,65,0.07)' }}>
+          <strong style={{ fontSize: 14, color: '#0E2841' }}>
             {mode === 'create' ? 'Novo flashcard' : mode === 'edit' ? 'Editar flashcard' : 'Estudar'}
           </strong>
           {mode === 'view' && (
-            <span style={{ fontSize: 12, color: '#9AA0AA' }}>
+            <span style={{ fontSize: 12, color: '#5F7288' }}>
               {index + 1} / {cards.length}
               {card?.exam_label ? ` · ${card.exam_label}` : ''}
               {card?.question_number != null ? ` · Q${card.question_number}` : ''}
@@ -182,7 +182,7 @@ export function FlashcardStudio({
 
         <div style={{ padding: 18 }}>
           {error && (
-            <div style={{ marginBottom: 12, fontSize: 12, color: '#EF5350', background: 'rgba(239,83,80,0.08)', border: '1px solid rgba(239,83,80,0.25)', borderRadius: 8, padding: '8px 12px' }}>
+            <div style={{ marginBottom: 12, fontSize: 12, color: '#D3402A', background: 'rgba(211,64,42,0.08)', border: '1px solid rgba(211,64,42,0.25)', borderRadius: 8, padding: '8px 12px' }}>
               {error}
             </div>
           )}
@@ -208,7 +208,7 @@ export function FlashcardStudio({
         </div>
 
         {/* Rodapé de ações */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 18px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 18px', borderTop: '1px solid rgba(14,40,65,0.07)' }}>
           {mode === 'view' && card && (
             <>
               <button onClick={() => go(-1)} disabled={index <= 0} style={btnGhost}>← Anterior</button>
@@ -249,29 +249,29 @@ function ViewCard({ card, flipped, onFlip }: { card: BancoFlashcard; flipped: bo
         cursor: 'pointer',
         minHeight: 260,
         borderRadius: 14,
-        border: `1px solid ${flipped ? 'rgba(102,187,106,0.35)' : 'rgba(201,168,76,0.3)'}`,
-        background: flipped ? 'rgba(102,187,106,0.04)' : 'rgba(201,168,76,0.03)',
+        border: `1px solid ${flipped ? 'rgba(0,96,72,0.35)' : 'rgba(212,7,84,0.3)'}`,
+        background: flipped ? 'rgba(0,96,72,0.04)' : 'rgba(212,7,84,0.03)',
         padding: 24,
         display: 'flex',
         flexDirection: 'column',
         gap: 14,
       }}
     >
-      <div style={{ fontSize: 10, letterSpacing: '0.6px', textTransform: 'uppercase', color: flipped ? '#66BB6A' : '#C9A84C', fontWeight: 700 }}>
+      <div style={{ fontSize: 10, letterSpacing: '0.6px', textTransform: 'uppercase', color: flipped ? '#006048' : '#D40754', fontWeight: 700 }}>
         {flipped ? 'Resposta' : 'Pergunta'}
       </div>
       <div
         className="fc-html"
-        style={{ fontSize: 16, lineHeight: 1.6, color: '#E8E8EA' }}
+        style={{ fontSize: 16, lineHeight: 1.6, color: '#0E2841' }}
         dangerouslySetInnerHTML={{ __html: sanitizeRichTextHtml(flipped ? card.back : card.front) }}
       />
       {!flipped && (
-        <div style={{ marginTop: 'auto', fontSize: 11, color: '#9AA0AA' }}>
+        <div style={{ marginTop: 'auto', fontSize: 11, color: '#5F7288' }}>
           Clique no cartão ou pressione Espaço para revelar
         </div>
       )}
       <style jsx global>{`
-        .fc-html img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(255,255,255,0.1); }
+        .fc-html img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; border: 1px solid rgba(14,40,65,0.1); }
         .fc-html p { margin: 0 0 8px; }
         .fc-html ul, .fc-html ol { padding-left: 1.4rem; }
       `}</style>
@@ -342,14 +342,14 @@ function EditForm({
         />
       </div>
       <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#9AA0AA' }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#5F7288' }}>
           Dificuldade
           <select value={difficulty} onChange={(e) => onDifficulty(Number(e.target.value))} style={selectStyle}>
             {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </label>
         {showType && (
-          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#9AA0AA' }}>
+          <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#5F7288' }}>
             Tipo
             <select value={cardType} onChange={(e) => onCardType(e.target.value as 'qa' | 'cloze')} style={selectStyle}>
               <option value="qa">Q&A</option>
@@ -358,7 +358,7 @@ function EditForm({
           </label>
         )}
         {sourceQuestionId && (
-          <span style={{ fontSize: 11, color: '#9AA0AA' }}>
+          <span style={{ fontSize: 11, color: '#5F7288' }}>
             Use o botão 📎 na barra para inserir figuras da questão original. Também dá para colar (Ctrl+V) ou subir imagem 🖼.
           </span>
         )}
@@ -409,7 +409,7 @@ function FigurePickerButton({
         onMouseDown={(e) => e.preventDefault()}
         onClick={toggle}
         title="Inserir figura da questão original"
-        className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/8 rounded transition-colors"
+        className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.08)] rounded transition-colors"
       >
         📎 Figura
       </button>
@@ -423,17 +423,17 @@ function FigurePickerButton({
             width: 320,
             maxHeight: 320,
             overflowY: 'auto',
-            background: '#12121A',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#FFFFFF',
+            border: '1px solid rgba(14,40,65,0.1)',
             borderRadius: 10,
             padding: 10,
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           }}
         >
           {loading ? (
-            <div style={{ fontSize: 12, color: '#9AA0AA', padding: 8 }}>Carregando figuras…</div>
+            <div style={{ fontSize: 12, color: '#5F7288', padding: 8 }}>Carregando figuras…</div>
           ) : !figs || figs.length === 0 ? (
-            <div style={{ fontSize: 12, color: '#9AA0AA', padding: 8 }}>A questão original não tem figuras.</div>
+            <div style={{ fontSize: 12, color: '#5F7288', padding: 8 }}>A questão original não tem figuras.</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {figs.map((f) => (
@@ -447,15 +447,15 @@ function FigurePickerButton({
                     flexDirection: 'column',
                     gap: 4,
                     padding: 6,
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(14,40,65,0.08)',
                     borderRadius: 8,
                     background: 'transparent',
                     cursor: 'pointer',
                   }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f.url} alt={SCOPE_LABEL[f.scope] ?? f.scope} style={{ width: '100%', height: 90, objectFit: 'contain', borderRadius: 4, background: '#0A0A0A' }} />
-                  <span style={{ fontSize: 10, color: '#9AA0AA' }}>
+                  <img src={f.url} alt={SCOPE_LABEL[f.scope] ?? f.scope} style={{ width: '100%', height: 90, objectFit: 'contain', borderRadius: 4, background: '#FFFFFF' }} />
+                  <span style={{ fontSize: 10, color: '#5F7288' }}>
                     {busy === f.id ? 'Inserindo…' : SCOPE_LABEL[f.scope] ?? f.scope}
                   </span>
                 </button>
@@ -468,14 +468,14 @@ function FigurePickerButton({
   )
 }
 
-const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 11, color: '#9AA0AA', marginBottom: 5, fontWeight: 600 }
-const selectStyle: React.CSSProperties = { background: '#1A1A22', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '5px 8px', fontSize: 12, color: '#E8E8EA' }
-const btnGhost: React.CSSProperties = { background: 'transparent', color: '#9AA0AA', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12, fontWeight: 600, padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }
-const btnSecondary: React.CSSProperties = { background: 'rgba(255,255,255,0.05)', color: '#E8E8EA', border: '1px solid rgba(255,255,255,0.12)', fontSize: 12, fontWeight: 600, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }
+const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 11, color: '#5F7288', marginBottom: 5, fontWeight: 600 }
+const selectStyle: React.CSSProperties = { background: '#FFFFFF', border: '1px solid rgba(14,40,65,0.1)', borderRadius: 6, padding: '5px 8px', fontSize: 12, color: '#0E2841' }
+const btnGhost: React.CSSProperties = { background: 'transparent', color: '#5F7288', border: '1px solid rgba(14,40,65,0.12)', fontSize: 12, fontWeight: 600, padding: '7px 12px', borderRadius: 8, cursor: 'pointer' }
+const btnSecondary: React.CSSProperties = { background: 'rgba(14,40,65,0.05)', color: '#0E2841', border: '1px solid rgba(14,40,65,0.12)', fontSize: 12, fontWeight: 600, padding: '7px 14px', borderRadius: 8, cursor: 'pointer' }
 function btnPrimary(active: boolean): React.CSSProperties {
   return {
-    background: active ? 'linear-gradient(135deg, #C9A84C, #E0C56E)' : '#2A2A33',
-    color: active ? '#0A0A0A' : '#9AA0AA',
+    background: active ? 'linear-gradient(135deg, #D40754, #E8407D)' : '#F4F6F9',
+    color: active ? '#FFFFFF' : '#5F7288',
     fontSize: 12,
     fontWeight: 700,
     padding: '7px 16px',

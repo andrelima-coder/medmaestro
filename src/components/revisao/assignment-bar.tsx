@@ -55,20 +55,20 @@ export function AssignmentBar({
   const barColor = isExpired || isUrgent
     ? 'border-destructive/30 bg-destructive/10 text-destructive'
     : isWarning
-    ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
-    : 'border-white/7 bg-[var(--mm-surface)]/60 text-muted-foreground'
+    ? 'border-[rgba(251,174,64,0.3)] bg-[rgba(251,174,64,0.1)] text-[#9E6606]'
+    : 'border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 text-muted-foreground'
 
   return (
     <div className={`flex items-center gap-3 rounded-lg border px-4 py-2 text-sm ${barColor}`}>
       <span className="font-medium text-foreground">{reviewerName}</span>
-      <span className="text-white/30">·</span>
+      <span className="text-[rgba(14,40,65,0.35)]">·</span>
 
       {isExpired ? (
         <span className="text-destructive">Sessão expirada — outra pessoa pode assumir</span>
       ) : (
         <span>
           Expira em{' '}
-          <span className={`font-mono font-semibold ${isUrgent ? 'text-destructive' : isWarning ? 'text-yellow-400' : 'text-foreground'}`}>
+          <span className={`font-mono font-semibold ${isUrgent ? 'text-destructive' : isWarning ? 'text-[#9E6606]' : 'text-foreground'}`}>
             {formatCountdown(secondsLeft)}
           </span>
         </span>

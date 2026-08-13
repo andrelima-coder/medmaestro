@@ -42,19 +42,19 @@ const DIMENSION_GLOW: Record<
 }
 
 const inputClass =
-  'h-8 flex-1 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-2.5 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-white/[0.07]'
+  'h-8 flex-1 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-2.5 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-[rgba(14,40,65,0.07)]'
 
 const btnGhostClass =
   'inline-flex h-7 items-center rounded-md border border-[var(--mm-border-default)] bg-transparent px-2.5 text-[11px] text-[var(--mm-text2)] transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground disabled:pointer-events-none disabled:opacity-40'
 
 const btnDangerInlineClass =
-  'inline-flex h-7 items-center rounded-md border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] px-2.5 text-[11px] text-[var(--mm-red)] transition-colors hover:bg-[rgba(239,83,80,0.18)] disabled:opacity-50'
+  'inline-flex h-7 items-center rounded-md border border-[rgba(211,64,42,0.30)] bg-[rgba(211,64,42,0.08)] px-2.5 text-[11px] text-[var(--mm-red)] transition-colors hover:bg-[rgba(211,64,42,0.18)] disabled:opacity-50'
 
 const btnSuccessInlineClass =
-  'inline-flex h-7 items-center rounded-md border border-[rgba(102,187,106,0.30)] bg-[rgba(102,187,106,0.08)] px-2.5 text-[11px] text-[var(--mm-green)] transition-colors hover:bg-[rgba(102,187,106,0.18)] disabled:opacity-50'
+  'inline-flex h-7 items-center rounded-md border border-[rgba(0,96,72,0.30)] bg-[rgba(0,96,72,0.08)] px-2.5 text-[11px] text-[var(--mm-green)] transition-colors hover:bg-[rgba(0,96,72,0.18)] disabled:opacity-50'
 
 const iconBtnClass =
-  'flex size-6 items-center justify-center rounded text-[var(--mm-muted)] transition-colors hover:bg-white/[0.04] hover:text-foreground disabled:opacity-20 disabled:pointer-events-none'
+  'flex size-6 items-center justify-center rounded text-[var(--mm-muted)] transition-colors hover:bg-[rgba(14,40,65,0.04)] hover:text-foreground disabled:opacity-20 disabled:pointer-events-none'
 
 export function TagManager({ tags }: TagManagerProps) {
   const router = useRouter()
@@ -130,15 +130,15 @@ export function TagManager({ tags }: TagManagerProps) {
                 <div
                   key={tag.id}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.02] px-3 py-2 transition-colors',
+                    'flex items-center gap-2.5 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.02)] px-3 py-2 transition-colors',
                     !tag.is_active && 'opacity-40',
                     tag.is_active && 'hover:border-[var(--mm-border-hover)]'
                   )}
                 >
                   {/* Color swatch */}
                   <div
-                    className="size-3 flex-shrink-0 rounded-full border border-white/20"
-                    style={{ backgroundColor: tag.color ?? '#525E76' }}
+                    className="size-3 flex-shrink-0 rounded-full border border-[rgba(14,40,65,0.2)]"
+                    style={{ backgroundColor: tag.color ?? '#5F7288' }}
                   />
 
                   {editingId === tag.id ? (
@@ -155,7 +155,7 @@ export function TagManager({ tags }: TagManagerProps) {
                       />
                       <input
                         type="color"
-                        value={editColor || '#525E76'}
+                        value={editColor || '#5F7288'}
                         onChange={(e) => setEditColor(e.target.value)}
                         className="size-7 cursor-pointer rounded-md border border-[var(--mm-border-default)] bg-transparent transition-colors hover:border-[var(--mm-border-hover)]"
                         title="Cor da tag"

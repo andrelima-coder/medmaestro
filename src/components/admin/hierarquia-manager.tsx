@@ -24,23 +24,23 @@ function slugify(s: string) {
 }
 
 const inputClass =
-  'h-9 w-full rounded-lg border border-[var(--mm-border-default)] bg-white/[0.04] px-3 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-white/[0.07]'
+  'h-9 w-full rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.04)] px-3 text-xs text-foreground outline-none transition-colors hover:border-[var(--mm-border-hover)] focus:border-[var(--mm-border-active)] focus:bg-[rgba(14,40,65,0.07)]'
 
 const inputMonoClass = inputClass + ' font-mono'
 
 const btnPrimaryClass =
-  'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 font-[family-name:var(--font-syne)] text-xs font-bold text-[#0A0A0A] transition-all hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50'
+  'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 font-[family-name:var(--font-syne)] text-xs font-bold text-[#FFFFFF] transition-all hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50'
 
 const btnPrimaryStyle: React.CSSProperties = {
-  background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-  boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+  background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
+  boxShadow: '0 4px 20px rgba(212,7,84,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
 }
 
 const btnGhostClass =
   'inline-flex h-8 items-center rounded-lg border border-[var(--mm-border-default)] bg-transparent px-3 text-xs text-[var(--mm-text2)] transition-colors hover:border-[var(--mm-border-hover)] hover:text-foreground'
 
 const btnDangerClass =
-  'inline-flex h-8 items-center rounded-lg border border-[rgba(239,83,80,0.30)] bg-[rgba(239,83,80,0.08)] px-3 text-xs text-[var(--mm-red)] transition-colors hover:bg-[rgba(239,83,80,0.18)] disabled:opacity-50'
+  'inline-flex h-8 items-center rounded-lg border border-[rgba(211,64,42,0.30)] bg-[rgba(211,64,42,0.08)] px-3 text-xs text-[var(--mm-red)] transition-colors hover:bg-[rgba(211,64,42,0.18)] disabled:opacity-50'
 
 // ── BoardRow ─────────────────────────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ function BoardRow({ board, onDeleted }: { board: Board; onDeleted: () => void })
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.02] px-4 py-2.5 transition-colors hover:border-[var(--mm-border-hover)]">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.02)] px-4 py-2.5 transition-colors hover:border-[var(--mm-border-hover)]">
       {error && <p className="text-xs text-[var(--mm-red)]">{error}</p>}
       <div className="flex min-w-0 items-center gap-3">
         <span className="w-14 shrink-0 font-[family-name:var(--font-syne)] text-xs font-bold text-[var(--mm-gold)]">
@@ -218,7 +218,7 @@ function SpecialtyRow({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mm-border-default)] bg-white/[0.02] px-4 py-2.5 transition-colors hover:border-[var(--mm-border-hover)]">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.02)] px-4 py-2.5 transition-colors hover:border-[var(--mm-border-hover)]">
       {error && <p className="text-xs text-[var(--mm-red)]">{error}</p>}
       <div className="flex min-w-0 items-center gap-3">
         <span className="truncate text-sm text-foreground">{specialty.name}</span>

@@ -179,7 +179,7 @@ export function FilterDropdown({
         <span className="flex items-center gap-1.5 truncate">
           <span className="truncate">{label}</span>
           {count > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--mm-gold)] px-1 text-[10px] font-bold text-[#0A0A0A]">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--mm-gold)] px-1 text-[10px] font-bold text-[#FFFFFF]">
               {count}
             </span>
           )}
@@ -225,7 +225,7 @@ export function FilterDropdown({
                     pushParams([])
                     if (single) setOpen(false)
                   }}
-                  className="flex w-full items-center px-2.5 py-1.5 text-left text-[11px] text-[var(--mm-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--mm-text2)]"
+                  className="flex w-full items-center px-2.5 py-1.5 text-left text-[11px] text-[var(--mm-muted)] transition-colors hover:bg-[rgba(14,40,65,0.04)] hover:text-[var(--mm-text2)]"
                 >
                   Limpar seleção
                 </button>
@@ -244,7 +244,7 @@ export function FilterDropdown({
                       type="button"
                       onClick={() => toggle(o.slug)}
                       className={cn(
-                        'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] transition-colors hover:bg-white/[0.04]',
+                        'flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12px] transition-colors hover:bg-[rgba(14,40,65,0.04)]',
                         active ? 'text-[var(--mm-gold)]' : 'text-[var(--mm-text2)]'
                       )}
                     >
@@ -262,7 +262,7 @@ export function FilterDropdown({
                       {colored && (
                         <span
                           className="inline-block size-2 flex-shrink-0 rounded-sm"
-                          style={{ background: o.color ?? '#5A6880' }}
+                          style={{ background: o.color ?? '#5F7288' }}
                         />
                       )}
                       <span className="truncate">{o.label}</span>

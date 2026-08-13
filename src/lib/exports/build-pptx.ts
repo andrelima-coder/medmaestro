@@ -2,14 +2,16 @@ import pptxgen from 'pptxgenjs'
 import type { ExportData, QuestionData } from '@/lib/exports/build'
 import { splitFiguresByScope } from '@/lib/exports/build'
 
-// Paleta MedMaestro (dark)
-const BG = '0A0A0A'
-const PANEL = '111D35'
-const GOLD = 'C9A84C'
-const ORANGE = 'FF6B35'
-const GREEN = '66BB6A'
-const TEXT = 'F2F2F2'
-const MUTED = '9AA0AA'
+// Paleta Afya Medicina Intensiva (base clara + magenta de assinatura)
+const BG = 'FFFFFF'
+const PANEL = 'F4F6F9'
+const GOLD = 'D40754' // magenta de assinatura (nome mantido por compatibilidade)
+const ORANGE = 'F26B43'
+const GREEN = '006048'
+const TEXT = '0E2841' // navy
+const MUTED = '64798F'
+const LINE = 'E8E8E8'
+const GREEN_TINT = 'CEEDD7'
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E'] as const
 
@@ -140,7 +142,7 @@ function addQuestionSlide(
 
   if (hasFigure) {
     slide.addShape(pptx.ShapeType.roundRect, {
-      x: 8.25, y: 1.2, w: 4.45, h: 5.0, fill: { color: PANEL }, line: { color: '2a3550', width: 1 },
+      x: 8.25, y: 1.2, w: 4.45, h: 5.0, fill: { color: PANEL }, line: { color: LINE, width: 1 },
     })
     // Figura do enunciado é renderizada MESMO quando há figuras nas alternativas
     // (antes o ECG do enunciado sumia se as alternativas fossem imagens).
@@ -204,7 +206,7 @@ function addAnswerSlide(
         ? `Gabarito: ${correct} — ${q.alternatives[q.correctAnswer]}`
         : `Gabarito: ${correct}`
     slide.addShape(pptx.ShapeType.roundRect, {
-      x: 0.6, y: 1.2, w: 12.1, h: 0.7, fill: { color: '12251a' }, line: { color: GREEN, width: 1 },
+      x: 0.6, y: 1.2, w: 12.1, h: 0.7, fill: { color: GREEN_TINT }, line: { color: GREEN, width: 1 },
     })
     slide.addText(correctText, {
       x: 0.8, y: 1.2, w: 11.7, h: 0.7,

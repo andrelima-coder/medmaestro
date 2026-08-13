@@ -19,7 +19,7 @@ export function InviteUserForm() {
         type="email"
         placeholder="email@exemplo.com"
         required
-        className="h-8 flex-1 rounded-lg border border-white/8 bg-[var(--mm-surface)] px-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
+        className="h-8 flex-1 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)] px-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
       />
       <button
         type="submit"
@@ -29,7 +29,7 @@ export function InviteUserForm() {
         {isPending ? 'Enviando…' : 'Convidar'}
       </button>
       {state?.ok && (
-        <span className="text-xs text-green-400 shrink-0">Convite enviado ✓</span>
+        <span className="text-xs text-[#006048] shrink-0">Convite enviado ✓</span>
       )}
       {state?.error && (
         <span className="text-xs text-destructive shrink-0">{state.error}</span>

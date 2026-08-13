@@ -17,7 +17,7 @@ interface CommentListProps {
 
 export function CommentList({ comments, questionId }: CommentListProps) {
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-sm font-semibold text-foreground">
           Comentários
@@ -50,7 +50,7 @@ export function CommentList({ comments, questionId }: CommentListProps) {
           {comments.map((comment) => (
             <div
               key={comment.id}
-              className="flex flex-col gap-1.5 rounded-lg border border-white/5 bg-white/2 p-4"
+              className="flex flex-col gap-1.5 rounded-lg border border-[rgba(14,40,65,0.08)] bg-[rgba(14,40,65,0.02)] p-4"
             >
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-[var(--mm-gold)]">
@@ -60,8 +60,8 @@ export function CommentList({ comments, questionId }: CommentListProps) {
                   <span
                     className="text-xs px-1.5 py-0.5 rounded"
                     style={{
-                      background: 'rgba(79,195,247,0.1)',
-                      color: '#4FC3F7',
+                      background: 'rgba(32,105,115,0.1)',
+                      color: '#206973',
                       fontWeight: 600,
                     }}
                   >

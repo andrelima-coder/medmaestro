@@ -66,7 +66,7 @@ export function NovoSimuladoForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-5">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-muted-foreground">Título</label>
           <input
@@ -74,7 +74,7 @@ export function NovoSimuladoForm({
             required
             autoFocus
             placeholder="Ex: Simulado TEMI 2024 — Módulo Cardiologia"
-            className="h-10 rounded-lg border border-white/8 bg-white/4 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
+            className="h-10 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
           />
         </div>
 
@@ -89,7 +89,7 @@ export function NovoSimuladoForm({
               max={500}
               value={total}
               onChange={(e) => setTotal(Math.max(0, parseInt(e.target.value) || 0))}
-              className="h-10 rounded-lg border border-white/8 bg-white/4 px-3 text-sm text-foreground outline-none focus:border-[var(--mm-gold)]/40"
+              className="h-10 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground outline-none focus:border-[var(--mm-gold)]/40"
             />
             <p className="text-[11px] text-muted-foreground/70">
               Pool elegível: {poolCount} originais · {variationsCount} variações aprovadas
@@ -123,7 +123,7 @@ export function NovoSimuladoForm({
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Distribuição por módulo</h3>
@@ -192,14 +192,14 @@ export function NovoSimuladoForm({
                         [m.slug]: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)),
                       }))
                     }
-                    className="w-14 h-7 rounded border border-white/8 bg-white/4 px-1.5 text-xs text-foreground tabular-nums text-right outline-none focus:border-[var(--mm-gold)]/40"
+                    className="w-14 h-7 rounded border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-1.5 text-xs text-foreground tabular-nums text-right outline-none focus:border-[var(--mm-gold)]/40"
                   />
                   <span className="text-[11px] text-muted-foreground/60 w-3">%</span>
                 </div>
                 {pct > 0 && (
                   <p
                     className={`text-[10px] tabular-nums ${
-                      insufficient ? 'text-amber-400' : 'text-muted-foreground/60'
+                      insufficient ? 'text-[#9E6606]' : 'text-muted-foreground/60'
                     }`}
                   >
                     alvo: {targetN}
@@ -213,7 +213,7 @@ export function NovoSimuladoForm({
       </div>
 
       {state?.error && (
-        <p className="text-xs text-red-400">{state.error}</p>
+        <p className="text-xs text-[#D3402A]">{state.error}</p>
       )}
 
       <div className="flex gap-3">
@@ -226,7 +226,7 @@ export function NovoSimuladoForm({
         </button>
         <Link
           href="/simulados"
-          className="rounded-lg border border-white/8 px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-white/4 transition-colors"
+          className="rounded-lg border border-[rgba(14,40,65,0.1)] px-5 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.04)] transition-colors"
         >
           Cancelar
         </Link>

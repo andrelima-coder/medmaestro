@@ -16,19 +16,19 @@ const ACTIONS: { id: Action; label: string; description: string; color: string }
     id: 'approve',
     label: 'Aprovar',
     description: 'Questão está correta e pronta para publicação.',
-    color: 'bg-green-500/15 border-green-500/30 text-green-400 hover:bg-green-500/25',
+    color: 'bg-[rgba(0,96,72,0.15)] border-[rgba(0,96,72,0.3)] text-[#006048] hover:bg-[rgba(0,96,72,0.25)]',
   },
   {
     id: 'flag',
     label: 'Sinalizar',
     description: 'Questão precisa de atenção adicional (devolve à fila).',
-    color: 'bg-yellow-500/15 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/25',
+    color: 'bg-[rgba(251,174,64,0.15)] border-[rgba(251,174,64,0.3)] text-[#9E6606] hover:bg-[rgba(251,174,64,0.25)]',
   },
   {
     id: 'reject',
     label: 'Rejeitar',
     description: 'Questão inadequada para o banco.',
-    color: 'bg-red-500/15 border-red-500/30 text-red-400 hover:bg-red-500/25',
+    color: 'bg-[rgba(211,64,42,0.15)] border-[rgba(211,64,42,0.3)] text-[#D3402A] hover:bg-[rgba(211,64,42,0.25)]',
   },
 ]
 
@@ -64,7 +64,7 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
 
   if (isDone) {
     return (
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-3">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-3">
         <h3 className="text-sm font-semibold text-foreground">Status</h3>
         <p className="text-xs text-muted-foreground">
           Esta questão já foi revisada ({currentStatus}).
@@ -74,7 +74,7 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
   }
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
       <h3 className="text-sm font-semibold text-foreground">Ações de revisão</h3>
 
       <div className="flex flex-col gap-2">
@@ -92,14 +92,14 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
           onClick={handleSaveDraft}
           disabled={pending}
           title="Salva o estado atual e libera a questão para retomar depois."
-          className="w-full rounded-lg border border-white/8 bg-white/4 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/8 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 py-2.5 text-left text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.08)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {pending ? 'Salvando…' : 'Salvar como rascunho'}
         </button>
       </div>
 
       {selected && (
-        <div className="flex flex-col gap-3 border-t border-white/7 pt-4">
+        <div className="flex flex-col gap-3 border-t border-[rgba(14,40,65,0.1)] pt-4">
           <p className="text-xs text-muted-foreground">
             {ACTIONS.find((a) => a.id === selected)?.description}
           </p>
@@ -113,7 +113,7 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               placeholder={selected === 'approve' ? 'Ex: OK, questão bem formulada.' : 'Descreva o motivo...'}
-              className="w-full rounded-lg border border-white/8 bg-white/4 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-[var(--mm-gold)]/40 resize-none"
+              className="w-full rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors focus:border-[var(--mm-gold)]/40 resize-none"
             />
           </div>
 
@@ -122,14 +122,14 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
               <button
                 onClick={() => handleSubmit(selected)}
                 disabled={pending || (selected !== 'approve' && !note.trim())}
-                className="flex-1 rounded-lg bg-[var(--mm-gold)] px-3 py-2 text-xs font-semibold text-black hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                className="flex-1 rounded-lg bg-[var(--mm-gold)] px-3 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
               >
                 {pending ? 'Salvando…' : 'Confirmar'}
               </button>
               <button
                 onClick={() => setConfirmAction(null)}
                 disabled={pending}
-                className="rounded-lg border border-white/8 px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="rounded-lg border border-[rgba(14,40,65,0.1)] px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancelar
               </button>
@@ -138,7 +138,7 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
             <button
               onClick={() => handleConfirmRequest(selected)}
               disabled={pending || (selected !== 'approve' && !note.trim())}
-              className="w-full rounded-lg border border-white/8 px-3 py-2 text-xs font-medium text-foreground hover:bg-white/4 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full rounded-lg border border-[rgba(14,40,65,0.1)] px-3 py-2 text-xs font-medium text-foreground hover:bg-[rgba(14,40,65,0.04)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {ACTIONS.find((a) => a.id === selected)?.label} →
             </button>

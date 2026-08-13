@@ -137,21 +137,21 @@ export default async function AnexosAdminPage({
             name="q"
             defaultValue={q}
             placeholder="Buscar por nome ou legenda…"
-            className="rounded-md border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40"
+            className="rounded-md border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40"
           />
           <button
             type="submit"
-            className="rounded-md border border-white/8 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-white/10"
+            className="rounded-md border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.05)] px-3 py-1.5 text-xs font-medium text-foreground hover:bg-[rgba(14,40,65,0.1)]"
           >
             Filtrar
           </button>
         </form>
       </div>
 
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/7">
+            <tr className="border-b border-[rgba(14,40,65,0.1)]">
               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
                 Arquivo
               </th>
@@ -179,7 +179,7 @@ export default async function AnexosAdminPage({
               </tr>
             ) : (
               items.map((a) => (
-                <tr key={a.id} className="border-b border-white/5 last:border-b-0">
+                <tr key={a.id} className="border-b border-[rgba(14,40,65,0.08)] last:border-b-0">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0">
                       {a.mime_type.startsWith('image/') ? (
@@ -187,7 +187,7 @@ export default async function AnexosAdminPage({
                           href={a.signed_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="block w-10 h-10 rounded overflow-hidden bg-black/30 border border-white/10 shrink-0"
+                          className="block w-10 h-10 rounded overflow-hidden bg-[rgba(14,40,65,0.06)] border border-[rgba(14,40,65,0.12)] shrink-0"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -201,7 +201,7 @@ export default async function AnexosAdminPage({
                           href={a.signed_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center justify-center w-10 h-10 rounded bg-red-500/10 border border-red-500/20 text-[10px] font-bold text-red-400 shrink-0"
+                          className="flex items-center justify-center w-10 h-10 rounded bg-[rgba(211,64,42,0.1)] border border-[rgba(211,64,42,0.2)] text-[10px] font-bold text-[#D3402A] shrink-0"
                         >
                           PDF
                         </a>

@@ -228,7 +228,7 @@ export function BancoFlashcardsClient({
         <div
           style={{
             fontSize: 12,
-            color: feedback.startsWith('Erro') ? '#EF5350' : '#66BB6A',
+            color: feedback.startsWith('Erro') ? '#D3402A' : '#006048',
           }}
         >
           {feedback}
@@ -339,9 +339,9 @@ export function BancoFlashcardsClient({
                           padding: '3px 8px',
                           borderRadius: 999,
                           background: c.approved
-                            ? 'rgba(102,187,106,0.15)'
-                            : 'rgba(255,167,38,0.15)',
-                          color: c.approved ? '#66BB6A' : '#FFA726',
+                            ? 'rgba(0,96,72,0.15)'
+                            : 'rgba(251,174,64,0.15)',
+                          color: c.approved ? '#006048' : '#9E6606',
                           letterSpacing: '0.3px',
                         }}
                       >
@@ -516,7 +516,7 @@ function btnPrimary(active: boolean): React.CSSProperties {
     background: active
       ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
       : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     fontFamily: 'var(--font-syne)',
     fontSize: 11,
     fontWeight: 700,
@@ -550,9 +550,9 @@ const btnGhost: React.CSSProperties = {
 }
 
 const btnDanger: React.CSSProperties = {
-  background: 'rgba(239,83,80,0.10)',
-  color: '#EF5350',
-  border: '1px solid rgba(239,83,80,0.4)',
+  background: 'rgba(211,64,42,0.10)',
+  color: '#D3402A',
+  border: '1px solid rgba(211,64,42,0.4)',
   fontSize: 11,
   fontWeight: 600,
   padding: '6px 12px',

@@ -5,19 +5,19 @@ import { Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const kpiCardVariants = cva(
-  "relative overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.07)] bg-[var(--mm-card-bg)] px-5 py-[18px] backdrop-blur-md transition-all duration-[250ms] hover:-translate-y-px before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)]",
+  "relative overflow-hidden rounded-[14px] border border-[rgba(14,40,65,0.07)] bg-[var(--mm-card-bg)] px-5 py-[18px] backdrop-blur-md transition-all duration-[250ms] hover:-translate-y-px before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(14,40,65,0.08),transparent)]",
   {
     variants: {
       tone: {
-        neutral: "hover:border-[rgba(255,255,255,0.14)]",
+        neutral: "hover:border-[rgba(14,40,65,0.14)]",
         total:
-          "hover:border-[rgba(139,92,246,0.35)] hover:shadow-[0_8px_32px_rgba(139,92,246,0.15)]",
+          "hover:border-[rgba(123,63,160,0.35)] hover:shadow-[0_8px_32px_rgba(123,63,160,0.15)]",
         ok:
-          "hover:border-[rgba(93,194,100,0.35)] hover:shadow-[0_8px_32px_rgba(93,194,100,0.12)]",
+          "hover:border-[rgba(0,96,72,0.35)] hover:shadow-[0_8px_32px_rgba(0,96,72,0.12)]",
         pending:
-          "hover:border-[rgba(201,168,76,0.35)] hover:shadow-[0_8px_32px_rgba(201,168,76,0.12)]",
+          "hover:border-[rgba(212,7,84,0.35)] hover:shadow-[0_8px_32px_rgba(212,7,84,0.12)]",
         info:
-          "hover:border-[rgba(79,195,247,0.35)] hover:shadow-[0_8px_32px_rgba(79,195,247,0.12)]",
+          "hover:border-[rgba(32,105,115,0.35)] hover:shadow-[0_8px_32px_rgba(32,105,115,0.12)]",
       },
     },
     defaultVariants: {
@@ -28,10 +28,10 @@ const kpiCardVariants = cva(
 
 const labelToneClass: Record<NonNullable<KpiTone>, string> = {
   neutral: "text-[var(--mm-muted)]",
-  total: "text-[rgba(139,92,246,0.7)]",
-  ok: "text-[rgba(93,194,100,0.7)]",
-  pending: "text-[rgba(201,168,76,0.7)]",
-  info: "text-[rgba(79,195,247,0.7)]",
+  total: "text-[rgba(123,63,160,0.7)]",
+  ok: "text-[rgba(0,96,72,0.7)]",
+  pending: "text-[rgba(212,7,84,0.7)]",
+  info: "text-[rgba(32,105,115,0.7)]",
 }
 
 type KpiTone = "neutral" | "total" | "ok" | "pending" | "info"

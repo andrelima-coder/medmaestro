@@ -18,7 +18,7 @@ export function FlagsList({ flags }: { flags: FlagItem[] }) {
       {items.map((f) => (
         <li
           key={f.id}
-          className="flex items-center justify-between rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+          className="flex items-center justify-between rounded-lg border border-[rgba(251,174,64,0.4)] bg-[rgba(251,174,64,0.05)] p-3 text-sm"
         >
           <span className="text-foreground">
             <strong>Questão {f.questionNo ?? '—'}:</strong> {f.reason}

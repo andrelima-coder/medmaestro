@@ -45,10 +45,10 @@ function ParetoBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`${typeof module === 'string' ? module : 'Módulo'}: ${count} (${Math.round(clamped)}%)`}
-        className="h-5 flex-1 overflow-hidden rounded bg-[rgba(255,255,255,0.04)]"
+        className="h-5 flex-1 overflow-hidden rounded bg-[rgba(14,40,65,0.04)]"
       >
         <div
-          className="flex h-full items-center rounded pl-2 text-[10px] font-semibold text-black/70"
+          className="flex h-full items-center rounded pl-2 text-[10px] font-semibold text-white"
           style={{ width: `${clamped}%`, background: color }}
         >
           {count}

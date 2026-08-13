@@ -22,7 +22,7 @@ export default function DashboardError({
       </p>
       <button
         onClick={reset}
-        className="mt-2 h-8 px-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-xs text-foreground"
+        className="mt-2 h-8 px-4 rounded-lg border border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.05)] hover:bg-[rgba(14,40,65,0.1)] transition-colors text-xs text-foreground"
       >
         Tentar novamente
       </button>

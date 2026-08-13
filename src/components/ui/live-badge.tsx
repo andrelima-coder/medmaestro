@@ -13,7 +13,7 @@ function LiveBadge({ className, children, ...props }: LiveBadgeProps) {
       role="status"
       aria-live="polite"
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,107,53,0.30)] bg-[rgba(255,107,53,0.12)] px-2 py-0.5 text-[11px] font-semibold text-[var(--mm-orange)]",
+        "inline-flex items-center gap-1.5 rounded-full border border-[rgba(242,107,67,0.30)] bg-[rgba(242,107,67,0.12)] px-2 py-0.5 text-[11px] font-semibold text-[var(--mm-orange)]",
         className
       )}
       {...props}

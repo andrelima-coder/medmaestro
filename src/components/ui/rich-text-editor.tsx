@@ -119,8 +119,8 @@ export function RichTextEditor({
   }
 
   return (
-    <div className="rounded-lg border border-white/8 bg-white/4 focus-within:border-[var(--mm-gold)]/40 transition-colors">
-      <div className="flex flex-wrap items-center gap-1 border-b border-white/8 px-2 py-1.5">
+    <div className="rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] focus-within:border-[var(--mm-gold)]/40 transition-colors">
+      <div className="flex flex-wrap items-center gap-1 border-b border-[rgba(14,40,65,0.1)] px-2 py-1.5">
         {TOOLBAR_BUTTONS.map((b) => (
           <button
             key={b.command + (b.arg ?? '')}
@@ -128,14 +128,14 @@ export function RichTextEditor({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => exec(b.command, b.arg)}
             title={b.title}
-            className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/8 rounded transition-colors min-w-[28px]"
+            className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.08)] rounded transition-colors min-w-[28px]"
           >
             {b.label}
           </button>
         ))}
         {onUploadImage && (
           <>
-            <span className="mx-1 h-4 w-px bg-white/10" aria-hidden />
+            <span className="mx-1 h-4 w-px bg-[rgba(14,40,65,0.1)]" aria-hidden />
             <input
               ref={fileInputRef}
               type="file"
@@ -149,12 +149,12 @@ export function RichTextEditor({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               title="Inserir imagem"
-              className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/8 rounded transition-colors min-w-[28px] disabled:opacity-40"
+              className="px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-[rgba(14,40,65,0.08)] rounded transition-colors min-w-[28px] disabled:opacity-40"
             >
               {uploading ? '…' : '🖼'}
             </button>
             {uploadError && (
-              <span className="text-[10px] text-red-400 ml-1" title={uploadError}>
+              <span className="text-[10px] text-[#D3402A] ml-1" title={uploadError}>
                 erro
               </span>
             )}
@@ -162,7 +162,7 @@ export function RichTextEditor({
         )}
         {extraButtons && (
           <>
-            <span className="mx-1 h-4 w-px bg-white/10" aria-hidden />
+            <span className="mx-1 h-4 w-px bg-[rgba(14,40,65,0.1)]" aria-hidden />
             {extraButtons(insertImage)}
           </>
         )}
@@ -215,7 +215,7 @@ export function RichTextEditor({
           height: auto;
           border-radius: 6px;
           margin: 6px 0;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(14, 40, 65, 0.1);
         }
       `}</style>
     </div>

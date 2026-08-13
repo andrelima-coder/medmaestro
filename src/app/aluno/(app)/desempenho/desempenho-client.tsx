@@ -55,7 +55,7 @@ export function DesempenhoClient({
                 <PolarGrid />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
                 <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-                <Radar dataKey="pct" stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
+                <Radar dataKey="pct" stroke="#006048" fill="#006048" fillOpacity={0.4} />
                 <Tooltip formatter={(v) => `${v}%`} />
               </RadarChart>
             </ResponsiveContainer>
@@ -74,7 +74,7 @@ export function DesempenhoClient({
                 <XAxis dataKey="data" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v) => `${v}%`} />
-                <Line type="monotone" dataKey="pct" stroke="#3b82f6" strokeWidth={2} />
+                <Line type="monotone" dataKey="pct" stroke="#206973" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -123,7 +123,7 @@ function BarList({ items }: { items: ModuleStat[] }) {
               className="h-2 rounded"
               style={{
                 width: `${m.pct}%`,
-                background: m.pct >= 70 ? '#10b981' : m.pct >= 40 ? '#f59e0b' : '#ef4444',
+                background: m.pct >= 70 ? '#006048' : m.pct >= 40 ? '#9E6606' : '#D3402A',
               }}
             />
           </div>

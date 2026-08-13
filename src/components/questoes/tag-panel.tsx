@@ -104,7 +104,7 @@ export function TagPanel({
   ]
 
   return (
-    <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-5">
+    <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-5">
       {/* Header com status de save */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Tags</h3>
@@ -113,10 +113,10 @@ export function TagPanel({
             <span className="text-xs text-muted-foreground animate-pulse">Salvando…</span>
           )}
           {saveState === 'saved' && (
-            <span className="text-xs text-green-400">Salvo ✓</span>
+            <span className="text-xs text-[#006048]">Salvo ✓</span>
           )}
           {saveState === 'error' && (
-            <span className="text-xs text-red-400">Erro ao salvar</span>
+            <span className="text-xs text-[#D3402A]">Erro ao salvar</span>
           )}
           {canUndo && saveState === 'idle' && (
             <button
@@ -149,7 +149,7 @@ export function TagPanel({
                   className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
                     isActive
                       ? 'bg-[var(--mm-gold)]/15 border-[var(--mm-gold)]/40 text-[var(--mm-gold)]'
-                      : 'border-white/8 text-muted-foreground hover:border-white/20 hover:text-foreground'
+                      : 'border-[rgba(14,40,65,0.1)] text-muted-foreground hover:border-[rgba(14,40,65,0.2)] hover:text-foreground'
                   }`}
                 >
                   {isActive && <span className="mr-1">✓</span>}

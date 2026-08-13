@@ -268,7 +268,7 @@ export function FlashcardsClient({
           <span
             style={{
               fontSize: 11,
-              color: feedbackError ? '#EF5350' : '#66BB6A',
+              color: feedbackError ? '#D3402A' : '#006048',
               marginLeft: 8,
             }}
           >
@@ -424,8 +424,8 @@ export function FlashcardsClient({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            border: '1px solid rgba(201,168,76,0.25)',
-            background: 'rgba(201,168,76,0.06)',
+            border: '1px solid rgba(212,7,84,0.25)',
+            background: 'rgba(212,7,84,0.06)',
             borderRadius: 10,
             padding: '10px 16px',
             fontSize: 12,
@@ -514,7 +514,7 @@ export function FlashcardsClient({
                     if ((e.target as HTMLElement).closest('input,a')) return
                     window.location.href = `/questoes/${r.id}`
                   }}
-                  className="hover:bg-white/[0.02]"
+                  className="hover:bg-[rgba(14,40,65,0.02)]"
                 >
                   <td style={td()} onClick={(e) => e.stopPropagation()}>
                     <input
@@ -551,7 +551,7 @@ export function FlashcardsClient({
                   </td>
                   <td style={td()}>
                     {r.flashcards_count > 0 ? (
-                      <span style={{ fontSize: 11, color: '#66BB6A', fontWeight: 600 }}>
+                      <span style={{ fontSize: 11, color: '#006048', fontWeight: 600 }}>
                         {r.flashcards_count}
                       </span>
                     ) : (
@@ -592,7 +592,7 @@ function btnPrimary(active: boolean): React.CSSProperties {
     background: active
       ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
       : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     fontFamily: 'var(--font-syne)',
     fontSize: 12,
     fontWeight: 700,

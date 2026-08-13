@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
 
       <div
         className={cn(
-          'rounded-xl border border-white/7 bg-[var(--mm-surface)]/80 backdrop-blur-md p-6',
+          'rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/80 backdrop-blur-md p-6',
           'shadow-[0_4px_32px_rgba(0,0,0,0.4)]'
         )}
       >
@@ -88,9 +88,9 @@ function PasswordField({
           minLength={8}
           placeholder="••••••••"
           className={cn(
-            'h-10 w-full rounded-lg border border-white/8 bg-white/4 px-3 pr-10 text-sm text-foreground',
+            'h-10 w-full rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 pr-10 text-sm text-foreground',
             'placeholder:text-muted-foreground/50 outline-none transition-colors',
-            'focus:border-[var(--mm-gold)]/40 focus:bg-white/6'
+            'focus:border-[var(--mm-gold)]/40 focus:bg-[rgba(14,40,65,0.06)]'
           )}
         />
         <button

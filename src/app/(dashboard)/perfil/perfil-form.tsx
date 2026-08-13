@@ -54,7 +54,7 @@ export function PerfilForm({ initialFullName }: { initialFullName: string }) {
         <div
           style={{
             fontSize: 12,
-            color: feedback.startsWith('Erro') ? '#EF5350' : '#66BB6A',
+            color: feedback.startsWith('Erro') ? '#D3402A' : '#006048',
           }}
         >
           {feedback}
@@ -105,7 +105,7 @@ function btnPrimary(active: boolean): React.CSSProperties {
     background: active
       ? 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))'
       : 'var(--mm-bg2)',
-    color: active ? '#0a0a0a' : 'var(--mm-muted)',
+    color: active ? '#FFFFFF' : 'var(--mm-muted)',
     fontFamily: 'var(--font-syne)',
     fontSize: 12,
     fontWeight: 700,

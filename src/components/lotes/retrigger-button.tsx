@@ -21,10 +21,10 @@ export function RetriggerButton({ examId }: { examId: string }) {
 
   const labels = { idle: 'Reextrair', loading: 'Iniciando…', ok: 'Iniciado ✓', error: 'Erro' }
   const colors = {
-    idle: { color: '#4FC3F7', border: 'rgba(79,195,247,0.3)', bg: 'rgba(79,195,247,0.08)' },
+    idle: { color: '#206973', border: 'rgba(32,105,115,0.3)', bg: 'rgba(32,105,115,0.08)' },
     loading: { color: 'var(--mm-muted)', border: 'var(--mm-line2)', bg: 'transparent' },
-    ok: { color: '#66BB6A', border: 'rgba(102,187,106,0.3)', bg: 'rgba(102,187,106,0.08)' },
-    error: { color: '#EF5350', border: 'rgba(239,83,80,0.3)', bg: 'rgba(239,83,80,0.08)' },
+    ok: { color: '#006048', border: 'rgba(0,96,72,0.3)', bg: 'rgba(0,96,72,0.08)' },
+    error: { color: '#D3402A', border: 'rgba(211,64,42,0.3)', bg: 'rgba(211,64,42,0.08)' },
   }
   const s = colors[state]
 

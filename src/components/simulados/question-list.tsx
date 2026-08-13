@@ -68,7 +68,7 @@ export function SimuladoQuestionList({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
         Nenhuma questão adicionada. Use o painel ao lado para buscar questões.
       </div>
     )
@@ -84,15 +84,15 @@ export function SimuladoQuestionList({
           onDragOver={(e) => onDragOver(e, i)}
           onDrop={onDrop}
           onDragEnd={onDragEnd}
-          className="rounded-xl border border-white/5 bg-[var(--mm-surface)]/40 px-4 py-3 flex flex-col gap-2 transition-colors"
+          className="rounded-xl border border-[rgba(14,40,65,0.08)] bg-[var(--mm-surface)]/40 px-4 py-3 flex flex-col gap-2 transition-colors"
           style={{
             cursor: 'grab',
             opacity: removing === q.questionId ? 0.4 : 1,
             borderColor: dragOver === i && dragIdx.current !== i
-              ? 'rgba(212,168,67,0.4)'
+              ? 'rgba(212,7,84,0.4)'
               : undefined,
             background: dragOver === i && dragIdx.current !== i
-              ? 'rgba(212,168,67,0.05)'
+              ? 'rgba(212,7,84,0.05)'
               : undefined,
           }}
         >
@@ -125,7 +125,7 @@ export function SimuladoQuestionList({
               <button
                 onClick={() => handleRemove(q.questionId)}
                 disabled={removing === q.questionId}
-                className="text-xs text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-40"
+                className="text-xs text-muted-foreground hover:text-[#D3402A] transition-colors disabled:opacity-40"
               >
                 Remover
               </button>

@@ -51,7 +51,7 @@ export function UserMenu({
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-white/5 transition-colors"
+        className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-[rgba(14,40,65,0.05)] transition-colors"
         aria-label="Menu do usuário"
       >
         <div className="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-[var(--mm-gold)] to-[var(--mm-gold2)] text-[10px] font-bold text-white shrink-0">
@@ -111,7 +111,7 @@ export function UserMenu({
             href="/perfil"
             onClick={() => setOpen(false)}
             style={menuItemStyle}
-            className="hover:bg-white/5"
+            className="hover:bg-[rgba(14,40,65,0.05)]"
           >
             Editar perfil
           </Link>
@@ -119,7 +119,7 @@ export function UserMenu({
             href="/perfil/senha"
             onClick={() => setOpen(false)}
             style={menuItemStyle}
-            className="hover:bg-white/5"
+            className="hover:bg-[rgba(14,40,65,0.05)]"
           >
             Mudar senha
           </Link>
@@ -135,12 +135,12 @@ export function UserMenu({
               ...menuItemStyle,
               width: '100%',
               textAlign: 'left',
-              color: '#EF5350',
+              color: '#D3402A',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
-            className="hover:bg-red-500/10"
+            className="hover:bg-[rgba(211,64,42,0.1)]"
           >
             Sair
           </button>

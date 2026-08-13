@@ -9,10 +9,10 @@ function page(title: string, message: string) {
     `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8" />
      <meta name="viewport" content="width=device-width,initial-scale=1" />
      <title>${title}</title></head>
-     <body style="font-family:-apple-system,sans-serif;background:#0d0d0d;color:#eee;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0">
+     <body style="font-family:'Afya Sans',Figtree,-apple-system,sans-serif;background:#F4F6F9;color:#0E2841;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0">
        <div style="max-width:420px;padding:32px;text-align:center">
          <h1 style="font-size:20px;margin:0 0 8px">${title}</h1>
-         <p style="color:#aaa;line-height:1.5">${message}</p>
+         <p style="color:#5F7288;line-height:1.5">${message}</p>
        </div>
      </body></html>`,
     { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }

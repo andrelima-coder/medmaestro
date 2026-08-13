@@ -105,7 +105,7 @@ export function ExportFlashcardsButton({
                 textDecoration: 'none',
                 borderRadius: 6,
               }}
-              className="hover:bg-white/[0.04]"
+              className="hover:bg-[rgba(14,40,65,0.04)]"
             >
               {FORMAT_LABEL[fmt]}
             </a>

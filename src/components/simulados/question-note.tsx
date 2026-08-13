@@ -43,14 +43,14 @@ export function QuestionNote({
         disabled={isPending}
         placeholder="Nota do professor (opcional)…"
         rows={2}
-        className="w-full resize-none rounded-lg border border-white/8 bg-white/3 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/30 transition-colors disabled:opacity-50"
+        className="w-full resize-none rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.03)] px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-[var(--mm-gold)]/30 transition-colors disabled:opacity-50"
       />
       <div className="h-3 text-right">
         {saveState === 'saving' && (
           <span className="text-[10px] text-muted-foreground animate-pulse">Salvando…</span>
         )}
         {saveState === 'saved' && (
-          <span className="text-[10px] text-green-400">Salvo ✓</span>
+          <span className="text-[10px] text-[#006048]">Salvo ✓</span>
         )}
         {saveState === 'error' && (
           <span className="text-[10px] text-destructive">Erro ao salvar</span>

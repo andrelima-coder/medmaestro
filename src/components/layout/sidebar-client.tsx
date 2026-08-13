@@ -58,19 +58,19 @@ export function SidebarClient({ sections }: SidebarClientProps) {
     <aside
       className={cn(
         'relative flex flex-col h-full transition-[width] duration-200 ease-in-out shrink-0',
-        'border-r border-[rgba(139,92,246,0.10)]',
-        'bg-[linear-gradient(180deg,rgba(12,9,26,0.98)_0%,rgba(9,7,20,0.98)_100%)]',
-        'shadow-[inset_-1px_0_0_rgba(139,92,246,0.06)]',
+        'border-r border-[rgba(123,63,160,0.10)]',
+        'bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,255,255,0.98)_100%)]',
+        'shadow-[inset_-1px_0_0_rgba(123,63,160,0.06)]',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
       {/* Logo */}
       <div className="flex h-14 items-center gap-2.5 px-4 border-b border-border shrink-0 overflow-hidden">
         <div
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg font-[family-name:var(--font-syne)] text-sm font-extrabold text-[#0A0A0A]"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg font-[family-name:var(--font-syne)] text-sm font-extrabold text-[#FFFFFF]"
           style={{
             background:
-              'linear-gradient(135deg, var(--mm-gold), var(--mm-orange))',
+              'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
           }}
         >
           M
@@ -112,7 +112,7 @@ export function SidebarClient({ sections }: SidebarClientProps) {
                         'flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors',
                         isActive
                           ? 'sidebar-item-active'
-                          : 'text-sidebar-foreground hover:bg-white/[0.04] hover:text-foreground',
+                          : 'text-sidebar-foreground hover:bg-[rgba(14,40,65,0.04)] hover:text-foreground',
                         collapsed && 'justify-center'
                       )}
                     >

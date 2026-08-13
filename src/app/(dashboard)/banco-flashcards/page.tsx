@@ -89,8 +89,8 @@ export default async function BancoFlashcardsPage({
               textDecoration: 'none',
               fontFamily: 'var(--font-syne)',
               background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
-              color: '#0a0a0a',
-              boxShadow: '0 4px 20px rgba(212,168,67,0.25)',
+              color: '#FFFFFF',
+              boxShadow: '0 4px 20px rgba(212,7,84,0.25)',
             }}
           >
             Gerar em massa →

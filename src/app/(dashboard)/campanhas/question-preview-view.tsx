@@ -14,7 +14,7 @@ export function QuestionPreviewView({ pv }: { pv: QuestionPreview }) {
             <li
               key={L}
               className={`rounded-md px-2 py-1 ${
-                correct ? 'bg-green-500/15 font-medium text-green-600' : 'text-foreground'
+                correct ? 'bg-[rgba(0,96,72,0.15)] font-medium text-[#006048]' : 'text-foreground'
               }`}
             >
               <strong>{L})</strong> {text}
@@ -24,7 +24,7 @@ export function QuestionPreviewView({ pv }: { pv: QuestionPreview }) {
         })}
       </ul>
       {pv.correctAnswer == null && (
-        <p className="text-xs text-amber-500">Sem gabarito cadastrado.</p>
+        <p className="text-xs text-[#9E6606]">Sem gabarito cadastrado.</p>
       )}
       <div>
         <p className="mb-1 text-xs font-semibold text-muted-foreground">Comentários</p>

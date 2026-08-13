@@ -133,7 +133,7 @@ export default async function SimuladoDetailPage({
           {isOwner ? (
             <SimuladoQuestionList simuladoId={id} initialQuestions={questions} />
           ) : questions.length === 0 ? (
-            <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-8 text-center text-sm text-muted-foreground">
               Nenhuma questão adicionada.
             </div>
           ) : (
@@ -141,7 +141,7 @@ export default async function SimuladoDetailPage({
               {questions.map((q, i) => (
                 <div
                   key={q.sqId}
-                  className="rounded-xl border border-white/5 bg-[var(--mm-surface)]/40 px-4 py-3 flex flex-col gap-2"
+                  className="rounded-xl border border-[rgba(14,40,65,0.08)] bg-[var(--mm-surface)]/40 px-4 py-3 flex flex-col gap-2"
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-xs tabular-nums text-muted-foreground/50 shrink-0 w-5 pt-0.5">
@@ -170,7 +170,7 @@ export default async function SimuladoDetailPage({
         {/* Seletor de questões */}
         {isOwner && (
           <div className="w-80 shrink-0 flex flex-col gap-3">
-            <div className="rounded-xl border border-white/7 bg-[var(--mm-surface)]/60 backdrop-blur-sm p-4 flex flex-col gap-3">
+            <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-4 flex flex-col gap-3">
               <h3 className="text-sm font-semibold text-foreground">Adicionar questões</h3>
               <QuestionPicker simuladoId={id} initialAddedIds={addedIds} />
             </div>

@@ -241,7 +241,7 @@ export function CampanhaForm({
             <button
               type="button"
               onClick={() => setSelected([])}
-              className="text-xs text-red-500 underline"
+              className="text-xs text-[#D3402A] underline"
             >
               Limpar seleção
             </button>
@@ -384,7 +384,7 @@ export function CampanhaForm({
       <Check label="Publicar imediatamente" name="publish" />
 
       {state?.error && (
-        <p role="alert" className="text-sm text-red-500">
+        <p role="alert" className="text-sm text-[#D3402A]">
           {state.error}
         </p>
       )}

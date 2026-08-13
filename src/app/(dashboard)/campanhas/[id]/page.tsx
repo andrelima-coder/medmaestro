@@ -29,11 +29,26 @@ const fmt = (iso: string | null) =>
 function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
   const endpoint = `${endpointBase || ''}/api/public/leads`
   const destino = `${alunoBase || endpointBase || ''}/login`
-  return `<form id="mm-lead-form">
+  return `<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" />
+<style>
+  #mm-lead-form{font-family:'Afya Sans','Figtree','Helvetica Neue',Arial,sans-serif;max-width:420px;background:#FFFFFF;
+    border:1px solid #E8E8E8;border-radius:18px;padding:24px;box-shadow:0 10px 34px rgba(14,40,65,.10);box-sizing:border-box}
+  #mm-lead-form input[type=text],#mm-lead-form input[type=email]{width:100%;box-sizing:border-box;margin:0 0 10px;
+    padding:12px 14px;border:1px solid #E8E8E8;border-radius:10px;font-size:15px;color:#0E2841;background:#FFFFFF;font-family:inherit}
+  #mm-lead-form input::placeholder{color:#A4A3A4}
+  #mm-lead-form input[type=text]:focus,#mm-lead-form input[type=email]:focus{outline:2px solid #D40754;outline-offset:0;border-color:#D40754}
+  #mm-lead-form label{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;color:#3F5A75;margin:6px 0 16px}
+  #mm-lead-form label input{accent-color:#D40754;margin-top:2px}
+  #mm-lead-form button{width:100%;border:0;border-radius:10px;padding:14px 20px;background:#D40754;color:#FFFFFF;
+    font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;transition:background .15s}
+  #mm-lead-form button:hover{background:#B6014F}
+</style>
+<form id="mm-lead-form">
   <input name="name" placeholder="Nome" required />
   <input name="email" type="email" placeholder="E-mail" required />
   <input name="whatsapp" placeholder="WhatsApp" required />
-  <label><input type="checkbox" name="consent" required /> Aceito os termos (LGPD)</label>
+  <label><input type="checkbox" name="consent" required /> <span>Autorizo o contato e o tratamento dos meus dados conforme a LGPD.</span></label>
   <input type="text" name="hp" style="display:none" tabindex="-1" autocomplete="off" />
   <button type="submit">Quero fazer o simulado</button>
 </form>
@@ -121,7 +136,7 @@ export default async function CampanhaDetailPage({
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               c.status === 'publicada'
-                ? 'bg-green-500/15 text-green-500'
+                ? 'bg-[rgba(0,96,72,0.15)] text-[#006048]'
                 : 'bg-muted text-muted-foreground'
             }`}
           >
@@ -279,7 +294,7 @@ function Metric({
   return (
     <div className="rounded-xl border border-border p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`text-xl font-bold ${danger ? 'text-red-500' : 'text-foreground'}`}>
+      <div className={`text-xl font-bold ${danger ? 'text-[#D3402A]' : 'text-foreground'}`}>
         {value}
       </div>
       {hint && <div className="mt-0.5 text-[10px] text-muted-foreground">{hint}</div>}

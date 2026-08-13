@@ -22,8 +22,8 @@ function AltCard({
       className={cn(
         "mb-2 flex items-start gap-3 rounded-lg border px-3.5 py-3 transition-colors",
         correct
-          ? "border-[rgba(201,168,76,0.3)] bg-[rgba(201,168,76,0.08)]"
-          : "border-[var(--mm-border-default)] bg-[rgba(255,255,255,0.02)]",
+          ? "border-[rgba(212,7,84,0.3)] bg-[rgba(212,7,84,0.08)]"
+          : "border-[var(--mm-border-default)] bg-[rgba(14,40,65,0.02)]",
         className
       )}
       {...props}
@@ -33,7 +33,7 @@ function AltCard({
         className={cn(
           "flex size-[26px] flex-shrink-0 items-center justify-center rounded-md border text-[11px] font-bold",
           correct
-            ? "border-[rgba(201,168,76,0.5)] bg-[rgba(201,168,76,0.10)] text-[var(--mm-gold)]"
+            ? "border-[rgba(212,7,84,0.5)] bg-[rgba(212,7,84,0.10)] text-[var(--mm-gold)]"
             : "border-[var(--mm-border-default)] text-[var(--mm-muted)]"
         )}
       >

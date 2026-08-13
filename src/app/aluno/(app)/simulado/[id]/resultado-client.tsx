@@ -40,7 +40,7 @@ export function ResultadoClient({
       <header className="rounded-2xl border border-border bg-card p-6 text-center">
         <h1 className="text-xl font-bold text-foreground">{campaignName} — Resultado</h1>
         {confetti && (
-          <p className="mt-1 text-sm text-emerald-600">
+          <p className="mt-1 text-sm text-[#006048]">
             🎉 Parabéns! Você concluiu de uma só vez e dentro do prazo.
           </p>
         )}
@@ -72,9 +72,9 @@ export function ResultadoClient({
           {questions.map((q, i) => {
             const cls =
               q.correct === true
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-[#006048] text-white'
                 : q.correct === false
-                  ? 'bg-red-500 text-white'
+                  ? 'bg-[#D3402A] text-white'
                   : q.selected
                     ? 'bg-muted text-foreground'
                     : 'border border-border text-muted-foreground'
@@ -133,8 +133,8 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
     <div id={`q-${q.number}`} className="rounded-2xl border border-border bg-card p-6">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground">Questão {q.number}</span>
-        {q.correct === true && <span className="text-xs text-emerald-600">Acertou</span>}
-        {q.correct === false && <span className="text-xs text-red-500">Errou</span>}
+        {q.correct === true && <span className="text-xs text-[#006048]">Acertou</span>}
+        {q.correct === false && <span className="text-xs text-[#D3402A]">Errou</span>}
       </div>
       {q.stem && <p className="whitespace-pre-line text-sm text-foreground">{q.stem}</p>}
 
@@ -152,9 +152,9 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
                 key={alt}
                 className={`rounded-lg border p-2 text-sm ${
                   isCorrect
-                    ? 'border-emerald-500 bg-emerald-500/10'
+                    ? 'border-[#006048] bg-[rgba(0,96,72,0.1)]'
                     : isSelected
-                      ? 'border-red-400 bg-red-400/10'
+                      ? 'border-[#D3402A] bg-[rgba(211,64,42,0.1)]'
                       : 'border-border'
                 }`}
               >
@@ -235,7 +235,7 @@ function Confetti() {
     if (!ctx) return
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
-    const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#a855f7']
+    const colors = ['#9E6606', '#006048', '#206973', '#D3402A', '#7B3FA0']
     const pieces = Array.from({ length: 120 }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * -canvas.height,

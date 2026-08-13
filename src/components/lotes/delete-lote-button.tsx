@@ -48,12 +48,12 @@ export function DeleteLoteButton({
       title={errorMsg ?? 'Excluir lote definitivamente'}
       style={{
         fontSize: 11,
-        color: '#EF5350',
-        border: '1px solid rgba(239,83,80,0.3)',
+        color: '#D3402A',
+        border: '1px solid rgba(211,64,42,0.3)',
         borderRadius: 6,
         padding: '4px 10px',
         fontWeight: 600,
-        background: 'rgba(239,83,80,0.08)',
+        background: 'rgba(211,64,42,0.08)',
         cursor: state === 'loading' ? 'default' : 'pointer',
         transition: 'all 0.15s',
         opacity: state === 'loading' ? 0.6 : 1,

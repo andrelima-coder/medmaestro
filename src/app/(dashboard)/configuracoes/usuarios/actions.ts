@@ -116,24 +116,24 @@ function inviteEmailHtml(link: string) {
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
-    <body style="background:#0d0d0d;margin:0;padding:40px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <body style="background:#F4F6F9;margin:0;padding:40px 16px;font-family:'Afya Sans',Figtree,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto">
         <tr>
           <td style="text-align:center;padding-bottom:32px">
-            <span style="font-size:24px;font-weight:600;color:#fff">Med<span style="color:#f5a623">Maestro</span></span>
+            <span style="font-size:24px;font-weight:700;color:#0E2841">Med<span style="color:#D40754">Maestro</span></span>
           </td>
         </tr>
         <tr>
-          <td style="background:#1a1a1a;border-radius:12px;padding:32px;border:1px solid rgba(255,255,255,0.08)">
-            <h1 style="color:#fff;font-size:18px;margin:0 0 12px">Você foi convidado</h1>
-            <p style="color:#888;font-size:14px;line-height:1.6;margin:0 0 24px">
+          <td style="background:#FFFFFF;border-radius:12px;padding:32px;border:1px solid #E8E8E8">
+            <h1 style="color:#0E2841;font-size:18px;margin:0 0 12px">Você foi convidado</h1>
+            <p style="color:#5F7288;font-size:14px;line-height:1.6;margin:0 0 24px">
               Você recebeu um convite para acessar o MedMaestro. Clique no botão abaixo para criar sua senha e começar.
             </p>
             <a href="${link}"
-               style="display:inline-block;background:linear-gradient(90deg,#f5a623,#e8540a);color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:500">
+               style="display:inline-block;background:linear-gradient(90deg,#D40754,#B6014F);color:#FFFFFF;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:500">
               Aceitar convite
             </a>
-            <p style="color:#555;font-size:12px;margin:24px 0 0;line-height:1.5">
+            <p style="color:#A4A3A4;font-size:12px;margin:24px 0 0;line-height:1.5">
               Este link expira em 24 horas. Se você não esperava este convite, pode ignorar este e-mail.
             </p>
           </td>

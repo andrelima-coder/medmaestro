@@ -64,7 +64,7 @@ export function IncidenciaTemaClient({
     for (const r of filtered) counts[r.label] = (counts[r.label] ?? 0) + 1
     const data = order.map((label) => ({
       label,
-      color: colors[label] ?? '#888888',
+      color: colors[label] ?? '#A4A3A4',
       count: counts[label] ?? 0,
     }))
     const sorted = [...data].sort((a, b) => b.count - a.count)
