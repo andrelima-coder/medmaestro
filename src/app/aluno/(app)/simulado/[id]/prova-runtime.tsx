@@ -219,7 +219,7 @@ export function ProvaRuntime({
         <button
           onClick={finish}
           disabled={isPending}
-          className="w-full rounded-lg bg-[#006048] px-3 py-2 text-sm font-semibold text-white"
+          className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4]"
         >
           Finalizar prova
         </button>
@@ -321,7 +321,7 @@ export function ProvaRuntime({
               <button
                 onClick={onSave}
                 disabled={!selected || isPending}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4]"
               >
                 Salvar resposta
               </button>

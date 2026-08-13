@@ -177,7 +177,7 @@ export function PraticarClient({
             <button
               onClick={responder}
               disabled={!selected || isPending}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4]"
             >
               Responder
             </button>
