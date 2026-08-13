@@ -58,13 +58,28 @@ export async function cadastroAlunoAction(
   }
 
   // Garante papel `aluno` e grava dados de lead (service-role ignora RLS).
+  // O erro NÃO pode ser ignorado: se este update falhar, o perfil fica com o
+  // default da coluna e o lead pode acabar com papel interno. Falhar fechado.
   const userId = data.user?.id
-  if (userId) {
-    const admin = createServiceClient()
-    await admin
-      .from('profiles')
-      .update({ role: 'aluno', full_name: fullName, phone, origin })
-      .eq('id', userId)
+  if (!userId) {
+    return { error: 'Não foi possível concluir o cadastro. Tente novamente.' }
+  }
+
+  const admin = createServiceClient()
+  const { data: updated, error: profileError } = await admin
+    .from('profiles')
+    .update({ role: 'aluno', full_name: fullName, phone, origin })
+    .eq('id', userId)
+    .select('id')
+
+  if (profileError || !updated?.length) {
+    console.error('[aluno/cadastro] falha ao definir papel do lead', {
+      userId,
+      error: profileError?.message ?? 'nenhuma linha atualizada',
+    })
+    return {
+      error: 'Sua conta foi criada, mas houve uma falha ao liberar o acesso. Fale com o suporte.',
+    }
   }
 
   redirect('/aluno')
