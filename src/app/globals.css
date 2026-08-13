@@ -288,20 +288,22 @@
   pointer-events: none;
 }
 
-/* Scrollbar — magenta discreto */
+/* Scrollbar — neutra em repouso, magenta ao passar o mouse.
+   (Magenta permanente virava uma barra vertical de página inteira, o que
+   contraria a dominância da marca: magenta é assinatura, não estrutura.) */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 7, 84, 0.22);
+  background: rgba(14, 40, 65, 0.14);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 7, 84, 0.40);
+  background: rgba(212, 7, 84, 0.35);
 }
 
 /* ================================================================
