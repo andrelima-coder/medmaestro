@@ -223,3 +223,124 @@ export async function getErrorCards(
     comment: pickComment(q.question_comments),
   }))
 }
+
+export type ModuloDesempenho = { tagId: string; label: string; pct: number | null; total: number }
+
+/** Todos os módulos do edital com o desempenho do aluno em cada um (Fase 3 — página Módulos). */
+export async function getModulosComDesempenho(
+  service: SupabaseClient,
+  userId: string
+): Promise<ModuloDesempenho[]> {
+  const [{ data: tags }, { data: stats }] = await Promise.all([
+    service
+      .from('tags')
+      .select('id, label')
+      .eq('dimension', 'modulo')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
+    service
+      .from('student_module_stats')
+      .select('tag_id, correct, total')
+      .eq('user_id', userId)
+      .eq('dimension', 'modulo'),
+  ])
+  const byTag = new Map(
+    (stats ?? []).map((s) => [s.tag_id as string, s as { correct: number; total: number }])
+  )
+  return (tags ?? []).map((t) => {
+    const s = byTag.get(t.id as string)
+    const total = s?.total ?? 0
+    const correct = s?.correct ?? 0
+    return {
+      tagId: t.id as string,
+      label: t.label as string,
+      pct: total > 0 ? Math.round((correct / total) * 100) : null,
+      total,
+    }
+  })
+}
+
+export type SimuladoDisponivel = { campaignId: string; nome: string; totalQuestoes: number | null }
+
+/** Campanhas publicadas e dentro da janela de acesso — disponíveis para qualquer aluno/lead. */
+export async function getSimuladosDisponiveis(service: SupabaseClient): Promise<SimuladoDisponivel[]> {
+  const nowIso = new Date().toISOString()
+  const { data } = await service
+    .from('campaigns')
+    .select('id, name, access_mode, window_start, window_end, simulados(total_questions)')
+    .eq('status', 'publicada')
+  const rows = (data ?? []) as unknown as {
+    id: string
+    name: string
+    access_mode: string
+    window_start: string | null
+    window_end: string | null
+    simulados: { total_questions: number | null } | null
+  }[]
+  return rows
+    .filter((c) => {
+      if (c.access_mode === 'imediato') return true
+      const afterStart = !c.window_start || c.window_start <= nowIso
+      const beforeEnd = !c.window_end || c.window_end >= nowIso
+      return afterStart && beforeEnd
+    })
+    .map((c) => ({ campaignId: c.id, nome: c.name, totalQuestoes: c.simulados?.total_questions ?? null }))
+}
+
+export type MeuSimuladoAttempt = {
+  campaignId: string
+  nome: string
+  status: 'em_andamento' | 'entregue' | 'expirado'
+  startedAt: string
+}
+
+/** Tentativas do aluno (uma por campanha — prova é sempre tentativa única). */
+export async function getMeusSimulados(
+  service: SupabaseClient,
+  userId: string
+): Promise<MeuSimuladoAttempt[]> {
+  const { data } = await service
+    .from('simulado_attempts')
+    .select('campaign_id, status, started_at, campaigns(name)')
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false })
+  const rows = (data ?? []) as unknown as {
+    campaign_id: string
+    status: 'em_andamento' | 'entregue' | 'expirado'
+    started_at: string
+    campaigns: { name: string } | null
+  }[]
+  return rows.map((r) => ({
+    campaignId: r.campaign_id,
+    nome: r.campaigns?.name ?? 'Simulado',
+    status: r.status,
+    startedAt: r.started_at,
+  }))
+}
+
+/** Prática dos últimos 7 dias, um contador por dia (Fase 3 — página Metas). */
+export async function getPracticeLast7Days(
+  service: SupabaseClient,
+  userId: string
+): Promise<{ date: string; count: number }[]> {
+  const since = new Date()
+  since.setDate(since.getDate() - 6)
+  since.setHours(0, 0, 0, 0)
+  const { data } = await service
+    .from('practice_attempts')
+    .select('created_at')
+    .eq('user_id', userId)
+    .gte('created_at', since.toISOString())
+
+  const counts = new Map<string, number>()
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(since)
+    d.setDate(d.getDate() + i)
+    counts.set(d.toISOString().slice(0, 10), 0)
+  }
+  for (const r of data ?? []) {
+    const key = new Date(r.created_at as string).toISOString().slice(0, 10)
+    if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  return [...counts.entries()].map(([date, count]) => ({ date, count }))
+}

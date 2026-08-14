@@ -34,13 +34,13 @@ const TOPO: NavItem[] = [
 ]
 
 const ESTUDO: NavItem[] = [
-  { label: 'Módulos', href: '/aluno/modulos', icon: LayoutGrid, emBreve: true },
+  { label: 'Módulos', href: '/aluno/modulos', icon: LayoutGrid },
   { label: 'Praticar', href: '/aluno/praticar', icon: Target },
-  { label: 'Simulados', href: '/aluno/simulados', icon: FileText, emBreve: true },
+  { label: 'Simulados', href: '/aluno/simulados', icon: FileText },
   { label: 'Revisão de erros', href: '/aluno/revisao', icon: RotateCcw },
   { label: 'Flashcards', href: '/aluno/flashcards', icon: Layers, emBreve: true },
   { label: 'Desempenho', href: '/aluno/desempenho', icon: Activity },
-  { label: 'Metas', href: '/aluno/metas', icon: Flag, emBreve: true },
+  { label: 'Metas', href: '/aluno/metas', icon: Flag },
 ]
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
