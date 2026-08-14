@@ -6,6 +6,7 @@ import {
   Home,
   Calendar,
   Timer,
+  Brain,
   LayoutGrid,
   Target,
   FileText,
@@ -29,6 +30,8 @@ type NavItem = {
 
 const TOPO: NavItem[] = [
   { label: 'Início', href: '/aluno', icon: Home },
+  { label: 'Revisar', href: '/aluno/revisar', icon: Brain },
+  { label: 'Flashcards', href: '/aluno/flashcards', icon: Layers },
   { label: 'Agenda', href: '/aluno/agenda', icon: Calendar },
   { label: 'Foco', href: '/aluno/foco', icon: Timer },
 ]
@@ -38,7 +41,6 @@ const ESTUDO: NavItem[] = [
   { label: 'Praticar', href: '/aluno/praticar', icon: Target },
   { label: 'Simulados', href: '/aluno/simulados', icon: FileText },
   { label: 'Revisão de erros', href: '/aluno/revisao', icon: RotateCcw },
-  { label: 'Flashcards', href: '/aluno/flashcards', icon: Layers, emBreve: true },
   { label: 'Desempenho', href: '/aluno/desempenho', icon: Activity },
   { label: 'Metas', href: '/aluno/metas', icon: Flag },
 ]
