@@ -1,8 +1,15 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+
+export async function logoutAluno() {
+  const supabase = await createClient()
+  await supabase.auth.signOut()
+  redirect('/aluno/login')
+}
 
 // Ações de estudo do aluno (feature 003): meta diária e dominar card de erro.
 
