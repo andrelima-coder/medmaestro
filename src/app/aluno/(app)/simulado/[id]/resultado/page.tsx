@@ -112,6 +112,7 @@ export default async function ResultadoPage({
       .from('question_comments')
       .select('question_id, content, comment_type')
       .in('question_id', ids)
+      .eq('status', 'published')
       .order('comment_type', { ascending: true })
     for (const c of comments ?? []) {
       // prioriza explicacao; não sobrescreve uma explicacao já escolhida

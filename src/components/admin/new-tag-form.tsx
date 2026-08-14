@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import { createTag } from '@/app/(dashboard)/configuracoes/tags/actions'
+import { createTag } from '@/app/(dashboard)/(admin)/configuracoes/tags/actions'
 import { Card, CardBody } from '@/components/ui'
 
 const DIMENSIONS = [

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { changeUserRole } from '@/app/(dashboard)/configuracoes/usuarios/actions'
+import { changeUserRole } from '@/app/(dashboard)/(admin)/configuracoes/usuarios/actions'
 
 const ROLES = ['analista', 'professor', 'admin', 'superadmin'] as const
 type Role = typeof ROLES[number]

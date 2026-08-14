@@ -16,12 +16,14 @@ import { Card, CardBody, CardHeader, CardTitle, Badge, AltCard, BackButton } fro
 type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
 
 const STATUS_TONE: Record<string, BadgeTone> = {
-  extracted: 'blue',
-  reviewing: 'purple',
+  pending_extraction: 'blue',
+  pending_review: 'gold',
+  in_review: 'purple',
+  pending_approval: 'purple',
+  needs_attention: 'orange',
   flagged: 'orange',
   approved: 'green',
   rejected: 'red',
-  commented: 'purple',
   published: 'green',
   draft: 'muted',
 }
@@ -146,7 +148,7 @@ export default async function QuestaoDetailPage({
       : null,
   ].filter(Boolean)
 
-  const statusKey = (question.status ?? 'extracted') as QuestionStatus
+  const statusKey = (question.status ?? 'pending_extraction') as QuestionStatus
   const statusTone = STATUS_TONE[statusKey] ?? 'blue'
 
   return (

@@ -10,6 +10,7 @@ import {
 } from '../flashcards/actions'
 import { RichEditor } from '@/components/ui/rich-editor'
 import { sanitizeHtml, isHtml } from '@/lib/sanitize-html'
+import { REVIEW_FEEDBACK } from '@/lib/utils/constants'
 
 export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
   const router = useRouter()
@@ -34,7 +35,11 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
   function approve() {
     if (!card || pending) return
     startTransition(async () => {
-      await approveFlashcardAction(card.id)
+      const res = await approveFlashcardAction(card.id)
+      if (!res.ok) {
+        window.alert(REVIEW_FEEDBACK.approveFailed)
+        return
+      }
       next()
     })
   }
@@ -45,7 +50,11 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
     // acidental na tecla D.
     if (!window.confirm('Descartar este flashcard definitivamente?')) return
     startTransition(async () => {
-      await rejectFlashcardAction(card.id)
+      const res = await rejectFlashcardAction(card.id)
+      if (!res.ok) {
+        window.alert(REVIEW_FEEDBACK.discardFailed)
+        return
+      }
       next()
     })
   }
@@ -74,7 +83,7 @@ export function RevisaoFlashcardsClient({ cards }: { cards: PendingCard[] }) {
       }
       const approved = await approveFlashcardAction(card.id)
       if (!approved.ok) {
-        window.alert('Edição salva, mas a aprovação falhou — card continua pendente.')
+        window.alert(REVIEW_FEEDBACK.editSavedApproveFailed)
         return
       }
       next()

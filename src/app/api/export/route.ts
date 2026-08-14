@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireRole } from '@/lib/auth/guards'
 import type { ContentFlags, ExportData } from '@/lib/exports/build'
 import {
   loadQuestionsForExport,
@@ -31,11 +31,15 @@ function csv(value: string | null): string[] {
  * /simulados/gerar, depois renderiza PDF/DOCX/XLSX/PPTX na hora.
  */
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  // Export do banco de questões (com gabarito, comentários e dicas do professor)
+  // é ferramenta de STAFF. Alunos autenticam no MESMO projeto Supabase, e este
+  // route handler NÃO passa pelo gate do (dashboard)/layout — logo precisa do
+  // seu próprio gate de papel, senão qualquer aluno logado baixa o banco inteiro.
+  const guard = await requireRole('analista')
+  if (!guard.ok) {
+    const status = guard.error === 'Não autenticado' ? 401 : 403
+    return NextResponse.json({ error: guard.error }, { status })
+  }
 
   const url = req.nextUrl
   const sp = url.searchParams

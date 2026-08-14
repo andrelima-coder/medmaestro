@@ -97,6 +97,8 @@ export async function getCorrection(
     .from('questions')
     .select('correct_answer, question_comments(content, comment_type)')
     .eq('id', questionId)
+    // Só comentário PUBLICADO chega ao aluno — nunca rascunho de IA não revisado.
+    .eq('question_comments.status', 'published')
     .single()
   const comment = pickComment(
     data?.question_comments as { content: string; comment_type: string | null }[] | null
@@ -211,6 +213,8 @@ export async function getErrorCards(
     .from('questions')
     .select('id, stem, correct_answer, question_comments(content, comment_type)')
     .in('id', ids)
+    // Só comentário PUBLICADO chega ao aluno — nunca rascunho de IA não revisado.
+    .eq('question_comments.status', 'published')
 
   return ((qs ?? []) as unknown as QRow[]).map((q) => ({
     questionId: q.id,

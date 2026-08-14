@@ -15,14 +15,16 @@ export interface Profile {
 }
 
 export type QuestionStatus =
-  | 'extracted'
-  | 'reviewing'
+  | 'pending_extraction'
+  | 'pending_review'
+  | 'in_review'
+  | 'pending_approval'
   | 'approved'
   | 'flagged'
   | 'rejected'
-  | 'commented'
   | 'published'
   | 'draft'
+  | 'needs_attention'
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   superadmin: 'Superadmin',
@@ -33,12 +35,14 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const STATUS_LABELS: Record<QuestionStatus, string> = {
-  extracted: 'Extraída',
-  reviewing: 'Em revisão',
+  pending_extraction: 'Extraída',
+  pending_review: 'Pendente',
+  in_review: 'Em revisão',
+  pending_approval: 'Aguardando aprovação',
   approved: 'Aprovada',
   flagged: 'Sinalizada',
   rejected: 'Rejeitada',
-  commented: 'Comentada',
   published: 'Publicada',
   draft: 'Rascunho (variante)',
+  needs_attention: 'Requer atenção',
 }

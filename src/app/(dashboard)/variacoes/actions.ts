@@ -35,6 +35,9 @@ export async function generateVariationsBatchAction(
     model: 'sonnet' | 'opus'
   }
 ): Promise<GenerateBatchResult> {
+  // Geração paga (Claude em lote) — exige revisor (professor+), não só sessão.
+  const guard = await requireReviewer()
+  if (!guard.ok) return { ok: false, error: guard.error }
   const supabase = await createClient()
   const {
     data: { user },

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
-import { triggerExtractionAction } from '@/app/(dashboard)/lotes/[id]/extract-action'
+import { triggerExtractionAction } from '@/app/(dashboard)/(admin)/lotes/[id]/extract-action'
 
 type ExamStatus = 'pending' | 'extracting' | 'classifying' | 'done' | 'error'
 

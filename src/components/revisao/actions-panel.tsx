@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition, useState } from 'react'
+import { unstable_rethrow } from 'next/navigation'
 import { submitReviewAction, saveAsDraft } from '@/app/(dashboard)/revisao/[id]/actions'
 
 type Action = 'approve' | 'reject' | 'flag'
@@ -37,6 +38,7 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
   const [selected, setSelected] = useState<Action | null>(null)
   const [note, setNote] = useState('')
   const [confirmAction, setConfirmAction] = useState<Action | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const isDone = ['approved', 'rejected', 'published'].includes(currentStatus)
 
@@ -51,14 +53,27 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
   }
 
   function handleSubmit(action: Action) {
+    setError(null)
     startTransition(async () => {
-      await submitReviewAction(questionId, action, note || undefined)
+      try {
+        await submitReviewAction(questionId, action, note || undefined)
+      } catch (e) {
+        unstable_rethrow(e)
+        // Cenário mais comum: lock expirado / questão travada por outro revisor.
+        setError(e instanceof Error ? e.message : 'Não foi possível enviar a revisão.')
+      }
     })
   }
 
   function handleSaveDraft() {
+    setError(null)
     startTransition(async () => {
-      await saveAsDraft(questionId)
+      try {
+        await saveAsDraft(questionId)
+      } catch (e) {
+        unstable_rethrow(e)
+        setError(e instanceof Error ? e.message : 'Não foi possível salvar o rascunho.')
+      }
     })
   }
 
@@ -76,6 +91,12 @@ export function ActionsPanel({ questionId, currentStatus }: ActionsPanelProps) {
   return (
     <div className="rounded-xl border border-[rgba(14,40,65,0.1)] bg-[var(--mm-surface)]/60 backdrop-blur-sm p-6 flex flex-col gap-4">
       <h3 className="text-sm font-semibold text-foreground">Ações de revisão</h3>
+
+      {error && (
+        <p role="alert" className="text-xs text-[#D3402A]">
+          {error}
+        </p>
+      )}
 
       <div className="flex flex-col gap-2">
         {ACTIONS.map((a) => (

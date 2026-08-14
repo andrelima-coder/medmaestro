@@ -7,7 +7,7 @@ import {
   updateTag,
   toggleTagActive,
   reorderTag,
-} from '@/app/(dashboard)/configuracoes/tags/actions'
+} from '@/app/(dashboard)/(admin)/configuracoes/tags/actions'
 import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
 import { cn } from '@/lib/utils'
 

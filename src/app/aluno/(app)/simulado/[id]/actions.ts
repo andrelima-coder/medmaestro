@@ -145,17 +145,23 @@ export async function saveAnswer(
   if (prev?.is_saved) return { ok: false, error: 'Resposta já salva e travada.' }
 
   if (prev) {
-    await service
+    const { error } = await service
       .from('question_attempts')
       .update({ selected_alt: selectedAlt, is_saved: true })
       .eq('id', prev.id)
+    if (error) return { ok: false, error: 'Não foi possível salvar a resposta. Tente novamente.' }
   } else {
-    await service.from('question_attempts').insert({
+    const { error } = await service.from('question_attempts').insert({
       attempt_id: attemptId,
       question_id: questionId,
       selected_alt: selectedAlt,
       is_saved: true,
     })
+    if (error) {
+      // 23505 = corrida com outra aba que já gravou esta questão: já está travada.
+      if (error.code === '23505') return { ok: false, error: 'Resposta já salva e travada.' }
+      return { ok: false, error: 'Não foi possível salvar a resposta. Tente novamente.' }
+    }
   }
 
   return { ok: true, data: { remaining } }

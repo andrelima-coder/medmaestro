@@ -7,7 +7,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { generateComment } from '@/lib/extraction/pipeline'
 import { logAudit } from '@/lib/audit'
 import { QUESTIONS_PAGE_SIZE } from '@/lib/pagination'
-import { requireUser } from '@/lib/auth/guards'
+import { requireUser, requireReviewer } from '@/lib/auth/guards'
 
 const BATCH_CONCURRENCY = 3
 
@@ -20,6 +20,9 @@ export type GenerateCommentsResult = {
 export async function generateCommentsBatchAction(
   questionIds: string[]
 ): Promise<GenerateCommentsResult> {
+  // Geração paga (Claude em lote) — exige revisor (professor+), não só sessão.
+  const guard = await requireReviewer()
+  if (!guard.ok) return { ok: false, error: guard.error }
   const supabase = await createClient()
   const {
     data: { user },

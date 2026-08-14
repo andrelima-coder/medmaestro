@@ -29,6 +29,9 @@ export type SuggestCountsResult = {
 export async function suggestCountsAction(
   questionIds: string[]
 ): Promise<SuggestCountsResult> {
+  // Sugestão de quantidade usa Claude — exige revisor (professor+).
+  const guard = await requireReviewer()
+  if (!guard.ok) return { ok: false, error: guard.error }
   const supabase = await createClient()
   const {
     data: { user },
@@ -59,6 +62,9 @@ export async function generateFlashcardsInlineAction(
   items: GenerateInlineItem[],
   config: { types: CardType[]; inheritTags: boolean }
 ): Promise<GenerateInlineResult> {
+  // Geração paga (Claude em lote) — exige revisor (professor+), não só sessão.
+  const guard = await requireReviewer()
+  if (!guard.ok) return { ok: false, created: 0, failed: 0, errors: [guard.error], error: guard.error }
   const supabase = await createClient()
   const {
     data: { user },

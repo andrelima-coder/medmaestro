@@ -9,7 +9,7 @@ import {
   createSpecialty,
   updateSpecialty,
   deleteSpecialty,
-} from '@/app/(dashboard)/configuracoes/hierarquia/actions'
+} from '@/app/(dashboard)/(admin)/configuracoes/hierarquia/actions'
 import { Card, CardBody, CardHeader, CardTitle, Badge } from '@/components/ui'
 import { cn } from '@/lib/utils'
 

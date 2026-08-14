@@ -8,6 +8,7 @@ import {
   rejectVariationAction,
   type PendingVariation,
 } from '../variacoes/actions'
+import { REVIEW_FEEDBACK } from '@/lib/utils/constants'
 
 const DELTA_LABEL: Record<number, string> = {
   0: 'Mesma dificuldade',
@@ -39,8 +40,9 @@ export function RevisaoVariacoesClient({
   function approve() {
     if (!v || pending) return
     startTransition(async () => {
-      await approveVariationAction(v.id)
-      next()
+      const res = await approveVariationAction(v.id)
+      if (res?.ok) next()
+      else setFeedback(REVIEW_FEEDBACK.variationApproveFailed(res?.error))
     })
   }
 
@@ -63,8 +65,9 @@ export function RevisaoVariacoesClient({
     // acidental na tecla D.
     if (!window.confirm('Descartar esta variação definitivamente?')) return
     startTransition(async () => {
-      await rejectVariationAction(v.id)
-      next()
+      const res = await rejectVariationAction(v.id)
+      if (res?.ok) next()
+      else setFeedback(REVIEW_FEEDBACK.variationDiscardFailed)
     })
   }
 

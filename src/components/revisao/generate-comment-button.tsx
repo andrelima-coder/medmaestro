@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { generateAiComment, COMMENT_MODEL_OPTIONS } from '@/app/(dashboard)/questoes/[id]/comment-actions'
+import { generateAiComment } from '@/app/(dashboard)/questoes/[id]/comment-actions'
+import { COMMENT_MODEL_OPTIONS } from '@/lib/extraction/comment-models'
 
 /**
  * Botão "Gerar comentário" com escolha de modelo de IA (Sonnet / Opus / Haiku).

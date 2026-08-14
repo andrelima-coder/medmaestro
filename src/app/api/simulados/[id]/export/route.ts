@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireSimuladoAccess } from '@/lib/auth/guards'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { ContentFlags, ExportData } from '@/lib/exports/build'
 import {
@@ -25,12 +25,6 @@ export async function GET(
 ) {
   const { id } = await params
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
   const service = createServiceClient()
 
   const { data: simulado } = await service
@@ -42,17 +36,10 @@ export async function GET(
   if (!simulado) return NextResponse.json({ error: 'Simulado não encontrado' }, { status: 404 })
 
   // Authz: dono OU admin/superadmin
-  const isOwner = simulado.created_by === user.id
-  if (!isOwner) {
-    const { data: profile } = await service
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
-    if (!isAdmin) {
-      return NextResponse.json({ error: 'Sem permissão para exportar este simulado' }, { status: 403 })
-    }
+  const guard = await requireSimuladoAccess(simulado.created_by)
+  if (!guard.ok) {
+    const status = guard.error === 'Não autenticado' ? 401 : 403
+    return NextResponse.json({ error: guard.error }, { status })
   }
 
   const url = req.nextUrl

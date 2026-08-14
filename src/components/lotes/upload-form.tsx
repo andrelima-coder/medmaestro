@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect, useRef, useState, useCallback } from 'react'
-import { createExamAction, type CreateExamState } from '@/app/(dashboard)/lotes/novo/actions'
+import { createExamAction, type CreateExamState } from '@/app/(dashboard)/(admin)/lotes/novo/actions'
 import { InlineProgress } from '@/components/lotes/inline-progress'
 import {
   CADERNO_ACCEPT,

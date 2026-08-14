@@ -26,13 +26,17 @@ export const metadata = { title: 'Revisão — MedMaestro' }
 
 const TEN_MINUTES_MS = 10 * 60 * 1000
 
+// Vocabulário REAL do enum question_status em produção (ver pipeline.ts).
+// Os antigos 'extracted'/'reviewing'/'commented' não existem no banco.
 const STATUS_LABELS: Record<string, string> = {
-  extracted: 'Extraída',
-  reviewing: 'Em revisão',
+  pending_extraction: 'Aguardando extração',
+  pending_review: 'Pendente',
+  in_review: 'Em revisão',
+  pending_approval: 'Aguardando aprovação',
+  needs_attention: 'Requer atenção',
   flagged: 'Sinalizada',
   approved: 'Aprovada',
   rejected: 'Rejeitada',
-  commented: 'Comentada',
   published: 'Publicada',
   draft: 'Rascunho',
 }
@@ -40,12 +44,14 @@ const STATUS_LABELS: Record<string, string> = {
 type BadgeTone = 'green' | 'gold' | 'red' | 'blue' | 'muted' | 'orange' | 'purple'
 
 const STATUS_TONE: Record<string, BadgeTone> = {
-  extracted: 'blue',
-  reviewing: 'purple',
+  pending_extraction: 'muted',
+  pending_review: 'blue',
+  in_review: 'purple',
+  pending_approval: 'gold',
+  needs_attention: 'orange',
   flagged: 'orange',
   approved: 'green',
   rejected: 'red',
-  commented: 'purple',
   published: 'green',
   draft: 'muted',
 }
@@ -199,10 +205,15 @@ export default async function RevisaoItemPage({
       },
       { onConflict: 'question_id' }
     )
+    // 'in_review' é o valor REAL do enum ('reviewing' não existe e fazia o
+    // UPDATE falhar silenciosamente). Só reivindica quem está mesmo esperando
+    // revisão (pending_review) — abrir uma questão flagged/draft/needs_attention/
+    // pending_approval/pending_extraction não deve apagar esse sinal.
     await service
       .from('questions')
-      .update({ status: 'reviewing', updated_at: now.toISOString() })
+      .update({ status: 'in_review', updated_at: now.toISOString() })
       .eq('id', id)
+      .eq('status', 'pending_review')
     expiresAt = newExpiresAt
   }
 

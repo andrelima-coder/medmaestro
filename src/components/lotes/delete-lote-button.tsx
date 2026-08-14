@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { deleteExamAction } from '@/app/(dashboard)/lotes/actions'
+import { deleteExamAction } from '@/app/(dashboard)/(admin)/lotes/actions'
 
 /**
  * Botão "Excluir" para lotes com erro / abandonados.

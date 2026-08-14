@@ -1,15 +1,24 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireSimuladoAccess } from '@/lib/auth/guards'
 import { ExportForm } from '@/components/simulados/export-form'
 import { BackButton } from '@/components/ui'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const fallback = { title: 'Exportar — Simulado — MedMaestro' }
+
   const service = createServiceClient()
-  const { data } = await service.from('simulados').select('title').eq('id', id).single()
-  return { title: `Exportar — ${data?.title ?? 'Simulado'} — MedMaestro` }
+  const { data } = await service.from('simulados').select('title, created_by').eq('id', id).single()
+  if (!data) return fallback
+
+  // Mesma checagem de dono/admin da página — não revela título de simulado
+  // alheio via <title> mesmo quando o corpo da página vai dar notFound().
+  const guard = await requireSimuladoAccess(data.created_by)
+  if (!guard.ok) return fallback
+
+  return { title: `Exportar — ${data.title ?? 'Simulado'} — MedMaestro` }
 }
 
 type FilterParts = {
@@ -73,12 +82,6 @@ export default async function ExportarSimuladoPage({
   const initialFormat =
     fmt === 'questoes' || fmt === 'comentarios' || fmt === 'ambos' ? fmt : undefined
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
   const service = createServiceClient()
 
   const { data: simulado } = await service
@@ -88,6 +91,12 @@ export default async function ExportarSimuladoPage({
     .single()
 
   if (!simulado) notFound()
+
+  // Autorização de leitura: dono OU admin/superadmin (mesma regra da página de
+  // detalhe e do endpoint de export). Evita IDOR — terceiro não vê título,
+  // filtros e contagem de simulado alheio por URL.
+  const guard = await requireSimuladoAccess(simulado.created_by)
+  if (!guard.ok) notFound()
 
   const { count: questionsCount } = await service
     .from('simulado_questions')

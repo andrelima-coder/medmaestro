@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
+import { requireSimuladoAccess } from '@/lib/auth/guards'
 import { SimuladoTitle } from '@/components/simulados/simulado-title'
 import { SimuladoDelete } from '@/components/simulados/simulado-delete'
 import { QuestionPicker } from '@/components/simulados/question-picker'
@@ -10,9 +10,13 @@ import { BackButton } from '@/components/ui'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const fallback = { title: 'Simulado — MedMaestro' }
   const service = createServiceClient()
-  const { data } = await service.from('simulados').select('title').eq('id', id).single()
-  return { title: `${data?.title ?? 'Simulado'} — MedMaestro` }
+  const { data } = await service.from('simulados').select('title, created_by').eq('id', id).single()
+  if (!data) return fallback
+  const guard = await requireSimuladoAccess(data.created_by)
+  if (!guard.ok) return fallback
+  return { title: `${data.title ?? 'Simulado'} — MedMaestro` }
 }
 
 export default async function SimuladoDetailPage({
@@ -21,12 +25,6 @@ export default async function SimuladoDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
   const service = createServiceClient()
 
@@ -38,19 +36,11 @@ export default async function SimuladoDetailPage({
 
   if (!simulado) notFound()
 
-  const isOwner = simulado.created_by === user.id
-
   // Autorização de leitura: dono OU admin/superadmin (alinhado ao endpoint de
   // export). Evita IDOR de leitura — terceiros não veem simulado alheio por URL.
-  if (!isOwner) {
-    const { data: profile } = await service
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin'
-    if (!isAdmin) notFound()
-  }
+  const guard = await requireSimuladoAccess(simulado.created_by)
+  if (!guard.ok) notFound()
+  const isOwner = simulado.created_by === guard.user.id
 
   const { data: sqRows } = await service
     .from('simulado_questions')

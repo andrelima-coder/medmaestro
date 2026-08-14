@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useRef } from 'react'
-import { inviteUserAction } from '@/app/(dashboard)/configuracoes/usuarios/actions'
+import { inviteUserAction } from '@/app/(dashboard)/(admin)/configuracoes/usuarios/actions'
 
 export function InviteUserForm() {
   const [state, action, isPending] = useActionState(inviteUserAction, null)

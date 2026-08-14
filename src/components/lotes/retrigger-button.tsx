@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { triggerExtractionAction } from '@/app/(dashboard)/lotes/[id]/extract-action'
+import { triggerExtractionAction } from '@/app/(dashboard)/(admin)/lotes/[id]/extract-action'
 
 export function RetriggerButton({ examId }: { examId: string }) {
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')

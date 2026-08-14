@@ -63,3 +63,22 @@ export async function requireRole(min: AppRole): Promise<GuardResult> {
 export async function requireReviewer(): Promise<GuardResult> {
   return requireRole('professor')
 }
+
+/**
+ * Autorização de leitura de um simulado: dono OU admin/superadmin.
+ * Recebe `created_by` (o chamador já buscou a linha de `simulados` com as
+ * colunas que precisa) em vez de buscar de novo — evita duplicar a query.
+ * Usado por simulados/[id]/page.tsx, simulados/[id]/exportar/page.tsx
+ * (corpo + generateMetadata) e api/simulados/[id]/export/route.ts.
+ */
+export async function requireSimuladoAccess(
+  createdBy: string | null | undefined
+): Promise<GuardResult> {
+  const user = await getAuthedUser()
+  if (!user) return { ok: false, error: 'Não autenticado' }
+  const isOwner = createdBy != null && createdBy === user.id
+  if (isOwner || ROLE_RANK[user.role] >= ROLE_RANK.admin) {
+    return { ok: true, user }
+  }
+  return { ok: false, error: 'Sem permissão' }
+}

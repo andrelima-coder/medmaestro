@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { logAudit } from '@/lib/audit'
 import { generateComment, type CommentsModelKey } from '@/lib/extraction/pipeline'
 import { requireUser, requireReviewer } from '@/lib/auth/guards'
+import { COMMENT_MODEL_OPTIONS } from '@/lib/extraction/comment-models'
 
 export interface QuestionComment {
   id: string
@@ -15,13 +16,6 @@ export interface QuestionComment {
   created_at: string
 }
 
-// Modelos de IA que o professor pode escolher ao gerar um comentário, com
-// rótulo amigável e nota de custo/qualidade. Fonte única para UI + validação.
-export const COMMENT_MODEL_OPTIONS: { key: CommentsModelKey; label: string; hint: string }[] = [
-  { key: 'sonnet', label: 'Claude Sonnet', hint: 'Equilíbrio custo/qualidade (padrão)' },
-  { key: 'opus', label: 'Claude Opus', hint: 'Máxima qualidade, mais caro' },
-  { key: 'haiku', label: 'Claude Haiku', hint: 'Rápido e econômico' },
-]
 const ALLOWED_MODELS = new Set<CommentsModelKey>(COMMENT_MODEL_OPTIONS.map((o) => o.key))
 
 export async function getQuestionComments(questionId: string): Promise<QuestionComment[]> {

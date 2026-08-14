@@ -9,21 +9,49 @@ type SearchParams = {
   exam_id?: string
 }
 
+// Vocabulário REAL do enum question_status (ver AGENTS.md): pending_extraction,
+// pending_review, in_review, pending_approval, approved, published, rejected,
+// needs_attention, draft, flagged. 'extracted'/'reviewing'/'commented' NÃO existem.
+const STATUS_CONFIG_DEFAULT = {
+  label: '—',
+  bg: 'rgba(164,163,164,0.1)',
+  color: '#A4A3A4',
+  border: 'rgba(164,163,164,0.25)',
+}
+
 const STATUS_CONFIG: Record<
   string,
   { label: string; bg: string; color: string; border: string }
 > = {
-  extracted: {
+  pending_extraction: {
     label: 'Extraída',
     bg: 'rgba(32,105,115,0.1)',
     color: '#206973',
     border: 'rgba(32,105,115,0.25)',
   },
-  reviewing: {
+  pending_review: {
+    label: 'Pendente',
+    bg: 'var(--mm-gold-bg)',
+    color: 'var(--mm-gold)',
+    border: 'var(--mm-gold-border)',
+  },
+  in_review: {
     label: 'Em revisão',
     bg: 'var(--mm-gold-bg)',
     color: 'var(--mm-gold)',
     border: 'var(--mm-gold-border)',
+  },
+  pending_approval: {
+    label: 'Aguardando aprovação',
+    bg: 'rgba(123,63,160,0.1)',
+    color: '#7B3FA0',
+    border: 'rgba(123,63,160,0.25)',
+  },
+  needs_attention: {
+    label: 'Requer atenção',
+    bg: 'rgba(211,64,42,0.1)',
+    color: '#D3402A',
+    border: 'rgba(211,64,42,0.25)',
   },
   approved: {
     label: 'Aprovada',
@@ -43,12 +71,6 @@ const STATUS_CONFIG: Record<
     color: '#D3402A',
     border: 'rgba(211,64,42,0.25)',
   },
-  commented: {
-    label: 'Comentada',
-    bg: 'rgba(123,63,160,0.1)',
-    color: '#7B3FA0',
-    border: 'rgba(123,63,160,0.25)',
-  },
   published: {
     label: 'Publicada',
     bg: 'rgba(0,96,72,0.15)',
@@ -64,20 +86,22 @@ const STATUS_CONFIG: Record<
 }
 
 const STATUS_DOT: Record<string, string> = {
-  extracted: '#206973',
-  reviewing: '#B6014F',
+  pending_extraction: '#206973',
+  pending_review: '#B6014F',
+  in_review: '#B6014F',
+  pending_approval: '#7B3FA0',
+  needs_attention: '#D3402A',
   approved: '#006048',
   rejected: '#D3402A',
   flagged: '#D3402A',
-  commented: '#7B3FA0',
   published: '#006048',
   draft: '#A4A3A4',
 }
 
 const FILTER_TABS = [
   { key: '', label: 'Todas' },
-  { key: 'approved', label: 'Validadas' },
-  { key: 'extracted,reviewing', label: 'Pendentes' },
+  { key: 'approved,published', label: 'Validadas' },
+  { key: 'pending_review,in_review,pending_approval,needs_attention', label: 'Pendentes' },
   { key: 'flagged', label: 'Com erro' },
 ]
 
@@ -133,8 +157,15 @@ export default async function RevisaoPage({
   const countByStatus = (keys: string[]) =>
     allQ.filter((q) => keys.includes(q.status as string)).length
   const totalAll = allQ.length
-  const totalApproved = countByStatus(['approved'])
-  const totalPending = countByStatus(['extracted', 'reviewing'])
+  // Vocabulário REAL do enum question_status (ver pipeline.ts): extração nova
+  // grava 'pending_review'; 'extracted'/'reviewing' não existem no banco.
+  const totalApproved = countByStatus(['approved', 'published'])
+  const totalPending = countByStatus([
+    'pending_review',
+    'in_review',
+    'pending_approval',
+    'needs_attention',
+  ])
   const totalError = countByStatus(['flagged'])
 
   const { data: questions } = await query.limit(100)
@@ -196,8 +227,12 @@ export default async function RevisaoPage({
         <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {[
             { key: '', label: 'Todas', count: totalAll },
-            { key: 'approved', label: 'Validadas', count: totalApproved },
-            { key: 'extracted,reviewing', label: 'Pendentes', count: totalPending },
+            { key: 'approved,published', label: 'Validadas', count: totalApproved },
+            {
+              key: 'pending_review,in_review,pending_approval,needs_attention',
+              label: 'Pendentes',
+              count: totalPending,
+            },
             { key: 'flagged', label: 'Com erro', count: totalError },
           ].map((tab) => {
             const isActive = statusFilter === tab.key
@@ -418,8 +453,8 @@ export default async function RevisaoPage({
                     ? (profileMap[assignment.assigned_to] ?? 'Revisor')
                     : null
 
-                  const statusKey = (q.status as string) ?? 'extracted'
-                  const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.extracted
+                  const statusKey = (q.status as string) ?? 'pending_extraction'
+                  const sc = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG_DEFAULT
                   const conf = q.extraction_confidence as number | null
                   const confPct = conf != null ? `${conf * 20}%` : '—'
                   const stem = ((q.stem as string | null) ?? '').slice(0, 70)
