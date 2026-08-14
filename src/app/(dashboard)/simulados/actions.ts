@@ -409,7 +409,7 @@ export async function searchQuestionsForSimulado(
       let query = service
         .from('questions')
         .select(
-          'id, question_number, stem, exams!left(year, booklet_color, exam_boards(short_name))'
+          'id, question_number, stem, exams!left(year, booklet_color, bancas(nome_curto))'
         )
         .in('status', ['approved', 'published'])
         .limit(30)
@@ -434,9 +434,9 @@ export async function searchQuestionsForSimulado(
     const exam = q.exams as unknown as {
       year: number
       booklet_color: string | null
-      exam_boards: { short_name: string } | null
+      bancas: { nome_curto: string } | null
     } | null
-    const parts = [exam?.exam_boards?.short_name, exam?.year].filter(Boolean)
+    const parts = [exam?.bancas?.nome_curto, exam?.year].filter(Boolean)
     return {
       id: q.id,
       question_number: q.question_number as number,

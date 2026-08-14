@@ -114,7 +114,7 @@ export default async function QuestoesPage({
       service.from('tags').select('slug, label, color').eq('dimension', 'tipo_questao').order('display_order'),
       service.from('tags').select('slug, label, color').eq('dimension', 'recurso_visual').order('display_order'),
       service.from('tags').select('slug, label, color').eq('dimension', 'dificuldade').order('display_order'),
-      service.from('exam_boards').select('slug, short_name').order('short_name'),
+      service.from('bancas').select('slug, nome_curto').order('nome_curto'),
       service.from('exams').select('year').order('year', { ascending: false }),
     ])
 
@@ -123,8 +123,8 @@ export default async function QuestoesPage({
   const tipos = (tipoRes.data ?? []) as TagOption[]
   const recursos = (recRes.data ?? []) as TagOption[]
   const dificuldades = (difRes.data ?? []) as TagOption[]
-  const bancas = ((boardRes.data ?? []) as { slug: string; short_name: string }[]).map(
-    (b) => ({ slug: b.slug, label: b.short_name })
+  const bancas = ((boardRes.data ?? []) as { slug: string; nome_curto: string }[]).map(
+    (b) => ({ slug: b.slug, label: b.nome_curto })
   )
   const years = [...new Set((yearRes.data ?? []).map((e) => e.year as number))]
 

@@ -193,6 +193,7 @@ export async function createCampaignAction(
 }
 
 export async function listSimuladosForSelect() {
+  if (!(await assertAdmin())) return []
   const service = createServiceClient()
   const { data } = await service
     .from('simulados')
@@ -212,6 +213,7 @@ export type PickerOptions = {
 }
 
 export async function getPickerOptions(): Promise<PickerOptions> {
+  if (!(await assertAdmin())) return { modulos: [], especialidades: [], provas: [], anos: [] }
   const service = createServiceClient()
   const [{ data: modulos }, { data: especialidades }, { data: provas }] = await Promise.all([
     service
@@ -223,7 +225,7 @@ export async function getPickerOptions(): Promise<PickerOptions> {
     service.from('specialties').select('id, name').order('name', { ascending: true }),
     service
       .from('exams')
-      .select('id, year, specialties(name), exam_boards(short_name)')
+      .select('id, year, specialties(name), bancas(nome_curto)')
       .order('year', { ascending: false })
       .limit(500),
   ])
@@ -232,12 +234,12 @@ export async function getPickerOptions(): Promise<PickerOptions> {
     id: string
     year: number | null
     specialties: { name: string } | null
-    exam_boards: { short_name: string } | null
+    bancas: { nome_curto: string } | null
   }[]).map((e) => ({
     id: e.id,
     year: e.year ?? null,
     label: `${e.specialties?.name ?? 'Prova'}${e.year ? ' ' + e.year : ''}${
-      e.exam_boards?.short_name ? ' · ' + e.exam_boards.short_name : ''
+      e.bancas?.nome_curto ? ' · ' + e.bancas.nome_curto : ''
     }`,
   }))
 
@@ -370,6 +372,7 @@ export type CampaignDashboard = {
 }
 
 export async function getCampaignDashboard(campaignId: string): Promise<CampaignDashboard> {
+  if (!(await assertAdmin())) throw new Error('Sem permissão.')
   const service = createServiceClient()
 
   const { data: camp } = await service
