@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getGoalAndToday, getStreak, getWeakestModule } from '@/lib/aluno/estudo'
+import { getMinhaBancaAtiva, getArvore, getEngajamentoHoje, type Arvore, type EngajamentoHoje } from '@/lib/aluno/mentoria'
 import { GoalSetter } from './home-client'
 
 export const metadata = { title: 'Área do Aluno — MedMaestro' }
@@ -16,6 +17,8 @@ export default async function AlunoHomePage() {
   let today = 0
   let streak = 0
   let weakest: { tagId: string; label: string; pct: number } | null = null
+  let arvore: Arvore | null = null
+  let engajamento: EngajamentoHoje | null = null
 
   if (user) {
     const service = createServiceClient()
@@ -30,6 +33,13 @@ export default async function AlunoHomePage() {
     today = gt.today
     streak = await getStreak(service, user.id)
     weakest = await getWeakestModule(service, user.id)
+
+    // Vertente 2: só carrega se o aluno tiver matrícula ativa em alguma banca.
+    const banca = await getMinhaBancaAtiva(supabase)
+    if (banca) {
+      arvore = await getArvore(supabase)
+      engajamento = await getEngajamentoHoje(supabase)
+    }
   }
 
   const pct = goal > 0 ? Math.min(100, Math.round((today / goal) * 100)) : 0
@@ -61,6 +71,78 @@ export default async function AlunoHomePage() {
         </div>
       </div>
 
+      {/* Sua jornada (Vertente 2 — só aparece com matrícula ativa) */}
+      {(arvore || engajamento) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {arvore && (
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="text-sm font-bold text-foreground">Sua jornada</h3>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-3xl">{arvore.estagio.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-foreground">
+                    {arvore.estagio.nome} · {arvore.pontos} pts
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {arvore.proximo
+                      ? `Faltam ${arvore.faltam} pontos para ${arvore.proximo.nome} ${arvore.proximo.emoji}`
+                      : 'Estágio máximo alcançado'}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 h-2 w-full rounded bg-muted">
+                <div className="h-2 rounded bg-primary" style={{ width: `${arvore.progressoPct}%` }} />
+              </div>
+              {arvore.murchando && (
+                <div className="mt-3 rounded-lg bg-[rgba(211,64,42,0.08)] p-3 text-xs text-[#D3402A]">
+                  🥀 {arvore.divida} conceitos vencidos — a árvore está murchando. Nenhum ponto foi perdido, mas vale
+                  colocar a fila em dia.
+                </div>
+              )}
+            </div>
+          )}
+          {engajamento && (
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="text-sm font-bold text-foreground">Meta de hoje</h3>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Questões</span>
+                    <span>
+                      {engajamento.questoesHoje}/{engajamento.metaQuestoes}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 w-full rounded bg-muted">
+                    <div
+                      className="h-2 rounded bg-primary"
+                      style={{
+                        width: `${Math.min(100, Math.round((100 * engajamento.questoesHoje) / engajamento.metaQuestoes))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Flashcards</span>
+                    <span>
+                      {engajamento.flashcardsHoje}/{engajamento.metaFlashcards}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-2 w-full rounded bg-muted">
+                    <div
+                      className="h-2 rounded bg-[var(--afya-teal)]"
+                      style={{
+                        width: `${Math.min(100, Math.round((100 * engajamento.flashcardsHoje) / engajamento.metaFlashcards))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Recomendação adaptativa (ponto fraco) */}
       {weakest && (
         <a
@@ -82,6 +164,12 @@ export default async function AlunoHomePage() {
         <Atalho href="/aluno/praticar" titulo="Praticar" desc="Questões avulsas com correção na hora" />
         <Atalho href="/aluno/revisao" titulo="Revisão de erros" desc="Revise o que você errou" />
         <Atalho href="/aluno/desempenho" titulo="Meu desempenho" desc="Radar por módulo e evolução" />
+        {(arvore || engajamento) && (
+          <>
+            <Atalho href="/aluno/agenda" titulo="Agenda" desc="Organize seus horários de estudo" />
+            <Atalho href="/aluno/foco" titulo="Foco" desc="Cronometre uma sessão e ganhe XP" />
+          </>
+        )}
       </div>
     </section>
   )
