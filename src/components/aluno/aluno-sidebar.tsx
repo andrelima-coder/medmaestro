@@ -29,8 +29,8 @@ type NavItem = {
 
 const TOPO: NavItem[] = [
   { label: 'Início', href: '/aluno', icon: Home },
-  { label: 'Agenda', href: '/aluno/agenda', icon: Calendar, emBreve: true },
-  { label: 'Foco', href: '/aluno/foco', icon: Timer, emBreve: true },
+  { label: 'Agenda', href: '/aluno/agenda', icon: Calendar },
+  { label: 'Foco', href: '/aluno/foco', icon: Timer },
 ]
 
 const ESTUDO: NavItem[] = [
@@ -45,7 +45,8 @@ const ESTUDO: NavItem[] = [
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const Icon = item.icon
-  const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+  const isActive =
+    pathname === item.href || (item.href !== '/aluno' && pathname.startsWith(item.href + '/'))
 
   if (item.emBreve) {
     return (
