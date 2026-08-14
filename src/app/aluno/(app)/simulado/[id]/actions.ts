@@ -161,6 +161,61 @@ export async function saveAnswer(
   return { ok: true, data: { remaining } }
 }
 
+/**
+ * Registra troca de alternativa antes de salvar (métrica principal do debrief,
+ * alimenta a tabela `mt_trocas_resposta` do MentorTemi — mesmo projeto Supabase).
+ * Telemetria best-effort: nunca deve interromper a prova.
+ */
+export async function logTrocaResposta(
+  attemptId: string,
+  questionId: string,
+  deAlt: string,
+  paraAlt: string
+): Promise<void> {
+  try {
+    const userId = await currentAlunoId()
+    if (!userId) return
+
+    const service = createServiceClient()
+    const { data: attempt } = await service
+      .from('simulado_attempts')
+      .select('user_id, status, time_remaining, deadline_at, campaign_id')
+      .eq('id', attemptId)
+      .single()
+    if (!attempt || attempt.user_id !== userId) return
+
+    const { data: campaign } = await service
+      .from('campaigns')
+      .select('duration_minutes')
+      .eq('id', attempt.campaign_id)
+      .single()
+
+    // Gabarito buscado no servidor — nunca exposto ao cliente durante a prova.
+    const { data: question } = await service
+      .from('questions')
+      .select('correct_answer')
+      .eq('id', questionId)
+      .single()
+
+    const remaining = remainingFrom(attempt)
+    const minutoProva = campaign
+      ? Math.max(0, Math.round(campaign.duration_minutes - remaining / 60))
+      : null
+
+    await service.from('mt_trocas_resposta').insert({
+      user_id: userId,
+      attempt_id: attemptId,
+      question_id: questionId,
+      de_alt: deAlt,
+      para_alt: paraAlt,
+      correta_alt: question?.correct_answer ?? null,
+      minuto_prova: minutoProva,
+    })
+  } catch {
+    // Best-effort — telemetria nunca deve interromper a prova.
+  }
+}
+
 /** Pausa (se permitido pela campanha): persiste o saldo e desliga o relógio. */
 export async function pauseAttempt(attemptId: string): Promise<ActionResult<{ remaining: number }>> {
   const userId = await currentAlunoId()

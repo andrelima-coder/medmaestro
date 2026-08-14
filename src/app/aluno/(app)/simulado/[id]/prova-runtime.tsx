@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveAnswer, pauseAttempt, submitAttempt, syncTime, reportarErro } from './actions'
+import { saveAnswer, pauseAttempt, submitAttempt, syncTime, reportarErro, logTrocaResposta } from './actions'
 
 type Question = {
   id: string
@@ -283,7 +283,14 @@ export function ProvaRuntime({
                   className="mt-1"
                   checked={isSel}
                   disabled={locked || isPending || isElim}
-                  onChange={() => setSelected(alt)}
+                  onChange={() => {
+                    if (selected && selected !== alt) {
+                      // Telemetria best-effort — não usa o startTransition compartilhado
+                      // pra não desabilitar os radios (isPending) a cada troca.
+                      void logTrocaResposta(attemptId, q.id, selected, alt)
+                    }
+                    setSelected(alt)
+                  }}
                 />
                 <span className={`flex-1 text-foreground ${isElim ? 'line-through' : ''}`}>
                   <strong>{alt})</strong> {text}
