@@ -72,7 +72,7 @@ export async function createExamAction(
   // Verifica se a banca existe + se suporta cores
   const { data: board, error: boardErr } = await supabase
     .from('exam_boards')
-    .select('id, supports_booklet_colors')
+    .select('id, supports_booklet_colors, banca_id')
     .eq('id', boardId)
     .single()
 
@@ -158,6 +158,7 @@ export async function createExamAction(
     .upsert(
       {
         board_id: boardId,
+        banca_id: board.banca_id,
         specialty_id: specialtyId,
         year,
         booklet_color: bookletColor,
