@@ -40,7 +40,7 @@ export async function getMinhaBancaAtiva(supabase: SupabaseClient): Promise<Minh
 
 export type Arvore = {
   pontos: number
-  estagio: { nome: string; emoji: string; frase: string }
+  estagio: { slug: string; nome: string; emoji: string; frase: string }
   proximo: { nome: string; emoji: string; pontosMin: number } | null
   faltam: number
   progressoPct: number
@@ -54,7 +54,7 @@ export async function getArvore(supabase: SupabaseClient): Promise<Arvore | null
   if (error || !data) return null
   const a = data as {
     pontos: number
-    estagio: { nome: string; emoji: string; frase: string }
+    estagio: { slug: string; nome: string; emoji: string; frase: string }
     proximo: { nome: string; emoji: string; pontos_min: number } | null
     faltam: number
     progresso_pct: number

@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Layers,
   Activity,
+  TrendingUp,
   Flag,
   Settings,
   LogOut,
@@ -42,6 +43,7 @@ const ESTUDO: NavItem[] = [
   { label: 'Simulados', href: '/aluno/simulados', icon: FileText },
   { label: 'Revisão de erros', href: '/aluno/revisao', icon: RotateCcw },
   { label: 'Desempenho', href: '/aluno/desempenho', icon: Activity },
+  { label: 'Evolução', href: '/aluno/evolucao', icon: TrendingUp },
   { label: 'Metas', href: '/aluno/metas', icon: Flag },
 ]
 
