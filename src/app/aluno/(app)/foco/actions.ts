@@ -25,3 +25,26 @@ export async function registrarSessaoAction(
 
   return { ok: true, pontos: Math.min(60, min) }
 }
+
+// Meta semanal de foco configurável pelo aluno (mt_preferencias, RLS own-row).
+export async function salvarMetaSemanalAction(
+  minutos: number
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Não autenticado.' }
+
+  const min = Math.round(minutos)
+  if (!Number.isFinite(min) || min < 60 || min > 4320) {
+    return { ok: false, error: 'A meta deve ficar entre 1h e 72h por semana.' }
+  }
+
+  const { error } = await supabase
+    .from('mt_preferencias')
+    .upsert({ user_id: user.id, meta_foco_semanal_min: min })
+  if (error) return { ok: false, error: 'Falha ao salvar a meta: ' + error.message }
+
+  return { ok: true }
+}
