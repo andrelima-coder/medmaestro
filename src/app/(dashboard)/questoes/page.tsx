@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, Badge, TagChip } from '@/components/ui'
@@ -265,7 +266,7 @@ export default async function QuestoesPage({
                   ? buildUrl(params, { [c.key]: '', page: '1' })
                   : buildToggleUrl(params, c.key, c.slug)
               }
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] px-2.5 py-0.5 text-[11px] text-[var(--mm-gold)] no-underline transition-opacity hover:opacity-80"
+              className="mm-chip mm-press inline-flex items-center gap-1 rounded-full border border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] px-2.5 py-0.5 text-[11px] text-[var(--mm-gold)] no-underline hover:bg-[rgba(212,7,84,0.14)]"
             >
               {c.label}
               <span aria-hidden className="opacity-70">×</span>
@@ -285,10 +286,9 @@ export default async function QuestoesPage({
           {total > 0 ? (
             <Link
               href={gerarHref}
-              className="rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] no-underline transition-all hover:-translate-y-px"
+              className="mm-press rounded-lg px-4 py-2 text-xs font-bold text-white no-underline shadow-[0_4px_20px_rgba(212,7,84,0.3),inset_0_1px_0_rgba(255,255,255,0.15)] transition-[box-shadow,transform] duration-[250ms] hover:-translate-y-px hover:shadow-[0_6px_28px_rgba(212,7,84,0.45),inset_0_1px_0_rgba(255,255,255,0.15)]"
               style={{
-                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-                boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
               }}
             >
               Gerar simulado
@@ -296,10 +296,10 @@ export default async function QuestoesPage({
           ) : (
             <button
               disabled
-              className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-[#0A0A0A] opacity-60"
+              className="cursor-not-allowed rounded-lg px-4 py-2 text-xs font-bold text-white opacity-60"
               style={{
-                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-orange) 100%)',
-                boxShadow: '0 4px 20px rgba(201,120,30,0.35), inset 0 1px 0 rgba(255,255,255,0.15)',
+                background: 'linear-gradient(135deg, var(--mm-gold) 0%, var(--mm-gold2) 100%)',
+                boxShadow: '0 4px 20px rgba(212,7,84,0.2), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}
             >
               Gerar simulado
@@ -322,7 +322,7 @@ export default async function QuestoesPage({
         </Card>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {rows.map((q) => {
+          {rows.map((q, rowIndex) => {
             const tags = q.tags ?? []
             const dificuldadeTag = tags.find((t) => t.dimension === 'dificuldade')
             const tipoTag = tags.find((t) => t.dimension === 'tipo_questao')
@@ -330,7 +330,11 @@ export default async function QuestoesPage({
             const sc = STATUS_CONFIG[q.status] ?? { label: q.status, tone: 'muted' as BadgeTone }
 
             return (
-              <Card key={q.id}>
+              <Card
+                key={q.id}
+                className="mm-animate-in"
+                style={{ '--stagger': Math.min(rowIndex, 8) } as React.CSSProperties}
+              >
                 <CardBody className="p-4">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">

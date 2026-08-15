@@ -141,7 +141,7 @@ export function MiniProgressBar({
                 height: 5,
                 borderRadius: '50%',
                 background: color,
-                animation: 'pulse 1.5s ease-in-out infinite',
+                animation: 'mm-pulse-soft 1.5s ease-in-out infinite',
               }}
             />
           )}
@@ -165,21 +165,11 @@ export function MiniProgressBar({
             borderRadius: 2,
             background: `linear-gradient(90deg, ${color}, ${color}80)`,
             width: indeterminate ? '100%' : `${pct}%`,
-            animation: indeterminate ? 'indeterminate 2s ease-in-out infinite' : 'none',
-            transition: 'width 500ms ease',
+            animation: indeterminate ? 'mm-indeterminate 2s ease-in-out infinite' : 'none',
+            transition: 'width var(--motion-bar) var(--ease-out-soft)',
           }}
         />
       </div>
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-        @keyframes indeterminate {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(400%); }
-        }
-      `}</style>
     </div>
   )
 }

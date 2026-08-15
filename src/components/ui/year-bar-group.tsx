@@ -31,12 +31,13 @@ function YearBarGroup({
           return (
             <div
               key={i}
-              className="flex-1 rounded-t transition-opacity hover:opacity-80"
+              className="mm-grow-y flex-1 rounded-t transition-opacity hover:opacity-80"
               style={{
                 height: `${clamped}%`,
                 background: color,
                 opacity,
-              }}
+                "--stagger": i,
+              } as React.CSSProperties}
             />
           )
         })}

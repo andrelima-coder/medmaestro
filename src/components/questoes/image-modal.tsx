@@ -218,7 +218,7 @@ export function ImageModal({
                 key={img.id}
                 onClick={() => openModal(i)}
                 title="Clique para ampliar"
-                className="group block overflow-hidden rounded-lg border border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.05)] transition-colors hover:border-[var(--mm-gold)]/50"
+                className="group mm-zoom-hover block overflow-hidden rounded-lg border border-[rgba(14,40,65,0.12)] bg-[rgba(14,40,65,0.05)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--mm-gold)]/50 hover:shadow-[var(--mm-shadow)]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -238,7 +238,7 @@ export function ImageModal({
             <button
               key={img.id}
               onClick={() => openModal(i)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[rgba(123,63,160,0.3)] bg-[rgba(123,63,160,0.1)] px-2.5 py-1 text-xs font-medium text-[#7B3FA0] hover:bg-[rgba(123,63,160,0.2)] transition-colors"
+              className="mm-chip mm-press inline-flex items-center gap-1.5 rounded-lg border border-[rgba(123,63,160,0.3)] bg-[rgba(123,63,160,0.1)] px-2.5 py-1 text-xs font-medium text-[#7B3FA0] hover:bg-[rgba(123,63,160,0.2)]"
             >
               🖼 {SCOPE_LABELS[img.image_scope] ?? img.image_scope}
             </button>
@@ -249,12 +249,12 @@ export function ImageModal({
       {/* Modal */}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={() => setOpen(false)}
         >
           <div
             data-modal-box
-            className={`relative flex flex-col gap-3 rounded-xl border border-[rgba(14,40,65,0.12)] bg-[var(--mm-surface)] p-4 mx-4 ${
+            className={`relative flex flex-col gap-3 rounded-xl border border-[rgba(14,40,65,0.12)] bg-[var(--mm-surface)] p-4 mx-4 shadow-[var(--mm-shadow-lg)] animate-in fade-in zoom-in-95 duration-200 ${
               modalSize ? '' : 'max-w-3xl w-full max-h-[90vh]'
             }`}
             style={

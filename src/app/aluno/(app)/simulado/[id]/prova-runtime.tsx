@@ -191,14 +191,14 @@ export function ProvaRuntime({
               const cls = st?.locked
                 ? 'bg-primary text-primary-foreground'
                 : i === current
-                  ? 'border-primary text-foreground'
-                  : 'border-border text-muted-foreground'
+                  ? 'scale-110 border-primary text-foreground shadow-[0_2px_10px_rgba(212,7,84,0.25)]'
+                  : 'border-border text-muted-foreground hover:border-[var(--mm-border-hover)] hover:text-foreground'
               const flag = flagged[qq.id] ? ' ring-2 ring-[#FBAE40]' : ''
               return (
                 <button
                   key={qq.id}
                   onClick={() => setCurrent(i)}
-                  className={`size-8 rounded-md border text-xs ${cls}${flag}`}
+                  className={`mm-chip mm-press size-8 rounded-md border text-xs ${cls}${flag}`}
                   title={flagged[qq.id] ? 'Sinalizada' : st?.locked ? 'Respondida' : 'Pendente'}
                 >
                   {i + 1}
@@ -211,7 +211,7 @@ export function ProvaRuntime({
           <button
             onClick={onPause}
             disabled={isPending}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
+            className="mm-chip mm-press w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)]"
           >
             Pausar e sair
           </button>
@@ -219,14 +219,14 @@ export function ProvaRuntime({
         <button
           onClick={finish}
           disabled={isPending}
-          className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4]"
+          className="mm-press w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_rgba(212,7,84,0.25)] transition-[box-shadow,transform] duration-200 hover:shadow-[0_6px_22px_rgba(212,7,84,0.4)] disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4] disabled:shadow-none"
         >
           Finalizar prova
         </button>
       </aside>
 
       {/* Questão atual */}
-      <section className="rounded-xl border border-border bg-card p-6">
+      <section key={q.id} className="mm-animate-in rounded-xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
         <div className="mb-2 text-xs text-muted-foreground">
           {campaignName} · Questão {current + 1} de {questions.length}
           {q.origem ? ` · ${q.origem}` : ''}
@@ -237,15 +237,17 @@ export function ProvaRuntime({
           <button
             type="button"
             onClick={highlightSelection}
-            className="rounded-md border border-border px-2 py-1 text-xs text-foreground"
+            className="mm-chip mm-press rounded-md border border-border px-2 py-1 text-xs text-foreground hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)]"
           >
             Marca-texto
           </button>
           <button
             type="button"
             onClick={toggleFlag}
-            className={`rounded-md border px-2 py-1 text-xs ${
-              flagged[q.id] ? 'border-[#FBAE40] text-[#9E6606]' : 'border-border text-foreground'
+            className={`mm-chip mm-press rounded-md border px-2 py-1 text-xs ${
+              flagged[q.id]
+                ? 'border-[#FBAE40] bg-[rgba(251,174,64,0.12)] text-[#9E6606]'
+                : 'border-border text-foreground hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)]'
             }`}
           >
             {flagged[q.id] ? 'Sinalizada' : 'Sinalizar'}
@@ -254,7 +256,7 @@ export function ProvaRuntime({
             type="button"
             onClick={onReport}
             disabled={reported[q.id] || isPending}
-            className="rounded-md border border-border px-2 py-1 text-xs text-foreground disabled:opacity-50"
+            className="mm-chip mm-press rounded-md border border-border px-2 py-1 text-xs text-foreground hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)] disabled:opacity-50"
           >
             {reported[q.id] ? 'Erro reportado' : 'Reportar erro'}
           </button>
@@ -273,8 +275,12 @@ export function ProvaRuntime({
             return (
               <div
                 key={alt}
-                className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${
-                  isSel ? 'border-primary bg-primary/5' : 'border-border'
+                className={`mm-chip flex items-start gap-2 rounded-lg border p-3 text-sm ${
+                  isSel
+                    ? 'border-primary bg-primary/5 shadow-[0_2px_12px_rgba(212,7,84,0.12)]'
+                    : locked || isElim
+                      ? 'border-border'
+                      : 'border-border hover:border-primary/40 hover:bg-[rgba(14,40,65,0.02)]'
                 } ${locked ? 'opacity-70' : ''} ${isElim ? 'opacity-50' : ''}`}
               >
                 <input

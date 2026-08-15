@@ -16,10 +16,10 @@ function TagChip({
     <span
       data-slot="tag-chip"
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border bg-[rgba(14,40,65,0.05)] px-2 py-0.5 text-[11px]",
+        "mm-chip inline-flex items-center gap-1 rounded-md border bg-[rgba(14,40,65,0.05)] px-2 py-0.5 text-[11px]",
         variant === "default"
           ? "border-[var(--mm-border-default)] text-[var(--mm-muted)]"
-          : "cursor-pointer border-[rgba(212,7,84,0.3)] text-[var(--mm-gold)]",
+          : "mm-press cursor-pointer border-[rgba(212,7,84,0.3)] text-[var(--mm-gold)] hover:bg-[var(--mm-gold-bg)]",
         className
       )}
       {...props}

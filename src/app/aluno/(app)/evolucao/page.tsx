@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getMinhaBancaAtiva, getArvore, type Arvore } from '@/lib/aluno/mentoria'
@@ -116,25 +117,25 @@ export default async function EvolucaoPage() {
 
 function ArvoreCard({ arvore }: { arvore: Arvore }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Sua árvore</h2>
       <div className="mt-3 flex items-center gap-4">
         {arvore.imagemUrl ? (
           <img
             src={arvore.imagemUrl}
             alt={`Árvore no estágio ${arvore.estagio.nome}`}
-            className="h-24 w-24 shrink-0 object-contain"
+            className="mm-sway h-24 w-24 shrink-0 object-contain"
           />
         ) : (
-          <span className="text-5xl">{arvore.estagio.emoji}</span>
+          <span className="mm-sway inline-block text-5xl">{arvore.estagio.emoji}</span>
         )}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-foreground">
             {arvore.estagio.nome} · {arvore.pontos} pts
           </div>
           <div className="mt-0.5 text-sm text-muted-foreground">{arvore.estagio.frase}</div>
-          <div className="mt-2 h-2 w-full rounded bg-muted">
-            <div className="h-2 rounded bg-primary" style={{ width: `${arvore.progressoPct}%` }} />
+          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-muted">
+            <div className="mm-grow-x h-2 rounded bg-primary" style={{ width: `${arvore.progressoPct}%` }} />
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
             {arvore.proximo
@@ -155,17 +156,18 @@ function ArvoreCard({ arvore }: { arvore: Arvore }) {
 
 function TrilhaCard({ trilha, slugAtual }: { trilha: TrilhaEstagio[]; slugAtual: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Trilha de estágios</h2>
       <p className="mt-1 text-sm text-muted-foreground">Seu caminho até o estágio máximo</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        {trilha.map((t) => (
+        {trilha.map((t, i) => (
           <div
             key={t.slug}
+            style={{ '--stagger': i } as React.CSSProperties}
             className={
-              'flex w-24 flex-col items-center rounded-xl border p-3 text-center ' +
+              'mm-pop-in mm-chip flex w-24 flex-col items-center rounded-xl border p-3 text-center ' +
               (t.slug === slugAtual
-                ? 'border-primary bg-[rgba(212,7,84,0.05)]'
+                ? 'border-primary bg-[rgba(212,7,84,0.05)] shadow-[0_2px_12px_rgba(212,7,84,0.12)]'
                 : t.atingido
                   ? 'border-border'
                   : 'border-border opacity-40')
@@ -183,15 +185,17 @@ function TrilhaCard({ trilha, slugAtual }: { trilha: TrilhaEstagio[]; slugAtual:
 
 function SemanaCard({ semana }: { semana: Semana }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Semana</h2>
       <div className="mt-3 flex justify-between gap-2">
         {semana.dias.map((d, i) => (
           <div key={i} className="flex flex-col items-center gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground">{letraDia(d.dia)}</span>
             <span
+              style={{ '--stagger': i } as React.CSSProperties}
               className={
-                'size-6 rounded-full ' + (d.ativo ? 'bg-primary' : d.plantao ? 'bg-[var(--afya-amber)]' : 'bg-muted')
+                'mm-pop-in size-6 rounded-full ' +
+                (d.ativo ? 'bg-primary' : d.plantao ? 'bg-[var(--afya-amber)]' : 'bg-muted')
               }
             />
           </div>
@@ -210,7 +214,7 @@ function SemanaCard({ semana }: { semana: Semana }) {
 
 function ModulosCard({ modulos }: { modulos: ModuloDesempenho[] }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Desempenho por módulo</h2>
       <p className="mt-1 text-sm text-muted-foreground">Seu acerto vs. meta · ordenado pelo peso na prova</p>
       <div className="mt-4 flex flex-col gap-4">
@@ -235,7 +239,7 @@ function ModulosCard({ modulos }: { modulos: ModuloDesempenho[] }) {
             {m.respostas > 0 ? (
               <>
                 <div className="relative mt-1.5 h-2 w-full rounded bg-muted">
-                  <div className="h-2 rounded bg-primary" style={{ width: `${m.acertoPct}%` }} />
+                  <div className="mm-grow-x h-2 rounded bg-primary" style={{ width: `${m.acertoPct}%` }} />
                   <div
                     className="absolute top-0 h-2 w-0.5 bg-foreground"
                     style={{ left: `${m.metaPct}%` }}
@@ -271,7 +275,7 @@ function CustoCard({
 
 function PercentilCard({ percentil }: { percentil: Percentil }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Posição na turma</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Percentil <b className="text-foreground">{percentil.percentil}</b> entre {percentil.alunosComparados} alunos
@@ -291,15 +295,15 @@ function EficienciaCard({ eficiencia }: { eficiencia: Eficiencia }) {
           ? 'bg-[var(--afya-amber)]'
           : 'bg-[#1E8E5A]'
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Eficiência dos últimos 7 dias</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Ganho de intervalo ponderado pelo peso da prova ÷ horas investidas
       </p>
       {eficiencia && eficiencia.eficiencia != null ? (
         <>
-          <div className="mt-3 h-3 w-full rounded bg-muted">
-            <div className={'h-3 rounded ' + cor} style={{ width: `${eficiencia.eficiencia}%` }} />
+          <div className="mt-3 h-3 w-full overflow-hidden rounded bg-muted">
+            <div className={'mm-grow-x h-3 rounded ' + cor} style={{ width: `${eficiencia.eficiencia}%` }} />
           </div>
           <div className="mt-2 text-sm text-foreground">{eficiencia.eficiencia}/100</div>
           <div className="mt-1 text-xs text-muted-foreground">
@@ -320,7 +324,7 @@ function CadernoCard({ erros }: { erros: ErroCaderno[] }) {
   const vazio = Object.values(grupos).every((v) => v.length === 0)
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Caderno de erros</h2>
       {vazio ? (
         <p className="mt-2 text-sm text-muted-foreground">Nenhum erro registrado ainda — bom sinal.</p>
@@ -357,14 +361,14 @@ function CadernoCard({ erros }: { erros: ErroCaderno[] }) {
 function DiarioCard({ diario }: { diario: DiarioErro }) {
   if (!diario) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
         <h2 className="text-base font-bold text-foreground">Conteúdo vs. skill de prova</h2>
         <p className="mt-2 text-sm text-muted-foreground">Nenhum erro registrado nos últimos 30 dias.</p>
       </div>
     )
   }
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Conteúdo vs. skill de prova</h2>
       <p className="mt-1 text-sm text-muted-foreground">Dos {diario.total} erros nos últimos 30 dias</p>
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -384,8 +388,11 @@ function DiarioCard({ diario }: { diario: DiarioErro }) {
           return (
             <div key={c.key} className="flex items-center gap-3 text-sm">
               <span className="w-32 shrink-0 text-muted-foreground">{c.label}</span>
-              <span className="h-1.5 flex-1 rounded bg-muted">
-                <span className="block h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
+              <span className="h-1.5 flex-1 overflow-hidden rounded bg-muted">
+                <span
+                  className="mm-grow-x block h-1.5 rounded bg-primary"
+                  style={{ width: `${pct}%`, '--stagger': CAUSAS.indexOf(c) } as React.CSSProperties}
+                />
               </span>
               <span className="w-6 shrink-0 text-right text-foreground">{n}</span>
             </div>
@@ -398,7 +405,7 @@ function DiarioCard({ diario }: { diario: DiarioErro }) {
 
 function DesafiosCard({ desafios }: { desafios: Desafio[] }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Desafios</h2>
       <div className="mt-3 flex flex-col gap-3">
         {desafios.map((d) => {
@@ -411,8 +418,8 @@ function DesafiosCard({ desafios }: { desafios: Desafio[] }) {
                 <span className="text-xs font-bold text-primary">+{d.pontos} pts</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{d.descricao}</p>
-              <div className="mt-2 h-1.5 w-full rounded bg-muted">
-                <div className="h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-muted">
+                <div className="mm-grow-x h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {d.atual} de {d.alvo}
@@ -427,7 +434,7 @@ function DesafiosCard({ desafios }: { desafios: Desafio[] }) {
 
 function EventosCard({ eventos }: { eventos: EventoRecente[] }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
       <h2 className="text-base font-bold text-foreground">Eventos recentes</h2>
       {eventos.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">Nenhum evento recente.</p>
@@ -438,7 +445,7 @@ function EventosCard({ eventos }: { eventos: EventoRecente[] }) {
             return (
               <div
                 key={i}
-                className="flex items-center justify-between gap-3 border-b border-border py-2.5 text-sm last:border-b-0"
+                className="flex items-center justify-between gap-3 border-b border-border py-2.5 text-sm transition-colors duration-150 last:border-b-0 hover:bg-muted/30"
               >
                 <span className="text-foreground">
                   <b>+{ev.pontos}</b> · {TIPO_EVENTO_LABEL[ev.tipo] ?? ev.tipo}

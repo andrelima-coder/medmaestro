@@ -153,10 +153,10 @@ export function GerarSimuladoForm({
                 key={o.value}
                 onClick={() => setProportion(o.value)}
                 className={cn(
-                  'flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
+                  'mm-chip mm-press flex flex-col gap-1 rounded-lg border p-3 text-left',
                   active
-                    ? 'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)]'
-                    : 'border-[var(--mm-border-default)] hover:border-[var(--mm-border-hover)]'
+                    ? 'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] shadow-[0_2px_12px_rgba(212,7,84,0.12)]'
+                    : 'border-[var(--mm-border-default)] hover:-translate-y-px hover:border-[var(--mm-border-hover)] hover:shadow-[var(--mm-shadow-sm)]'
                 )}
               >
                 <span className={cn('text-[13px] font-semibold', active ? 'text-[var(--mm-gold)]' : 'text-foreground')}>
@@ -181,10 +181,10 @@ export function GerarSimuladoForm({
                 key={o.value}
                 onClick={() => setFormat(o.value)}
                 className={cn(
-                  'flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
+                  'mm-chip mm-press flex flex-col gap-1 rounded-lg border p-3 text-left',
                   active
-                    ? 'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)]'
-                    : 'border-[var(--mm-border-default)] hover:border-[var(--mm-border-hover)]'
+                    ? 'border-[var(--mm-border-active)] bg-[var(--mm-gold-bg)] shadow-[0_2px_12px_rgba(212,7,84,0.12)]'
+                    : 'border-[var(--mm-border-default)] hover:-translate-y-px hover:border-[var(--mm-border-hover)] hover:shadow-[var(--mm-shadow-sm)]'
                 )}
               >
                 <span className={cn('text-[13px] font-semibold', active ? 'text-[var(--mm-gold)]' : 'text-foreground')}>

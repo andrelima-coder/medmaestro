@@ -1,5 +1,7 @@
 'use client'
 
+import type * as React from 'react'
+
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { revisarRevelarAction, revisarRegistrarAction } from './actions'
 
@@ -100,11 +102,11 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
           {idx + 1} de {cards.length}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded bg-muted">
-        <div className="h-1.5 rounded bg-primary transition-all" style={{ width: `${(idx / cards.length) * 100}%` }} />
+      <div className="h-1.5 w-full overflow-hidden rounded bg-muted">
+        <div className="mm-bar h-1.5 rounded bg-primary" style={{ width: `${(idx / cards.length) * 100}%` }} />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div key={card.conceitoId ?? idx} className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
         <div className="text-lg font-bold text-foreground">{card.proposicao}</div>
         <div className="mt-4 rounded-xl bg-muted/40 p-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{card.modulo}</div>
@@ -117,7 +119,7 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
               <button
                 key={k}
                 onClick={() => setEscolha(k)}
-                className="flex items-start gap-3 rounded-lg border border-border p-3 text-left text-sm transition hover:border-primary"
+                className="mm-chip mm-press flex items-start gap-3 rounded-lg border border-border p-3 text-left text-sm hover:border-primary hover:bg-[rgba(212,7,84,0.03)]"
               >
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
                   {k}
@@ -137,19 +139,19 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => escolherConfianca(1)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary"
+                className="mm-chip mm-press rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary hover:bg-[rgba(212,7,84,0.03)]"
               >
                 😬 Chutei
               </button>
               <button
                 onClick={() => escolherConfianca(2)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary"
+                className="mm-chip mm-press rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary hover:bg-[rgba(212,7,84,0.03)]"
               >
                 🤔 Tenho dúvida
               </button>
               <button
                 onClick={() => escolherConfianca(3)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary"
+                className="mm-chip mm-press rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary hover:bg-[rgba(212,7,84,0.03)]"
               >
                 ✅ Tenho certeza
               </button>
@@ -160,12 +162,13 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
         {pending && confianca && !revelado && <div className="mt-4 text-sm text-muted-foreground">Revelando…</div>}
 
         {revelado && (
-          <div className="mt-4 flex flex-col gap-3">
-            {letras.map((k) => (
+          <div className="mm-animate-in mt-4 flex flex-col gap-3">
+            {letras.map((k, ki) => (
               <div
                 key={k}
+                style={{ '--stagger': ki } as React.CSSProperties}
                 className={
-                  'flex items-start gap-3 rounded-lg border p-3 text-left text-sm ' +
+                  'mm-animate-in mm-chip flex items-start gap-3 rounded-lg border p-3 text-left text-sm ' +
                   (k === revelado.correctAnswer
                     ? 'border-[#1E8E5A] bg-[rgba(30,142,90,0.06)]'
                     : k === escolha
@@ -181,8 +184,9 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
             ))}
 
             <div
+              style={{ '--stagger': 5 } as React.CSSProperties}
               className={
-                'rounded-lg px-3 py-2 text-sm font-semibold ' +
+                'mm-animate-in rounded-lg px-3 py-2 text-sm font-semibold ' +
                 (revelado.acerto ? 'bg-[rgba(30,142,90,0.1)] text-[#1E8E5A]' : 'bg-[rgba(211,64,42,0.1)] text-[#D3402A]')
               }
             >
@@ -212,7 +216,7 @@ export function RevisarClient({ cards: initialCards }: { cards: RevisarCard[] })
                       key={c.key}
                       onClick={() => escolherCausa(c.key)}
                       disabled={pending}
-                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary disabled:opacity-60"
+                      className="mm-chip mm-press rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:border-primary hover:bg-[rgba(212,7,84,0.03)] disabled:opacity-60"
                     >
                       {c.label}
                     </button>

@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -40,8 +41,8 @@ export default async function MetasPage() {
           <div className="mt-1 text-2xl font-bold text-foreground">
             {today}/{goal}
           </div>
-          <div className="mt-2 h-2 w-full rounded bg-muted">
-            <div className="h-2 rounded bg-primary" style={{ width: `${pct}%` }} />
+          <div className="mt-2 h-2 w-full overflow-hidden rounded bg-muted">
+            <div className="mm-grow-x mm-bar h-2 rounded bg-primary" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-5">
@@ -54,15 +55,15 @@ export default async function MetasPage() {
         <h2 className="text-base font-bold text-foreground">Últimos 7 dias</h2>
         <p className="mt-1 text-sm text-muted-foreground">Questões praticadas por dia.</p>
         <div className="mt-4 flex items-end gap-3">
-          {last7.map((d) => {
+          {last7.map((d, i) => {
             const alturaPct = Math.round((d.count / maxDia) * 100)
             const dia = DIA_SEMANA[new Date(d.date + 'T00:00:00').getDay()]
             return (
               <div key={d.date} className="flex flex-1 flex-col items-center gap-1.5">
                 <div className="flex h-24 w-full items-end rounded-lg bg-muted/40 p-1">
                   <div
-                    className="w-full rounded bg-primary transition-all"
-                    style={{ height: d.count > 0 ? `${Math.max(8, alturaPct)}%` : '0%' }}
+                    className="mm-grow-y w-full rounded bg-primary"
+                    style={{ height: d.count > 0 ? `${Math.max(8, alturaPct)}%` : '0%', '--stagger': i } as React.CSSProperties}
                   />
                 </div>
                 <div className="text-[11px] font-semibold text-muted-foreground">{dia}</div>

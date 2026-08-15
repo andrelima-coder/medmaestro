@@ -239,6 +239,7 @@ export default async function RevisaoPage({
             return (
               <Link
                 key={tab.key}
+                className="mm-chip hover:bg-[rgba(14,40,65,0.04)]"
                 href={buildUrl(params, tab.key)}
                 style={{
                   display: 'flex',
@@ -247,7 +248,7 @@ export default async function RevisaoPage({
                   padding: '7px 10px',
                   borderRadius: 8,
                   textDecoration: 'none',
-                  background: isActive ? 'var(--mm-gold-bg)' : 'transparent',
+                  background: isActive ? 'var(--mm-gold-bg)' : undefined,
                   border: isActive ? '1px solid var(--mm-gold-border)' : '1px solid transparent',
                 }}
               >
@@ -302,6 +303,7 @@ export default async function RevisaoPage({
             return (
               <Link
                 key={q.id as string}
+                className="mm-chip hover:bg-[rgba(14,40,65,0.04)]"
                 href={`/revisao/${q.id}`}
                 style={{
                   display: 'flex',
@@ -364,16 +366,18 @@ export default async function RevisaoPage({
             return (
               <Link
                 key={tab.key}
+                className={
+                  isActive
+                    ? 'mm-chip mm-press border border-[var(--mm-gold-border)]'
+                    : 'mm-chip mm-press border border-[var(--mm-line2)] hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)]'
+                }
                 href={buildUrl(params, tab.key)}
                 style={{
                   padding: '5px 14px',
                   borderRadius: 20,
                   fontSize: 11,
                   textDecoration: 'none',
-                  border: isActive
-                    ? '1px solid var(--mm-gold-border)'
-                    : '1px solid var(--mm-line2)',
-                  background: isActive ? 'var(--mm-gold-bg)' : 'transparent',
+                  background: isActive ? 'var(--mm-gold-bg)' : undefined,
                   color: isActive ? 'var(--mm-gold)' : 'var(--mm-text2)',
                   fontWeight: isActive ? 600 : 400,
                 }}

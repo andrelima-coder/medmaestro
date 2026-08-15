@@ -99,7 +99,7 @@ export function PraticarClient({
   // Fim do lote.
   if (idx >= batch.length) {
     return (
-      <div className="mx-auto mt-10 max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+      <div className="mm-pop-in mx-auto mt-10 max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-[var(--mm-shadow)]">
         <h1 className="text-xl font-bold text-foreground">Sessão concluída 🎉</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Você acertou {acertos} de {batch.length}.
@@ -121,7 +121,7 @@ export function PraticarClient({
       <div className="mb-2 text-xs text-muted-foreground">
         Questão {idx + 1} de {batch.length} · acertos: {acertos}
       </div>
-      <div className="rounded-2xl border border-border bg-card p-6">
+      <div key={q.id} className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]">
         <p className="whitespace-pre-line text-foreground">{q.stem}</p>
         <div className="mt-5 space-y-2">
           {ALTS.map((alt) => {
@@ -133,16 +133,16 @@ export function PraticarClient({
             return (
               <label
                 key={alt}
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
+                className={`mm-chip flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${
                   result
                     ? isCorrect
                       ? 'border-[#006048] bg-[rgba(0,96,72,0.1)]'
                       : isWrongPick
                         ? 'border-[#D3402A] bg-[rgba(211,64,42,0.1)]'
-                        : 'border-border'
+                        : 'border-border opacity-60'
                     : isSel
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border'
+                      ? 'border-primary bg-primary/5 shadow-[0_2px_12px_rgba(212,7,84,0.12)]'
+                      : 'border-border hover:border-primary/40 hover:bg-[rgba(14,40,65,0.02)]'
                 }`}
               >
                 <input
@@ -162,7 +162,7 @@ export function PraticarClient({
         </div>
 
         {result && (
-          <div className="mt-4 rounded-lg bg-muted/50 p-3 text-sm">
+          <div className="mm-animate-in mt-4 rounded-lg bg-muted/50 p-3 text-sm">
             <p className={result.isCorrect ? 'text-[#006048]' : 'text-[#D3402A]'}>
               {result.isCorrect ? 'Você acertou!' : `Resposta correta: ${result.correctAnswer}`}
             </p>
@@ -177,14 +177,14 @@ export function PraticarClient({
             <button
               onClick={responder}
               disabled={!selected || isPending}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4]"
+              className="mm-press rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_rgba(212,7,84,0.25)] transition-[box-shadow,transform] duration-200 hover:shadow-[0_6px_22px_rgba(212,7,84,0.4)] disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4] disabled:shadow-none"
             >
               Responder
             </button>
           ) : (
             <button
               onClick={proxima}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground"
+              className="mm-press rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_rgba(212,7,84,0.25)] transition-[box-shadow,transform] duration-200 hover:shadow-[0_6px_22px_rgba(212,7,84,0.4)]"
             >
               {idx + 1 >= batch.length ? 'Finalizar' : 'Próxima'}
             </button>

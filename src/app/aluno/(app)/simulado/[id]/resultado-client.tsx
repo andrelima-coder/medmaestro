@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useParams } from 'next/navigation'
 import { saveDoubt } from './actions'
 
@@ -37,7 +37,7 @@ export function ResultadoClient({
     <div className="space-y-6">
       {confetti && <Confetti />}
 
-      <header className="rounded-2xl border border-border bg-card p-6 text-center">
+      <header className="mm-animate-in rounded-2xl border border-border bg-card p-6 text-center shadow-[var(--mm-shadow-sm)]">
         <h1 className="text-xl font-bold text-foreground">{campaignName} — Resultado</h1>
         {confetti && (
           <p className="mt-1 text-sm text-[#006048]">
@@ -66,7 +66,7 @@ export function ResultadoClient({
       </header>
 
       {/* Mapa de questões */}
-      <section className="rounded-2xl border border-border bg-card p-6">
+      <section className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]" style={{ '--stagger': 1 } as CSSProperties}>
         <h2 className="mb-3 text-sm font-semibold text-foreground">Mapa de questões</h2>
         <div className="grid grid-cols-8 gap-2 sm:grid-cols-10">
           {questions.map((q, i) => {
@@ -82,7 +82,8 @@ export function ResultadoClient({
               <a
                 key={i}
                 href={allowReview ? `#q-${q.number}` : undefined}
-                className={`flex size-9 items-center justify-center rounded-md text-xs ${cls}`}
+                className={`mm-pop-in mm-chip flex size-9 items-center justify-center rounded-md text-xs hover:scale-110 ${cls}`}
+                style={{ '--stagger': Math.min(i, 30) } as CSSProperties}
                 title={
                   q.correct === true
                     ? 'Acertou'
@@ -150,7 +151,7 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
             return (
               <li
                 key={alt}
-                className={`rounded-lg border p-2 text-sm ${
+                className={`mm-chip rounded-lg border p-2 text-sm ${
                   isCorrect
                     ? 'border-[#006048] bg-[rgba(0,96,72,0.1)]'
                     : isSelected
@@ -166,8 +167,8 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
                   {pct !== null && <span className="text-xs text-muted-foreground">{pct}%</span>}
                 </div>
                 {pct !== null && (
-                  <div className="mt-1 h-1.5 w-full rounded bg-muted">
-                    <div className="h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-muted">
+                    <div className="mm-grow-x h-1.5 rounded bg-primary" style={{ width: `${pct}%` }} />
                   </div>
                 )}
               </li>
@@ -219,7 +220,7 @@ function ShareButton({
   return (
     <button
       onClick={share}
-      className="mt-3 rounded-lg border border-border px-4 py-1.5 text-sm text-foreground"
+      className="mm-chip mm-press mt-3 rounded-lg border border-border px-4 py-1.5 text-sm text-foreground hover:border-[var(--mm-border-hover)] hover:bg-[rgba(14,40,65,0.03)]"
     >
       {copied ? 'Copiado!' : 'Compartilhar resultado'}
     </button>
@@ -233,6 +234,7 @@ function Confetti() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
     const colors = ['#9E6606', '#006048', '#206973', '#D3402A', '#7B3FA0']

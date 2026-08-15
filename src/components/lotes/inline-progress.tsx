@@ -188,7 +188,7 @@ export function InlineProgress({ examId }: { examId: string }) {
                 height: 6,
                 borderRadius: '50%',
                 background: ss.color,
-                animation: 'pulse 1.5s ease-in-out infinite',
+                animation: 'mm-pulse-soft 1.5s ease-in-out infinite',
               }}
             />
           )}
@@ -224,8 +224,8 @@ export function InlineProgress({ examId }: { examId: string }) {
                 borderRadius: 4,
                 background: `linear-gradient(90deg, ${ss.color}, ${ss.color}80)`,
                 width: indeterminate ? '40%' : `${pct}%`,
-                animation: indeterminate ? 'inline-indeterminate 1.6s ease-in-out infinite' : 'none',
-                transition: 'width 500ms ease',
+                animation: indeterminate ? 'mm-indeterminate 1.6s ease-in-out infinite' : 'none',
+                transition: 'width var(--motion-bar) var(--ease-out-soft)',
               }}
             />
           </div>
@@ -273,17 +273,6 @@ export function InlineProgress({ examId }: { examId: string }) {
           Voltar aos lotes
         </Button>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-        @keyframes inline-indeterminate {
-          0%   { transform: translateX(-120%); }
-          100% { transform: translateX(320%); }
-        }
-      `}</style>
     </div>
   )
 }

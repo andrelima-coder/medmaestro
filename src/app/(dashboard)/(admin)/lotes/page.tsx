@@ -1,3 +1,4 @@
+import type * as React from 'react'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { RetriggerButton } from '@/components/lotes/retrigger-button'
@@ -110,6 +111,7 @@ export default async function LotesPage() {
         </div>
         <Link
           href="/lotes/novo"
+          className="mm-press shadow-[0_4px_20px_rgba(212,7,84,0.25)] transition-[box-shadow,transform] duration-[250ms] hover:-translate-y-px hover:shadow-[0_6px_28px_rgba(212,7,84,0.4)]"
           style={{
             background: 'linear-gradient(135deg, var(--mm-gold), var(--mm-gold2))',
             color: '#FFFFFF',
@@ -119,7 +121,6 @@ export default async function LotesPage() {
             padding: '10px 20px',
             borderRadius: 8,
             border: 'none',
-            boxShadow: '0 4px 20px rgba(212,7,84,0.25)',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
@@ -138,9 +139,10 @@ export default async function LotesPage() {
             { label: 'Em processo', value: statsProcessing, color: '#206973' },
             { label: 'Pendentes', value: statsPending, color: '#9E6606' },
             { label: 'Com erro', value: statsError, color: '#D3402A' },
-          ].map((s) => (
+          ].map((s, i) => (
             <div
               key={s.label}
+              className="mm-lift mm-animate-in"
               style={{
                 background: 'var(--mm-surface)',
                 border: '1px solid var(--mm-line)',
@@ -149,7 +151,8 @@ export default async function LotesPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-              }}
+                '--stagger': i,
+              } as React.CSSProperties}
             >
               <span
                 className="font-[family-name:var(--font-syne)]"
@@ -225,6 +228,7 @@ export default async function LotesPage() {
                 return (
                   <tr
                     key={eid}
+                    className="transition-colors duration-150 hover:bg-[rgba(14,40,65,0.03)]"
                     style={{ borderBottom: '1px solid var(--mm-line)' }}
                   >
                     <td style={{ fontSize: 12, padding: '11px 16px', color: 'var(--mm-text2)' }}>

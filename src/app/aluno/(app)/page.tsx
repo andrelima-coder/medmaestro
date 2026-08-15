@@ -248,7 +248,7 @@ export default async function AlunoHomePage() {
       {weakest && (
         <a
           href={`/aluno/praticar?modulo=${weakest.tagId}`}
-          className="block rounded-2xl border border-[#FBAE40] bg-[rgba(251,174,64,0.05)] p-5 transition hover:bg-[rgba(251,174,64,0.1)]"
+          className="mm-lift block rounded-2xl border border-[#FBAE40] bg-[rgba(251,174,64,0.05)] p-5 hover:bg-[rgba(251,174,64,0.1)]"
         >
           <div className="text-xs font-semibold text-[#9E6606]">🎯 Recomendado para você</div>
           <div className="mt-1 font-semibold text-foreground">Praticar seu ponto fraco: {weakest.label}</div>
@@ -276,7 +276,7 @@ export default async function AlunoHomePage() {
 
 function Atalho({ href, titulo, desc }: { href: string; titulo: string; desc: string }) {
   return (
-    <a href={href} className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary">
+    <a href={href} className="mm-lift rounded-2xl border border-border bg-card p-5 shadow-[var(--mm-shadow-sm)] hover:border-primary">
       <div className="font-semibold text-foreground">{titulo}</div>
       <div className="mt-1 text-sm text-muted-foreground">{desc}</div>
     </a>
@@ -290,7 +290,7 @@ function ArvoreIlustrada({ imagemUrl, estagioNome }: { imagemUrl: string | null;
       <img
         src={imagemUrl}
         alt={`Árvore no estágio ${estagioNome}`}
-        className="mx-auto my-4 h-44 w-auto object-contain"
+        className="mm-sway mx-auto my-4 h-44 w-auto object-contain"
       />
     )
   }
@@ -298,13 +298,15 @@ function ArvoreIlustrada({ imagemUrl, estagioNome }: { imagemUrl: string | null;
     <div className="relative mx-auto my-4 h-36 w-44">
       <div className="absolute bottom-2 left-1/2 h-4 w-28 -translate-x-1/2 rounded-full bg-[var(--afya-mint)]" />
       <div className="absolute bottom-4 left-1/2 h-10 w-3.5 -translate-x-1/2 rounded-sm bg-[var(--afya-navy)]" />
-      <div className="absolute bottom-10 left-1/2 size-24 -translate-x-1/2 rounded-full bg-[var(--afya-teal-deep)] opacity-90" />
-      <div className="absolute bottom-16 left-[32%] size-16 -translate-x-1/2 rounded-full bg-[var(--afya-teal)]" />
-      <div className="absolute bottom-16 left-[68%] size-14 -translate-x-1/2 rounded-full bg-[var(--afya-green)]" />
-      <div className="absolute bottom-24 left-1/2 size-6 -translate-x-1/2 rounded-full bg-[var(--afya-magenta)]" />
-      <div className="absolute bottom-28 left-[22%] size-1.5 rounded-full bg-[var(--afya-magenta)]" />
-      <div className="absolute bottom-20 left-[78%] size-1.5 rounded-full bg-[var(--afya-magenta)]" />
-      <div className="absolute bottom-32 left-[54%] size-1.5 rounded-full bg-[var(--afya-magenta)]" />
+      <div className="mm-sway absolute inset-0">
+        <div className="absolute bottom-10 left-1/2 size-24 -translate-x-1/2 rounded-full bg-[var(--afya-teal-deep)] opacity-90" />
+        <div className="absolute bottom-16 left-[32%] size-16 -translate-x-1/2 rounded-full bg-[var(--afya-teal)]" />
+        <div className="absolute bottom-16 left-[68%] size-14 -translate-x-1/2 rounded-full bg-[var(--afya-green)]" />
+        <div className="absolute bottom-24 left-1/2 size-6 -translate-x-1/2 rounded-full bg-[var(--afya-magenta)]" />
+        <div className="absolute bottom-28 left-[22%] size-1.5 rounded-full bg-[var(--afya-magenta)] [animation:mm-pulse-soft_2.4s_ease-in-out_infinite]" />
+        <div className="absolute bottom-20 left-[78%] size-1.5 rounded-full bg-[var(--afya-magenta)] [animation:mm-pulse-soft_2.4s_ease-in-out_0.8s_infinite]" />
+        <div className="absolute bottom-32 left-[54%] size-1.5 rounded-full bg-[var(--afya-magenta)] [animation:mm-pulse-soft_2.4s_ease-in-out_1.6s_infinite]" />
+      </div>
     </div>
   )
 }

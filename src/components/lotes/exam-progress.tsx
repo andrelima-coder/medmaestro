@@ -221,7 +221,7 @@ export function ExamProgress({
                 height: 6,
                 borderRadius: '50%',
                 background: ss.color,
-                animation: 'pulse 1.5s ease-in-out infinite',
+                animation: 'mm-pulse-soft 1.5s ease-in-out infinite',
               }}
             />
           )}
@@ -269,8 +269,8 @@ export function ExamProgress({
                       borderRadius: 3,
                       background: `linear-gradient(90deg, ${ss.color}, ${ss.color}80)`,
                       width: indeterminate ? '100%' : `${pct}%`,
-                      animation: indeterminate ? 'indeterminate 2s ease-in-out infinite' : 'none',
-                      transition: 'width 500ms ease',
+                      animation: indeterminate ? 'mm-indeterminate 2s ease-in-out infinite' : 'none',
+                      transition: 'width var(--motion-bar) var(--ease-out-soft)',
                     }}
                   />
                 </div>
@@ -313,17 +313,6 @@ export function ExamProgress({
         )}
         <Button variant="ghost" render={<a href="/lotes" />}>Voltar aos lotes</Button>
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-        @keyframes indeterminate {
-          0%   { transform: translateX(-100%); }
-          100% { transform: translateX(400%); }
-        }
-      `}</style>
     </div>
   )
 }

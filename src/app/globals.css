@@ -448,6 +448,118 @@ textarea:focus-visible {
   }
 }
 
+/* ================================================================
+   Motion design system — tokens + keyframes + utilitários.
+   Regras: movimento curto, easing suave, magenta só como acento.
+   O guard global de prefers-reduced-motion (acima) zera tudo isto.
+================================================================ */
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 450ms;
+  --motion-bar: 700ms;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mm-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes mm-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  70%  { transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes mm-grow-x {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes mm-grow-y {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+/* Barra indeterminada — consolida os keyframes que viviam duplicados
+   em mini-progress-bar / exam-progress / inline-progress */
+@keyframes mm-indeterminate {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(400%); }
+}
+@keyframes mm-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+/* Balanço vegetal da árvore de gamificação do aluno */
+@keyframes mm-sway {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50%      { transform: rotate(1.4deg); }
+}
+
+/* Entrada de cards/linhas — stagger via style={{ '--stagger': i }} */
+.mm-animate-in {
+  animation: mm-fade-up var(--motion-slow) var(--ease-out-soft) both;
+  animation-delay: calc(var(--stagger, 0) * 60ms);
+}
+.mm-pop-in {
+  animation: mm-pop var(--motion-base) var(--ease-spring) both;
+  animation-delay: calc(var(--stagger, 0) * 35ms);
+}
+/* Crescimento de barras de gráfico (independe do width/height final) */
+.mm-grow-x {
+  transform-origin: left center;
+  animation: mm-grow-x var(--motion-bar) var(--ease-out-soft) both;
+  animation-delay: calc(var(--stagger, 0) * 60ms);
+}
+.mm-grow-y {
+  transform-origin: bottom center;
+  animation: mm-grow-y var(--motion-bar) var(--ease-out-soft) both;
+  animation-delay: calc(var(--stagger, 0) * 50ms);
+}
+/* Barras de progresso que atualizam ao vivo */
+.mm-bar {
+  transition: width var(--motion-bar) var(--ease-out-soft);
+}
+/* Elevação em hover — usa os tokens de sombra do tema claro */
+.mm-lift {
+  transition:
+    box-shadow var(--motion-base) ease,
+    transform var(--motion-base) ease,
+    border-color var(--motion-base) ease,
+    background-color var(--motion-base) ease;
+}
+.mm-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--mm-shadow-lg);
+}
+/* Especificidade zero: qualquer hover:border-* utilitário vence esta borda */
+:where(.mm-lift:hover) {
+  border-color: var(--mm-border-hover);
+}
+.mm-press:active {
+  transform: translateY(1px) scale(0.985);
+}
+/* Chips/badges/alternativas — seleção com fade em vez de corte seco */
+.mm-chip {
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+/* Figuras — zoom sutil no hover do thumb */
+.mm-zoom-hover img {
+  transition: transform var(--motion-base) var(--ease-out-soft);
+}
+.mm-zoom-hover:hover img {
+  transform: scale(1.04);
+}
+.mm-sway {
+  transform-origin: bottom center;
+  animation: mm-sway 5s ease-in-out infinite;
+}
+
 /* Tabelas extraídas via Docling (extracted_tables) */
 .mm-doc-table table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0; }
 .mm-doc-table th, .mm-doc-table td { border: 1px solid rgba(14, 40, 65, 0.14); padding: 4px 8px; text-align: left; vertical-align: top; }
