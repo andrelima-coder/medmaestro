@@ -46,6 +46,7 @@ export type Arvore = {
   progressoPct: number
   divida: number
   murchando: boolean
+  imagemUrl: string | null
 }
 
 /** Árvore de pontos vitalícios (XP acumulado) — mt_xp_eventos, mesma fonte do mentortemi-web. */
@@ -69,7 +70,26 @@ export async function getArvore(supabase: SupabaseClient): Promise<Arvore | null
     progressoPct: a.progresso_pct,
     divida: a.divida,
     murchando: a.murchando,
+    imagemUrl: await getArvoreImagemUrl(supabase, a.estagio.slug, a.murchando),
   }
+}
+
+/** URL pública (bucket app-assets) da ilustração do estágio, na variante murcha quando aplicável. */
+async function getArvoreImagemUrl(
+  supabase: SupabaseClient,
+  estagioSlug: string,
+  murchando: boolean,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('mt_estagios')
+    .select('imagem, imagem_murcho')
+    .eq('slug', estagioSlug)
+    .single()
+  if (error || !data) return null
+  const est = data as { imagem: string | null; imagem_murcho: string | null }
+  const path = (murchando ? est.imagem_murcho : null) ?? est.imagem
+  if (!path) return null
+  return supabase.storage.from('app-assets').getPublicUrl(path).data.publicUrl
 }
 
 export type EngajamentoHoje = {

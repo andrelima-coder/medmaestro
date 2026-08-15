@@ -180,7 +180,7 @@ export default async function AlunoHomePage() {
                   </span>
                 </div>
 
-                <ArvoreIlustrada />
+                <ArvoreIlustrada imagemUrl={arvore.imagemUrl} estagioNome={arvore.estagio.nome} />
 
                 <div className="text-center">
                   <div className="text-3xl font-bold text-foreground">{arvore.pontos} pontos</div>
@@ -283,8 +283,17 @@ function Atalho({ href, titulo, desc }: { href: string; titulo: string; desc: st
   )
 }
 
-/** Ilustração decorativa da árvore (círculos sobrepostos) — reconcilia com a Figura 1 de referência. */
-function ArvoreIlustrada() {
+/** Ilustração do estágio da árvore (bucket app-assets via mt_estagios); círculos CSS como fallback. */
+function ArvoreIlustrada({ imagemUrl, estagioNome }: { imagemUrl: string | null; estagioNome: string }) {
+  if (imagemUrl) {
+    return (
+      <img
+        src={imagemUrl}
+        alt={`Árvore no estágio ${estagioNome}`}
+        className="mx-auto my-4 h-44 w-auto object-contain"
+      />
+    )
+  }
   return (
     <div className="relative mx-auto my-4 h-36 w-44">
       <div className="absolute bottom-2 left-1/2 h-4 w-28 -translate-x-1/2 rounded-full bg-[var(--afya-mint)]" />
