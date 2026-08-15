@@ -119,7 +119,15 @@ function ArvoreCard({ arvore }: { arvore: Arvore }) {
     <div className="rounded-2xl border border-border bg-card p-6">
       <h2 className="text-base font-bold text-foreground">Sua árvore</h2>
       <div className="mt-3 flex items-center gap-4">
-        <span className="text-5xl">{arvore.estagio.emoji}</span>
+        {arvore.imagemUrl ? (
+          <img
+            src={arvore.imagemUrl}
+            alt={`Árvore no estágio ${arvore.estagio.nome}`}
+            className="h-24 w-24 shrink-0 object-contain"
+          />
+        ) : (
+          <span className="text-5xl">{arvore.estagio.emoji}</span>
+        )}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-foreground">
             {arvore.estagio.nome} · {arvore.pontos} pts
