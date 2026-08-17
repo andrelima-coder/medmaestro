@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { isQuestionLockedByActiveExam } from '@/lib/aluno/exam-lock'
 
 // Revisão SRS por conceito (feature mentoria — porte do mentortemi-web).
 // Duas etapas: revelar (mostra gabarito + comentários, sem gravar nada) e
@@ -28,6 +29,11 @@ export async function revisarRevelarAction(questionId: string, escolha: string):
   if (!user) return { ok: false, error: 'Não autenticado.' }
 
   const service = createServiceClient()
+  // Não revelar gabarito de questão que está num simulado em andamento do aluno
+  // (burlaria a prova ranqueada).
+  if (await isQuestionLockedByActiveExam(service, user.id, questionId)) {
+    return { ok: false, error: 'Esta questão faz parte de um simulado em andamento — finalize-o antes de revisá-la.' }
+  }
   const { data: q } = await service
     .from('questions')
     .select('correct_answer, question_comments(comment_type, content)')

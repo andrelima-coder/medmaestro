@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getPracticeBatch, getCorrection, type PracticeQuestion } from '@/lib/aluno/estudo'
+import { isQuestionLockedByActiveExam } from '@/lib/aluno/exam-lock'
 
 // Prática avulsa (feature 003 — B005).
 
@@ -40,6 +41,14 @@ export async function recordPracticeAction(
   }
 
   const service = createServiceClient()
+  // Não revelar gabarito de questão que está num simulado em andamento do aluno
+  // (burlaria a prova ranqueada). Também evita poluir as estatísticas de prática.
+  if (await isQuestionLockedByActiveExam(service, user.id, questionId)) {
+    return {
+      ok: false,
+      error: 'Esta questão faz parte de um simulado em andamento — finalize o simulado antes de praticá-la.',
+    }
+  }
   const { correctAnswer, comment } = await getCorrection(service, questionId)
   const isCorrect = correctAnswer != null && selectedAlt === correctAnswer
 
