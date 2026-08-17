@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import {
   createBlocoAction,
   deleteBlocoAction,
@@ -25,6 +25,7 @@ export type AgendaNota = {
 
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const CORES = ['#D40754', '#206973', '#9E6606', '#006048', '#0E2841']
+const HORA_PX = 52
 
 function relTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -34,6 +35,28 @@ function relTime(iso: string): string {
   const h = Math.floor(min / 60)
   if (h < 24) return `há ${h}h`
   return `há ${Math.floor(h / 24)}d`
+}
+
+function startOfWeek(d: Date): Date {
+  const r = new Date(d)
+  r.setDate(d.getDate() - d.getDay())
+  r.setHours(0, 0, 0, 0)
+  return r
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function toMin(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + (m || 0)
 }
 
 export function AgendaClient({
@@ -48,12 +71,56 @@ export function AgendaClient({
   const [pending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
 
+  const [view, setView] = useState<'semana' | 'mes'>('semana')
+  const [anchor, setAnchor] = useState(() => new Date())
+
   const [titulo, setTitulo] = useState('')
   const [dia, setDia] = useState(0)
   const [inicio, setInicio] = useState('')
   const [fim, setFim] = useState('')
   const [cor, setCor] = useState(0)
   const [notaTexto, setNotaTexto] = useState('')
+
+  const hoje = new Date()
+
+  function navegar(delta: number) {
+    setAnchor((prev) =>
+      view === 'semana' ? addDays(prev, delta * 7) : new Date(prev.getFullYear(), prev.getMonth() + delta, 1)
+    )
+  }
+
+  const semanaDias = useMemo(() => {
+    const ini = startOfWeek(anchor)
+    return Array.from({ length: 7 }, (_, i) => addDays(ini, i))
+  }, [anchor])
+
+  const { horaIni, horaFim } = useMemo(() => {
+    const mins = blocos.flatMap((b) => [toMin(b.hora_inicio), toMin(b.hora_fim)])
+    const ini = mins.length ? Math.min(7, Math.floor(Math.min(...mins) / 60)) : 7
+    const fimH = mins.length ? Math.max(21, Math.ceil(Math.max(...mins) / 60)) : 21
+    return { horaIni: ini, horaFim: fimH }
+  }, [blocos])
+
+  const horas = useMemo(
+    () => Array.from({ length: horaFim - horaIni + 1 }, (_, i) => horaIni + i),
+    [horaIni, horaFim]
+  )
+  const alturaGrade = (horaFim - horaIni) * HORA_PX
+
+  const mesCelulas = useMemo(() => {
+    const primeiro = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    const ini = startOfWeek(primeiro)
+    return Array.from({ length: 42 }, (_, i) => addDays(ini, i))
+  }, [anchor])
+
+  const rotuloPeriodo =
+    view === 'semana'
+      ? `${semanaDias[0].getDate()} ${semanaDias[0]
+          .toLocaleDateString('pt-BR', { month: 'short' })
+          .replace('.', '')} – ${semanaDias[6].getDate()} ${semanaDias[6]
+          .toLocaleDateString('pt-BR', { month: 'short' })
+          .replace('.', '')} ${semanaDias[6].getFullYear()}`
+      : anchor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
   function submitBloco(e: React.FormEvent) {
     e.preventDefault()
@@ -104,46 +171,211 @@ export function AgendaClient({
       <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
 
       <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="text-base font-bold text-foreground">Grade semanal</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Seus horários fixos de estudo — organização pessoal, não muda a fila de revisão.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground">Grade semanal</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Seus horários fixos de estudo — organização pessoal, não muda a fila de revisão.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => navegar(-1)}
+                aria-label={view === 'semana' ? 'Semana anterior' : 'Mês anterior'}
+                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => setAnchor(new Date())}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                onClick={() => navegar(1)}
+                aria-label={view === 'semana' ? 'Próxima semana' : 'Próximo mês'}
+                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted"
+              >
+                ›
+              </button>
+            </div>
+            <span className="min-w-[130px] text-center text-sm font-semibold capitalize text-foreground">
+              {rotuloPeriodo}
+            </span>
+            <div className="flex items-center rounded-lg border border-border p-0.5">
+              <button
+                type="button"
+                onClick={() => setView('semana')}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  view === 'semana' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Semana
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('mes')}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  view === 'mes' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Mês
+              </button>
+            </div>
+          </div>
+        </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-7">
-          {DIAS.map((nome, idx) => {
-            const doDia = blocos.filter((b) => b.dia_semana === idx)
-            return (
-              <div key={idx} className="rounded-xl bg-muted/40 p-2.5">
-                <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
-                  {nome.slice(0, 3)}
-                </div>
-                {doDia.length ? (
-                  doDia.map((b) => (
-                    <div
-                      key={b.id}
-                      className="group relative mb-1.5 rounded-lg bg-card p-2 text-xs shadow-sm"
-                      style={{ borderLeft: `3px solid ${CORES[b.cor % CORES.length]}` }}
-                    >
-                      <button
-                        onClick={() => removerBloco(b.id)}
-                        aria-label="Remover"
-                        className="absolute right-1.5 top-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+        {view === 'semana' ? (
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[680px]">
+              <div className="grid" style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}>
+                <div />
+                {semanaDias.map((d, i) => {
+                  const ehHoje = sameDay(d, hoje)
+                  return (
+                    <div key={i} className="pb-2 text-center">
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70">
+                        {DIAS[i].slice(0, 3)}
+                      </div>
+                      <div
+                        className={`mx-auto mt-1 flex size-7 items-center justify-center rounded-full text-sm font-semibold ${
+                          ehHoje ? 'bg-primary text-primary-foreground' : 'text-foreground'
+                        }`}
                       >
-                        ✕
-                      </button>
-                      <div className="font-semibold text-foreground">{b.titulo}</div>
-                      <div className="mt-0.5 text-muted-foreground">
-                        {b.hora_inicio.slice(0, 5)}–{b.hora_fim.slice(0, 5)}
+                        {d.getDate()}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-[11px] italic text-muted-foreground/50">—</div>
-                )}
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
+              <div
+                className="grid rounded-xl border border-border"
+                style={{ gridTemplateColumns: '48px repeat(7, 1fr)' }}
+              >
+                <div className="relative" style={{ height: alturaGrade }}>
+                  {horas.slice(0, -1).map((h) => (
+                    <div
+                      key={h}
+                      className={`absolute right-2 text-[10px] tabular-nums text-muted-foreground/70 ${
+                        h > horaIni ? '-translate-y-1/2' : ''
+                      }`}
+                      style={{ top: h > horaIni ? (h - horaIni) * HORA_PX : 2 }}
+                    >
+                      {String(h).padStart(2, '0')}:00
+                    </div>
+                  ))}
+                </div>
+                {semanaDias.map((d, colIdx) => {
+                  const doDia = blocos.filter((b) => b.dia_semana === d.getDay())
+                  const ehHoje = sameDay(d, hoje)
+                  return (
+                    <div
+                      key={colIdx}
+                      className={`relative border-l border-border ${ehHoje ? 'bg-primary/[0.03]' : ''}`}
+                      style={{ height: alturaGrade }}
+                    >
+                      {horas.slice(1, -1).map((h) => (
+                        <div
+                          key={h}
+                          className="pointer-events-none absolute inset-x-0 border-t border-border/60"
+                          style={{ top: (h - horaIni) * HORA_PX }}
+                        />
+                      ))}
+                      {doDia.map((b) => {
+                        const c = CORES[b.cor % CORES.length]
+                        const top = ((toMin(b.hora_inicio) - horaIni * 60) / 60) * HORA_PX
+                        const altura = Math.max(
+                          30,
+                          ((toMin(b.hora_fim) - toMin(b.hora_inicio)) / 60) * HORA_PX - 3
+                        )
+                        return (
+                          <div
+                            key={b.id}
+                            className="group absolute inset-x-1 overflow-hidden rounded-lg p-1.5 text-[11px] leading-tight shadow-sm"
+                            style={{ top: top + 1, height: altura, background: `${c}1C`, borderLeft: `3px solid ${c}` }}
+                          >
+                            <button
+                              onClick={() => removerBloco(b.id)}
+                              aria-label="Remover"
+                              className="absolute right-1 top-0.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                            >
+                              ✕
+                            </button>
+                            <div className="truncate font-semibold text-foreground">{b.titulo}</div>
+                            <div className="mt-0.5 tabular-nums text-muted-foreground">
+                              {b.hora_inicio.slice(0, 5)}–{b.hora_fim.slice(0, 5)}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <div className="min-w-[560px]">
+              <div className="grid grid-cols-7">
+                {DIAS.map((nome, i) => (
+                  <div
+                    key={i}
+                    className="pb-2 text-center text-[11px] font-bold uppercase tracking-wide text-muted-foreground/70"
+                  >
+                    {nome.slice(0, 3)}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border bg-border">
+                {mesCelulas.map((d, i) => {
+                  const doMes = d.getMonth() === anchor.getMonth()
+                  const ehHoje = sameDay(d, hoje)
+                  const doDia = blocos.filter((b) => b.dia_semana === d.getDay())
+                  return (
+                    <div key={i} className={`min-h-[84px] p-1.5 ${doMes ? 'bg-card' : 'bg-muted/40'}`}>
+                      <div
+                        className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
+                          ehHoje
+                            ? 'bg-primary text-primary-foreground'
+                            : doMes
+                              ? 'text-foreground'
+                              : 'text-muted-foreground/50'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </div>
+                      {doDia.map((b) => {
+                        const c = CORES[b.cor % CORES.length]
+                        return (
+                          <div
+                            key={b.id}
+                            title={`${b.titulo} · ${b.hora_inicio.slice(0, 5)}–${b.hora_fim.slice(0, 5)}`}
+                            className={`mt-1 truncate rounded px-1 py-0.5 text-[10px] font-medium ${
+                              doMes ? 'text-foreground' : 'text-muted-foreground/60'
+                            }`}
+                            style={{ background: `${c}1C`, borderLeft: `2px solid ${c}` }}
+                          >
+                            <span className="tabular-nums text-muted-foreground">{b.hora_inicio.slice(0, 5)}</span>{' '}
+                            {b.titulo}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground/70">
+                A grade é semanal recorrente — os blocos se repetem em todas as semanas do mês.
+              </p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={submitBloco} className="mt-5 flex flex-wrap items-center gap-2">
           <input

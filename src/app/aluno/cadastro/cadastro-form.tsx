@@ -4,20 +4,26 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import { cadastroAlunoAction } from './actions'
 
-export function CadastroForm() {
+export function CadastroForm({
+  defaults,
+}: {
+  defaults?: { fullName?: string; email?: string; phone?: string }
+}) {
   const [state, formAction, isPending] = useActionState(cadastroAlunoAction, null)
 
   return (
     <div className="mx-auto mt-10 w-full max-w-[420px] rounded-2xl border border-border bg-card p-8">
       <h1 className="text-xl font-bold text-foreground">Criar conta</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Cadastre-se para fazer o simulado gratuito.
+        {defaults
+          ? 'Confira seus dados e crie uma senha para acessar o simulado.'
+          : 'Cadastre-se para fazer o simulado gratuito.'}
       </p>
 
       <form action={formAction} className="mt-6 space-y-4">
-        <Field label="Nome completo" name="full_name" type="text" autoComplete="name" />
-        <Field label="E-mail" name="email" type="email" autoComplete="email" />
-        <Field label="WhatsApp" name="phone" type="tel" autoComplete="tel" />
+        <Field label="Nome completo" name="full_name" type="text" autoComplete="name" defaultValue={defaults?.fullName} />
+        <Field label="E-mail" name="email" type="email" autoComplete="email" defaultValue={defaults?.email} />
+        <Field label="WhatsApp" name="phone" type="tel" autoComplete="tel" defaultValue={defaults?.phone} />
         <Field label="Senha (mín. 8 caracteres)" name="password" type="password" autoComplete="new-password" />
 
         {state?.error && (
@@ -50,11 +56,13 @@ function Field({
   name,
   type,
   autoComplete,
+  defaultValue,
 }: {
   label: string
   name: string
   type: string
   autoComplete?: string
+  defaultValue?: string
 }) {
   return (
     <label className="block">
@@ -64,6 +72,7 @@ function Field({
         type={type}
         required
         autoComplete={autoComplete}
+        defaultValue={defaultValue}
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
       />
     </label>

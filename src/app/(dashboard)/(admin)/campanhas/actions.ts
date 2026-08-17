@@ -174,6 +174,109 @@ export async function createCampaignAction(
   return { ok: true, embedId }
 }
 
+// ── Formulário embedável: edição pós-criação (seção "Formulário" na campanha) ──
+
+export type CampaignFormField = {
+  key: string
+  label: string
+  type: string
+  required: boolean
+}
+
+export type CampaignFormSettings = {
+  extraFields: { label: string; required: boolean }[]
+  allowedDomains: string[]
+  requireEmailVerification: boolean
+}
+
+const BASE_FORM_FIELDS: CampaignFormField[] = [
+  { key: 'name', label: 'Nome completo', type: 'text', required: true },
+  { key: 'email', label: 'E-mail', type: 'email', required: true },
+  { key: 'whatsapp', label: 'WhatsApp', type: 'tel', required: true },
+]
+
+function buildFormFields(extras: { label: string; required: boolean }[]): CampaignFormField[] {
+  return [
+    ...BASE_FORM_FIELDS,
+    ...extras
+      .map((f) => ({ label: f.label.trim(), required: f.required }))
+      .filter((f) => f.label)
+      .map((f) => ({
+        key: f.label
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, ''),
+        label: f.label,
+        type: 'text',
+        required: f.required,
+      }))
+      .filter((f) => f.key && !['name', 'email', 'whatsapp'].includes(f.key)),
+  ]
+}
+
+function cleanDomains(domains: string[]): string[] {
+  return [...new Set(domains.map((d) => d.trim().toLowerCase()).filter(Boolean))]
+}
+
+export async function updateCampaignFormAction(
+  campaignId: string,
+  settings: CampaignFormSettings
+): Promise<{ ok: boolean; error?: string }> {
+  const guard = await requireRole('admin')
+  if (!guard.ok) return { ok: false, error: guard.error }
+
+  const service = createServiceClient()
+  const { data, error } = await service
+    .from('campaign_form')
+    .update({
+      fields: buildFormFields(settings.extraFields),
+      allowed_domains: cleanDomains(settings.allowedDomains),
+      require_email_verification: settings.requireEmailVerification,
+    })
+    .eq('campaign_id', campaignId)
+    .select('embed_id')
+
+  if (error) return { ok: false, error: error.message }
+  if (!data?.length) return { ok: false, error: 'Esta campanha não tem formulário.' }
+
+  await logAudit(guard.user.id, 'campaign', campaignId, 'campaign_form_updated', null, {
+    require_email_verification: settings.requireEmailVerification,
+    allowed_domains: cleanDomains(settings.allowedDomains),
+    extra_fields: settings.extraFields.length,
+  })
+
+  revalidatePath(`/campanhas/${campaignId}`)
+  return { ok: true }
+}
+
+/** Cria o campaign_form para campanhas antigas criadas sem o gerador. */
+export async function createCampaignFormAction(
+  campaignId: string
+): Promise<{ ok: boolean; embedId?: string; error?: string }> {
+  const guard = await requireRole('admin')
+  if (!guard.ok) return { ok: false, error: guard.error }
+
+  const service = createServiceClient()
+  const embedId = randomUUID()
+  const { error } = await service.from('campaign_form').insert({
+    campaign_id: campaignId,
+    fields: BASE_FORM_FIELDS,
+    embed_id: embedId,
+    allowed_domains: [],
+    require_email_verification: false,
+  })
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit(guard.user.id, 'campaign', campaignId, 'campaign_form_created', null, {
+    embed_id: embedId,
+  })
+
+  revalidatePath(`/campanhas/${campaignId}`)
+  return { ok: true, embedId }
+}
+
 export async function listSimuladosForSelect() {
   if (!(await requireRole('admin')).ok) return []
   const service = createServiceClient()

@@ -12,47 +12,14 @@ import {
   type QuestionPreview,
 } from '../actions'
 import { QuestionPreviewView } from '../question-preview-view'
-
-function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
-  const endpoint = `${endpointBase || ''}/api/public/leads`
-  const destino = `${alunoBase || endpointBase || ''}/login`
-  return `<form id="mm-lead-form">
-  <input name="name" placeholder="Nome" required />
-  <input name="email" type="email" placeholder="E-mail" required />
-  <input name="whatsapp" placeholder="WhatsApp" required />
-  <label><input type="checkbox" name="consent" required /> Aceito os termos (LGPD)</label>
-  <input type="text" name="hp" style="display:none" tabindex="-1" autocomplete="off" />
-  <button type="submit">Quero fazer o simulado</button>
-</form>
-<script>
-(function(){
-  var f=document.getElementById('mm-lead-form');
-  f.addEventListener('submit',function(e){
-    e.preventDefault();
-    var d=new FormData(f);
-    fetch('${endpoint}',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        embed_id:'${embedId}',
-        name:d.get('name'), email:d.get('email'), whatsapp:d.get('whatsapp'),
-        consent:d.get('consent')==='on', consent_version:'v1', hp:d.get('hp')
-      })
-    }).then(function(r){return r.json()}).then(function(j){
-      if(j.lead_id){ window.location.href='${destino}'; }
-      else { alert('Não foi possível enviar. Verifique os campos.'); }
-    });
-  });
-})();
-</script>`
-}
+import { buildIframeSnippet } from '@/lib/marketing/embed-snippet'
 
 export function CampanhaForm({
   options,
   appUrl,
-  alunoUrl = '',
 }: {
   options: PickerOptions
   appUrl: string
-  alunoUrl?: string
 }) {
   const [state, formAction, isPending] = useActionState<CampaignState, FormData>(
     createCampaignAction,
@@ -131,10 +98,12 @@ export function CampanhaForm({
       <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="text-lg font-bold text-foreground">Campanha criada ✅</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cole este código na landing page externa para captar leads desta campanha.
+          Entregue este código para a equipe de design colar na landing page. O formulário é
+          hospedado pelo MedMaestro — edições feitas na página da campanha valem sem trocar o
+          código.
         </p>
         <pre className="mt-4 max-h-80 overflow-auto rounded-lg bg-background p-4 text-xs text-foreground">
-          {buildEmbedSnippet(state.embedId, appUrl, alunoUrl)}
+          {buildIframeSnippet(state.embedId, appUrl)}
         </pre>
         <p className="mt-2 text-xs text-muted-foreground">
           embed_id: <code>{state.embedId}</code>

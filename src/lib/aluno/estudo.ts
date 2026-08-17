@@ -224,7 +224,13 @@ export async function getErrorCards(
   }))
 }
 
-export type ModuloDesempenho = { tagId: string; label: string; pct: number | null; total: number }
+export type ModuloDesempenho = {
+  tagId: string
+  slug: string
+  label: string
+  pct: number | null
+  total: number
+}
 
 /** Todos os módulos do edital com o desempenho do aluno em cada um (Fase 3 — página Módulos). */
 export async function getModulosComDesempenho(
@@ -234,7 +240,7 @@ export async function getModulosComDesempenho(
   const [{ data: tags }, { data: stats }] = await Promise.all([
     service
       .from('tags')
-      .select('id, label')
+      .select('id, slug, label')
       .eq('dimension', 'modulo')
       .eq('is_active', true)
       .order('display_order', { ascending: true }),
@@ -253,6 +259,7 @@ export async function getModulosComDesempenho(
     const correct = s?.correct ?? 0
     return {
       tagId: t.id as string,
+      slug: t.slug as string,
       label: t.label as string,
       pct: total > 0 ? Math.round((correct / total) * 100) : null,
       total,

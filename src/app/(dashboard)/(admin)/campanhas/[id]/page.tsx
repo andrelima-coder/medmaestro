@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getCampaignDashboard } from '../actions'
+import { getCampaignDashboard, type CampaignFormField } from '../actions'
 import { QuestoesList, type QuestaoItem } from './questoes-list'
+import { EmbedFormSection } from './embed-form-section'
 
 function fmtDur(sec: number | null): string {
   if (sec == null) return '—'
@@ -26,53 +27,6 @@ type QRow = {
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'
 
-function buildEmbedSnippet(embedId: string, endpointBase: string, alunoBase: string): string {
-  const endpoint = `${endpointBase || ''}/api/public/leads`
-  const destino = `${alunoBase || endpointBase || ''}/login`
-  return `<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" />
-<style>
-  #mm-lead-form{font-family:'Afya Sans','Figtree','Helvetica Neue',Arial,sans-serif;max-width:420px;background:#FFFFFF;
-    border:1px solid #E8E8E8;border-radius:18px;padding:24px;box-shadow:0 10px 34px rgba(14,40,65,.10);box-sizing:border-box}
-  #mm-lead-form input[type=text],#mm-lead-form input[type=email]{width:100%;box-sizing:border-box;margin:0 0 10px;
-    padding:12px 14px;border:1px solid #E8E8E8;border-radius:10px;font-size:15px;color:#0E2841;background:#FFFFFF;font-family:inherit}
-  #mm-lead-form input::placeholder{color:#A4A3A4}
-  #mm-lead-form input[type=text]:focus,#mm-lead-form input[type=email]:focus{outline:2px solid #D40754;outline-offset:0;border-color:#D40754}
-  #mm-lead-form label{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;color:#3F5A75;margin:6px 0 16px}
-  #mm-lead-form label input{accent-color:#D40754;margin-top:2px}
-  #mm-lead-form button{width:100%;border:0;border-radius:10px;padding:14px 20px;background:#D40754;color:#FFFFFF;
-    font-size:15px;font-weight:800;font-family:inherit;cursor:pointer;transition:background .15s}
-  #mm-lead-form button:hover{background:#B6014F}
-</style>
-<form id="mm-lead-form">
-  <input name="name" placeholder="Nome" required />
-  <input name="email" type="email" placeholder="E-mail" required />
-  <input name="whatsapp" placeholder="WhatsApp" required />
-  <label><input type="checkbox" name="consent" required /> <span>Autorizo o contato e o tratamento dos meus dados conforme a LGPD.</span></label>
-  <input type="text" name="hp" style="display:none" tabindex="-1" autocomplete="off" />
-  <button type="submit">Quero fazer o simulado</button>
-</form>
-<script>
-(function(){
-  var f=document.getElementById('mm-lead-form');
-  f.addEventListener('submit',function(e){
-    e.preventDefault();
-    var d=new FormData(f);
-    fetch('${endpoint}',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        embed_id:'${embedId}',
-        name:d.get('name'), email:d.get('email'), whatsapp:d.get('whatsapp'),
-        consent:d.get('consent')==='on', consent_version:'v1', hp:d.get('hp')
-      })
-    }).then(function(r){return r.json()}).then(function(j){
-      if(j.lead_id){ window.location.href='${destino}'; }
-      else { alert('Não foi possível enviar. Verifique os campos.'); }
-    });
-  });
-})();
-</script>`
-}
-
 export default async function CampanhaDetailPage({
   params,
 }: {
@@ -84,7 +38,7 @@ export default async function CampanhaDetailPage({
   const { data: c } = await service
     .from('campaigns')
     .select(
-      'id, name, status, access_mode, window_start, window_end, pause_allowed, duration_minutes, releases, live_at, live_url, simulado_id, campaign_form(embed_id, allowed_domains)'
+      'id, name, status, access_mode, window_start, window_end, pause_allowed, duration_minutes, releases, live_at, live_url, simulado_id, campaign_form(embed_id, allowed_domains, fields, require_email_verification)'
     )
     .eq('id', id)
     .single()
@@ -116,7 +70,16 @@ export default async function CampanhaDetailPage({
     dashboard?: boolean
   }
 
-  const form = (c.campaign_form as unknown as { embed_id: string; allowed_domains: string[] }[] | null)?.[0]
+  const form = (
+    c.campaign_form as unknown as
+      | {
+          embed_id: string
+          allowed_domains: string[]
+          fields: CampaignFormField[] | null
+          require_email_verification: boolean
+        }[]
+      | null
+  )?.[0]
   const embedId = form?.embed_id ?? null
 
   const dash = await getCampaignDashboard(c.id)
@@ -237,26 +200,14 @@ export default async function CampanhaDetailPage({
         </pre>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold text-foreground">Formulário de captação (embed)</h2>
-        {embedId ? (
-          <>
-            <p className="text-xs text-muted-foreground">
-              embed_id: <code>{embedId}</code>
-              {form?.allowed_domains?.length
-                ? ` · domínios: ${form.allowed_domains.join(', ')}`
-                : ''}
-            </p>
-            <pre className="max-h-72 overflow-auto rounded-lg bg-background p-3 text-xs text-foreground">
-              {buildEmbedSnippet(embedId, appUrl, alunoUrl)}
-            </pre>
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Esta campanha não tem formulário embedável (foi criada sem o gerador de formulário).
-          </p>
-        )}
-      </section>
+      <EmbedFormSection
+        campaignId={c.id}
+        embedId={embedId}
+        fields={form?.fields ?? []}
+        allowedDomains={form?.allowed_domains ?? []}
+        requireEmailVerification={form?.require_email_verification ?? false}
+        appUrl={appUrl}
+      />
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground">

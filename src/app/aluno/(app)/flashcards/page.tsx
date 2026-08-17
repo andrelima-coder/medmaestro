@@ -17,6 +17,6 @@ export default async function FlashcardsPage() {
   const banca = await getMinhaBancaAtiva(supabase)
   if (!banca) return <SemMatricula />
 
-  const cards = await getFlashcardFila(supabase, 20)
+  const cards = await getFlashcardFila(supabase, 30)
   return <FlashcardsClient cards={cards} />
 }

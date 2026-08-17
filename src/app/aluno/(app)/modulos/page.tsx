@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getModulosComDesempenho } from '@/lib/aluno/estudo'
+import { getModuloEmoji } from '@/lib/utils/constants'
 
 export const metadata = { title: 'Módulos — MedMaestro' }
 
@@ -30,7 +31,12 @@ export default async function ModulosPage() {
             href={`/aluno/praticar?modulo=${m.tagId}`}
             className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary"
           >
-            <div className="font-semibold text-foreground">{m.label}</div>
+            <div className="flex items-start gap-2.5">
+              <span aria-hidden className="text-2xl leading-none">
+                {getModuloEmoji(m.slug, m.label)}
+              </span>
+              <span className="font-semibold text-foreground">{m.label}</span>
+            </div>
             {m.total > 0 ? (
               <>
                 <div className="mt-2 text-2xl font-bold text-foreground">{m.pct}%</div>

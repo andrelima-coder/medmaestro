@@ -8,6 +8,7 @@ type LeadRow = {
   fields: Record<string, unknown> | null
   segment: string | null
   origin: string | null
+  email_verified_at: string | null
   created_at: string
   lead_consents: { id: string }[] | null
   campaigns: { name: string | null } | null
@@ -36,7 +37,7 @@ export default async function LeadsPage({
 
   let query = service
     .from('leads')
-    .select('id, email, fields, segment, origin, created_at, lead_consents(id), campaigns(name)')
+    .select('id, email, fields, segment, origin, email_verified_at, created_at, lead_consents(id), campaigns(name)')
     .order('created_at', { ascending: false })
     .limit(500)
   if (sp.campaign) query = query.eq('campaign_id', sp.campaign)
@@ -116,6 +117,7 @@ export default async function LeadsPage({
               <th className="py-2">WhatsApp</th>
               <th className="py-2">Campanha</th>
               <th className="py-2">Segmento</th>
+              <th className="py-2">Verificado</th>
               <th className="py-2">LGPD</th>
             </tr>
           </thead>
@@ -127,6 +129,7 @@ export default async function LeadsPage({
                 <td className="py-2">{String(l.fields?.whatsapp ?? '—')}</td>
                 <td className="py-2">{l.campaigns?.name ?? '—'}</td>
                 <td className="py-2">{l.segment ?? '—'}</td>
+                <td className="py-2">{l.email_verified_at ? '✓' : '—'}</td>
                 <td className="py-2">
                   {(l.lead_consents?.length ?? 0) > 0 ? '✓' : '—'}
                 </td>

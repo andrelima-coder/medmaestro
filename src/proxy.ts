@@ -24,6 +24,8 @@ const WORKER_ROUTES = [
   '/api/public',
   '/api/analytics',
   '/api/aluno',
+  // Formulário de captação hospedado (iframe nas landings) — anônimo
+  '/f/',
 ]
 
 const ADMIN_ROUTES = ['/auditoria', '/configuracoes/usuarios']

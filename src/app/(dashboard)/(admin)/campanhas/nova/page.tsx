@@ -6,7 +6,6 @@ export const metadata = { title: 'Nova campanha — MedMaestro' }
 export default async function NovaCampanhaPage() {
   const options = await getPickerOptions()
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const alunoUrl = process.env.NEXT_PUBLIC_ALUNO_URL ?? ''
 
   return (
     <div>
@@ -15,7 +14,7 @@ export default async function NovaCampanhaPage() {
         Monte a campanha de captação, escolha as questões do simulado e gere o código do formulário
         para a landing page.
       </p>
-      <CampanhaForm options={options} appUrl={appUrl} alunoUrl={alunoUrl} />
+      <CampanhaForm options={options} appUrl={appUrl} />
     </div>
   )
 }
