@@ -41,7 +41,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
+        // Exclui /f/* (formulário embedável): a rota manda o próprio CSP com
+        // frame-ancestors dinâmico por allowed_domains — o global aqui tem
+        // frame-ancestors 'none' + X-Frame-Options DENY e mataria o iframe.
+        source: '/:path((?!f/).*)',
         headers: SECURITY_HEADERS,
       },
     ]

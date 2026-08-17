@@ -65,7 +65,7 @@ export function QuestionPicker({ simuladoId, initialAddedIds }: QuestionPickerPr
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           ref={inputRef}
-          placeholder="Buscar questões aprovadas…"
+          placeholder="Buscar questões do banco…"
           className="flex-1 h-9 rounded-lg border border-[rgba(14,40,65,0.1)] bg-[rgba(14,40,65,0.04)] px-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-[var(--mm-gold)]/40 transition-colors"
         />
         <button

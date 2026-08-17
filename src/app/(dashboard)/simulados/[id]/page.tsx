@@ -41,6 +41,9 @@ export default async function SimuladoDetailPage({
   const guard = await requireSimuladoAccess(simulado.created_by)
   if (!guard.ok) notFound()
   const isOwner = simulado.created_by === guard.user.id
+  // "/campanhas/nova" é admin-only — dono professor não pode receber um CTA
+  // que termina em porta fechada.
+  const canPublicarParaAlunos = guard.user.role === 'admin' || guard.user.role === 'superadmin'
 
   const { data: sqRows } = await service
     .from('simulado_questions')
@@ -99,10 +102,18 @@ export default async function SimuladoDetailPage({
             <h1 className="text-xl font-semibold text-foreground">{simulado.title}</h1>
           )}
           <p className="text-sm text-muted-foreground">
-            {questions.length} questão{questions.length !== 1 ? 'ões' : ''}
+            {questions.length} {questions.length === 1 ? 'questão' : 'questões'}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {questions.length > 0 && canPublicarParaAlunos && (
+            <Link
+              href={`/campanhas/nova?simulado=${id}`}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-primary hover:bg-primary/90 transition-colors text-xs font-medium text-primary-foreground"
+            >
+              Disponibilizar para alunos
+            </Link>
+          )}
           {questions.length > 0 && (
             <Link
               href={`/simulados/${id}/exportar`}

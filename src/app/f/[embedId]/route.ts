@@ -22,6 +22,10 @@ function htmlResponse(html: string, status: number, csp?: string): NextResponse 
   const headers: Record<string, string> = {
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store',
+    // /f/* fica fora dos security headers globais (next.config) para o iframe
+    // funcionar — repõe aqui o mínimo que não conflita com embed.
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
   }
   if (csp) headers['Content-Security-Policy'] = csp
   return new NextResponse(html, { status, headers })
@@ -102,11 +106,11 @@ export async function GET(
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex" />
 <title>${esc(campaignName)} — cadastro</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;800&display=swap" />
 <style>
   *{box-sizing:border-box}
-  body{margin:0;background:transparent;font-family:'Afya Sans','Figtree','Helvetica Neue',Arial,sans-serif}
+  /* Fonte de sistema: o CSP (style-src 'self') bloqueia o Google Fonts, então
+     qualquer webfont externa cairia no fallback com erro de console. */
+  body{margin:0;background:transparent;font-family:'Afya Sans',-apple-system,'Segoe UI','Helvetica Neue',Arial,sans-serif}
   .mm-card{max-width:440px;background:#FFFFFF;border:1px solid #E8E8E8;border-radius:18px;padding:24px;
     box-shadow:0 10px 34px rgba(14,40,65,.10)}
   .mm-title{margin:0 0 4px;font-size:17px;font-weight:800;color:#0E2841}

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { logAudit } from '@/lib/audit'
-import { requireUser } from '@/lib/auth/guards'
+import { requireRole, requireUser } from '@/lib/auth/guards'
 
 async function getUser() {
   const supabase = await createClient()
@@ -400,7 +400,9 @@ export async function searchQuestionsForSimulado(
   questions: { id: string; question_number: number; stem: string; exam_label: string }[]
   addedIds: string[]
 }> {
-  const auth = await requireUser()
+  // Staff apenas ('analista'+): a busca vasculha o banco inteiro via full-text —
+  // com requireUser(), qualquer conta de aluno auto-cadastrada enumeraria o acervo.
+  const auth = await requireRole('analista')
   if (!auth.ok) return { questions: [], addedIds: [] }
   const service = createServiceClient()
 
@@ -411,7 +413,10 @@ export async function searchQuestionsForSimulado(
         .select(
           'id, question_number, stem, exams!left(year, booklet_color, bancas(nome_curto))'
         )
-        .in('status', ['approved', 'published'])
+        // O banco vivo trabalha quase todo em pending_review/in_review — exigir
+        // approved/published deixava a busca permanentemente vazia. Basta
+        // excluir o que não pode entrar em simulado.
+        .not('status', 'in', '("rejected","draft","flagged","pending_extraction","needs_attention")')
         .limit(30)
 
       if (q.trim()) {

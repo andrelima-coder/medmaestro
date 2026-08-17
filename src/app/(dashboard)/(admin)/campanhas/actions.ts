@@ -364,6 +364,53 @@ export type QuestionPreview = {
   comments: { type: string; content: string }[]
 }
 
+export type SimuladoSeed = { name: string; questions: QSearchResult[] }
+
+/**
+ * Semeia a nova campanha a partir de um simulado existente ("Disponibilizar
+ * para alunos" na página do simulado): mesmas questões, na mesma ordem.
+ */
+export async function getSimuladoSeed(simuladoId: string): Promise<SimuladoSeed | null> {
+  if (!(await requireRole('admin')).ok) return null
+  const service = createServiceClient()
+  const [{ data: sim }, { data: sq }] = await Promise.all([
+    service.from('simulados').select('title').eq('id', simuladoId).single(),
+    service
+      .from('simulado_questions')
+      .select(
+        'position, questions(id, question_number, stem, status, correct_answer, question_comments(id), exams(year, specialties(name)))'
+      )
+      .eq('simulado_id', simuladoId)
+      .order('position', { ascending: true }),
+  ])
+  if (!sim || !sq) return null
+  // Mesmo crivo da busca: questão rejeitada/quebrada de um simulado antigo não
+  // pode ser semeada silenciosamente numa campanha para alunos.
+  const BLOCKED = new Set(['rejected', 'draft', 'flagged', 'pending_extraction', 'needs_attention'])
+  const questions = (sq as unknown as {
+    questions: {
+      id: string
+      question_number: number | null
+      stem: string | null
+      status: string | null
+      correct_answer: string | null
+      question_comments: { id: string }[] | null
+      exams: { year: number | null; specialties: { name: string } | null } | null
+    } | null
+  }[])
+    .map((r) => r.questions)
+    .filter((q): q is NonNullable<typeof q> => !!q && !BLOCKED.has(q.status ?? ''))
+    .map((q) => ({
+      id: q.id,
+      number: q.question_number,
+      stem: ((q.stem ?? '') as string).slice(0, 140),
+      examLabel: [q.exams?.specialties?.name, q.exams?.year].filter(Boolean).join(' ') || '—',
+      hasComment: (q.question_comments?.length ?? 0) > 0,
+      hasAnswer: q.correct_answer != null,
+    }))
+  return { name: sim.title as string, questions }
+}
+
 /** Detalhe completo de uma questão para conferência antes de incluir. */
 export async function getQuestionPreviewAction(
   questionId: string

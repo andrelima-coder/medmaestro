@@ -75,7 +75,17 @@ export async function getPracticeBatch(
   if (moduleTagId) q = q.eq('question_tags.tag_id', moduleTagId)
 
   const { data } = await q
-  const rows = (data ?? []) as unknown as QRow[]
+  // Questão sem enunciado ou sem pelo menos 2 alternativas com texto é um beco
+  // sem saída na Prática (não há como responder nem pular) — fica fora do
+  // sorteio. Atenção: toAlternatives() preenche A–E com '' — conte só as
+  // alternativas de verdade, direto do JSONB.
+  const rows = ((data ?? []) as unknown as QRow[]).filter(
+    (r) =>
+      (r.stem ?? '').trim() !== '' &&
+      Object.values((r.alternatives ?? {}) as Record<string, string>).filter(
+        (v) => typeof v === 'string' && v.trim() !== ''
+      ).length >= 2
+  )
   // embaralha e corta
   for (let i = rows.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))

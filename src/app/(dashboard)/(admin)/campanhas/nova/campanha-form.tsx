@@ -10,6 +10,7 @@ import {
   type QSearchFilter,
   type QSearchResult,
   type QuestionPreview,
+  type SimuladoSeed,
 } from '../actions'
 import { QuestionPreviewView } from '../question-preview-view'
 import { buildIframeSnippet } from '@/lib/marketing/embed-snippet'
@@ -17,9 +18,11 @@ import { buildIframeSnippet } from '@/lib/marketing/embed-snippet'
 export function CampanhaForm({
   options,
   appUrl,
+  seed,
 }: {
   options: PickerOptions
   appUrl: string
+  seed?: SimuladoSeed | null
 }) {
   const [state, formAction, isPending] = useActionState<CampaignState, FormData>(
     createCampaignAction,
@@ -36,7 +39,7 @@ export function CampanhaForm({
   const [results, setResults] = useState<QSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
-  const [selected, setSelected] = useState<QSearchResult[]>([])
+  const [selected, setSelected] = useState<QSearchResult[]>(seed?.questions ?? [])
   const [fillN, setFillN] = useState(20)
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [previewData, setPreviewData] = useState<Record<string, QuestionPreview | 'loading'>>({})
@@ -115,7 +118,16 @@ export function CampanhaForm({
   return (
     <form action={formAction} className="max-w-2xl space-y-5">
       <Section title="Campanha">
-        <Text label="Nome da campanha" name="name" required />
+        {seed && (
+          <p className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-foreground">
+            Campanha semeada pelo simulado <strong>{seed.name}</strong>:{' '}
+            {seed.questions.length === 1
+              ? 'a única questão já está selecionada'
+              : `as ${seed.questions.length} questões já estão selecionadas`}{' '}
+            abaixo, na mesma ordem. Ajuste o que quiser antes de publicar.
+          </p>
+        )}
+        <Text label="Nome da campanha" name="name" required defaultValue={seed?.name} />
         <Text label="Duração (minutos)" name="duration_minutes" type="number" required />
       </Section>
 
@@ -412,11 +424,13 @@ function Text({
   name,
   type = 'text',
   required,
+  defaultValue,
 }: {
   label: string
   name: string
   type?: string
   required?: boolean
+  defaultValue?: string
 }) {
   return (
     <label className="block">
@@ -425,6 +439,7 @@ function Text({
         name={name}
         type={type}
         required={required}
+        defaultValue={defaultValue}
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary"
       />
     </label>
