@@ -74,16 +74,22 @@ export function FocoClient({
   modulos,
   minutosSemanaInicial,
   metaSemanalMinInicial,
+  focoMin = POMODORO_MIN,
+  pausaCurtaMin = PAUSA_CURTA_MIN,
+  pausaLongaMin = PAUSA_LONGA_MIN,
 }: {
   modulos: { slug: string; label: string }[]
   minutosSemanaInicial: number
   metaSemanalMinInicial: number
+  focoMin?: number
+  pausaCurtaMin?: number
+  pausaLongaMin?: number
 }) {
   const [modo, setModo] = useState<Modo>('pomodoro')
   const [fase, setFase] = useState<Fase>('idle')
   const [emSessao, setEmSessao] = useState(false)
-  const [ms, setMs] = useState(POMODORO_MIN * 60_000)
-  const [pausaMin, setPausaMin] = useState(PAUSA_CURTA_MIN)
+  const [ms, setMs] = useState(focoMin * 60_000)
+  const [pausaMin, setPausaMin] = useState(pausaCurtaMin)
   const [modulo, setModulo] = useState('')
   const [status, setStatus] = useState('Pronto pra começar')
   const [salvando, setSalvando] = useState(false)
@@ -114,7 +120,7 @@ export function FocoClient({
   }
 
   function msInicial(m: Modo): number {
-    return m === 'pomodoro' ? POMODORO_MIN * 60_000 : 0
+    return m === 'pomodoro' ? focoMin * 60_000 : 0
   }
 
   function elapsedFocoAgora(faseAtual: Fase): number {
@@ -136,7 +142,7 @@ export function FocoClient({
     intervalRef.current = setInterval(() => {
       const elapsed = focoAcumuladoRef.current + (Date.now() - segInicioRef.current)
       if (modo === 'pomodoro') {
-        const restante = POMODORO_MIN * 60_000 - elapsed
+        const restante = focoMin * 60_000 - elapsed
         if (restante <= 0) {
           setMs(0)
           limparIntervalo()
@@ -163,7 +169,7 @@ export function FocoClient({
     setFase('foco')
     setStatus('De volta ao foco — sessão em andamento')
     if (modo === 'pomodoro') {
-      setMs(Math.max(0, POMODORO_MIN * 60_000 - focoAcumuladoRef.current))
+      setMs(Math.max(0, focoMin * 60_000 - focoAcumuladoRef.current))
     } else {
       setMs(focoAcumuladoRef.current)
     }
@@ -174,7 +180,7 @@ export function FocoClient({
     const elapsed = elapsedFocoAgora(fase)
     limparIntervalo()
     const minutos = completouPomodoro
-      ? POMODORO_MIN
+      ? focoMin
       : Math.min(MAX_MINUTOS_SESSAO, Math.max(1, Math.round(elapsed / 60_000)))
     setEmSessao(false)
     setFase('idle')
@@ -207,7 +213,7 @@ export function FocoClient({
     setFase('pausa')
     setPausaMin(min)
     setMs(min * 60_000)
-    const rotulo = min === PAUSA_CURTA_MIN ? 'Pausa curta' : 'Pausa longa'
+    const rotulo = min === pausaCurtaMin ? 'Pausa curta' : 'Pausa longa'
     setStatus(
       veioDoFoco
         ? `${rotulo} — ${Math.round(focoAcumuladoRef.current / 60_000)} min de foco guardados`
@@ -272,7 +278,7 @@ export function FocoClient({
   const progresso =
     fase === 'foco'
       ? modo === 'pomodoro'
-        ? 1 - ms / (POMODORO_MIN * 60_000)
+        ? 1 - ms / (focoMin * 60_000)
         : (ms % 3_600_000) / 3_600_000
       : fase === 'pausa'
         ? 1 - ms / (pausaMin * 60_000)
@@ -395,7 +401,7 @@ export function FocoClient({
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <button
-            onClick={() => iniciarPausa(PAUSA_CURTA_MIN)}
+            onClick={() => iniciarPausa(pausaCurtaMin)}
             disabled={!podePausar}
             className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -403,10 +409,10 @@ export function FocoClient({
               <Coffee className="h-4 w-4 text-primary" />
               Pausa curta
             </span>
-            <span className="text-xs text-muted-foreground">{PAUSA_CURTA_MIN} min</span>
+            <span className="text-xs text-muted-foreground">{pausaCurtaMin} min</span>
           </button>
           <button
-            onClick={() => iniciarPausa(PAUSA_LONGA_MIN)}
+            onClick={() => iniciarPausa(pausaLongaMin)}
             disabled={!podePausar}
             className="flex flex-col items-center gap-1 rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -414,7 +420,7 @@ export function FocoClient({
               <Coffee className="h-4 w-4 text-primary" />
               Pausa longa
             </span>
-            <span className="text-xs text-muted-foreground">{PAUSA_LONGA_MIN} min</span>
+            <span className="text-xs text-muted-foreground">{pausaLongaMin} min</span>
           </button>
         </div>
         {fase === 'foco' && (

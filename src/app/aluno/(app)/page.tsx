@@ -1,8 +1,22 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getGoalAndToday, getStreak, getWeakestModule } from '@/lib/aluno/estudo'
-import { getMinhaBancaAtiva, getArvore, getEngajamentoHoje, type Arvore, type EngajamentoHoje } from '@/lib/aluno/mentoria'
-import { getRevisoesPendentes, getStreakMt, getMetasSemana, type MetasSemana } from '@/lib/aluno/inicio'
+import {
+  getMinhaBancaAtiva,
+  getArvore,
+  getEngajamentoHoje,
+  type Arvore,
+  type EngajamentoHoje,
+  type MinhaBanca,
+} from '@/lib/aluno/mentoria'
+import {
+  getRevisoesPendentes,
+  getStreakMt,
+  getMetasSemana,
+  getAtividadeRecente,
+  type MetasSemana,
+  type AtividadeItem,
+} from '@/lib/aluno/inicio'
 import { getSemana, getDesempenhoModulo, type ModuloDesempenho } from '@/lib/aluno/evolucao'
 import { GoalSetter } from './home-client'
 
@@ -13,6 +27,26 @@ function formatHoras(minutos: number): string {
   const m = minutos % 60
   if (h === 0) return `${m}min`
   return `${h}h${String(m).padStart(2, '0')}`
+}
+
+function tempoRelativo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const min = Math.floor(diffMs / 60000)
+  if (min < 60) return min <= 1 ? 'agora' : `há ${min}min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `há ${h}h`
+  const dias = Math.floor(h / 24)
+  if (dias === 1) return 'ontem'
+  if (dias < 7) return `há ${dias} dias`
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+function edicaoBanca(banca: MinhaBanca): string {
+  if (!banca.dataProva) return banca.nomeCurto
+  const edicao = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
+    new Date(banca.dataProva)
+  )
+  return `${banca.nomeCurto} · edição de ${edicao}`
 }
 
 function statusMeta(pct: number): { label: string; cor: string; bg: string } {
@@ -39,6 +73,8 @@ export default async function AlunoHomePage() {
   let metasSemana: MetasSemana | null = null
   let semanaCumprida = false
   let moduloTop: ModuloDesempenho | null = null
+  let banca: MinhaBanca | null = null
+  let atividades: AtividadeItem[] = []
 
   if (user) {
     const service = createServiceClient()
@@ -55,14 +91,15 @@ export default async function AlunoHomePage() {
     weakest = await getWeakestModule(service, user.id)
 
     // Vertente 2: só carrega se o aluno tiver matrícula ativa em alguma banca.
-    const banca = await getMinhaBancaAtiva(supabase)
+    banca = await getMinhaBancaAtiva(supabase)
     if (banca) {
-      ;[arvore, engajamento, revisoesPendentes, streakMt, metasSemana] = await Promise.all([
+      ;[arvore, engajamento, revisoesPendentes, streakMt, metasSemana, atividades] = await Promise.all([
         getArvore(supabase),
         getEngajamentoHoje(supabase),
         getRevisoesPendentes(supabase),
         getStreakMt(service, user.id),
         getMetasSemana(service, user.id),
+        getAtividadeRecente(service, user.id),
       ])
       const [semana, modulos] = await Promise.all([getSemana(supabase), getDesempenhoModulo(supabase)])
       semanaCumprida = semana?.cumprida ?? false
@@ -93,7 +130,10 @@ export default async function AlunoHomePage() {
 
   return (
     <section className="mt-6 space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Olá{nome ? `, ${nome}` : ''} 👋</h1>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Olá{nome ? `, ${nome}` : ''} 👋</h1>
+        {banca && <p className="mt-1 text-sm text-muted-foreground">{edicaoBanca(banca)}</p>}
+      </div>
 
       {matriculado ? (
         <>
@@ -219,6 +259,40 @@ export default async function AlunoHomePage() {
               </div>
             )}
           </div>
+
+          {/* Atividade recente */}
+          {atividades.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="text-base font-bold text-foreground">Atividade recente</h2>
+              <div className="mt-2 divide-y divide-border">
+                {atividades.map((a) => (
+                  <div key={`${a.tipo}-${a.quando}`} className="flex items-center gap-3 py-3">
+                    <span
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full text-lg"
+                      style={{
+                        background:
+                          a.tipo === 'simulado'
+                            ? 'rgba(0,96,72,0.1)'
+                            : a.tipo === 'flashcards'
+                              ? 'rgba(0,141,120,0.12)'
+                              : 'rgba(212,7,84,0.08)',
+                      }}
+                    >
+                      {a.tipo === 'simulado' ? '📝' : a.tipo === 'flashcards' ? '📋' : '🎯'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-foreground">{a.titulo}</div>
+                      <div className="truncate text-sm text-muted-foreground">{a.detalhe}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {a.destaque && <div className="text-sm font-bold text-foreground">{a.destaque}</div>}
+                      <div className="text-xs text-muted-foreground">{tempoRelativo(a.quando)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

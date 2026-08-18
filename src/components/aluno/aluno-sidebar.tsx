@@ -137,13 +137,10 @@ export function AlunoSidebar({
 
       {/* Rodapé */}
       <div className="mt-auto space-y-0.5 border-t border-[rgba(14,40,65,0.10)] px-2 pt-3 pb-2">
-        <div
-          className="flex cursor-not-allowed items-center gap-3 rounded-lg px-2 py-2 text-sm text-muted-foreground/40"
-          title="Em breve"
-        >
-          <Settings className="size-4 shrink-0" />
-          <span>Configurações</span>
-        </div>
+        <NavLink
+          item={{ label: 'Configurações', href: '/aluno/configuracoes', icon: Settings }}
+          pathname={pathname}
+        />
         <form action={logoutAluno}>
           <button
             type="submit"

@@ -32,6 +32,9 @@ export default async function FocoPage() {
 
   let minutosSemana = 0
   let metaSemanalMin = META_SEMANAL_PADRAO_MIN
+  let focoMin = 25
+  let pausaCurtaMin = 5
+  let pausaLongaMin = 15
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -44,12 +47,15 @@ export default async function FocoPage() {
         .gte('created_at', inicioDaSemanaIso()),
       service
         .from('mt_preferencias')
-        .select('meta_foco_semanal_min')
+        .select('meta_foco_semanal_min, foco_min, pausa_curta_min, pausa_longa_min')
         .eq('user_id', user.id)
         .maybeSingle(),
     ])
     minutosSemana = (sessoes ?? []).reduce((soma, s) => soma + (s.minutos ?? 0), 0)
     if (pref?.meta_foco_semanal_min) metaSemanalMin = pref.meta_foco_semanal_min
+    if (pref?.foco_min) focoMin = pref.foco_min
+    if (pref?.pausa_curta_min) pausaCurtaMin = pref.pausa_curta_min
+    if (pref?.pausa_longa_min) pausaLongaMin = pref.pausa_longa_min
   }
 
   return (
@@ -57,6 +63,9 @@ export default async function FocoPage() {
       modulos={(modulos ?? []) as { slug: string; label: string }[]}
       minutosSemanaInicial={minutosSemana}
       metaSemanalMinInicial={metaSemanalMin}
+      focoMin={focoMin}
+      pausaCurtaMin={pausaCurtaMin}
+      pausaLongaMin={pausaLongaMin}
     />
   )
 }

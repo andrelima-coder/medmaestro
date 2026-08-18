@@ -44,6 +44,112 @@ export type MetasSemana = {
   minutosEstudados: number
 }
 
+export type AtividadeItem = {
+  tipo: 'simulado' | 'flashcards' | 'pratica'
+  titulo: string
+  detalhe: string
+  destaque: string | null
+  quando: string
+}
+
+type SimuladoAtividadeRow = {
+  started_at: string
+  attempt_results:
+    | { score: number | null; finished_at: string | null }[]
+    | { score: number | null; finished_at: string | null }
+    | null
+  campaigns: { name: string | null } | null
+}
+
+/**
+ * Feed "Atividade recente" do Início: simulados entregues (1 item por attempt)
+ * + prática e flashcards agrupados por dia, ordenados do mais novo ao mais antigo.
+ */
+export async function getAtividadeRecente(
+  service: SupabaseClient,
+  userId: string,
+  limite = 4
+): Promise<AtividadeItem[]> {
+  const [simulados, flashcards, praticas] = await Promise.all([
+    service
+      .from('simulado_attempts')
+      .select('started_at, attempt_results(score, finished_at), campaigns(name)')
+      .eq('user_id', userId)
+      .eq('status', 'entregue')
+      .order('started_at', { ascending: false })
+      .limit(3),
+    service
+      .from('mt_flashcard_review_log')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(200),
+    service
+      .from('srs_review_log')
+      .select('created_at, acerto')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ])
+
+  const itens: AtividadeItem[] = []
+
+  for (const r of (simulados.data ?? []) as unknown as SimuladoAtividadeRow[]) {
+    const res = Array.isArray(r.attempt_results) ? r.attempt_results[0] : r.attempt_results
+    itens.push({
+      tipo: 'simulado',
+      titulo: 'Simulado concluído',
+      detalhe: r.campaigns?.name ?? 'Simulado',
+      destaque: res?.score != null ? `${Math.round(Number(res.score))}% de acerto` : null,
+      quando: res?.finished_at ?? r.started_at,
+    })
+  }
+
+  // Rows chegam em ordem decrescente, então o primeiro de cada dia é o mais recente.
+  const diasFlash = new Map<string, { n: number; ultimo: string }>()
+  for (const r of flashcards.data ?? []) {
+    const criado = r.created_at as string
+    const dia = criado.slice(0, 10)
+    const g = diasFlash.get(dia)
+    if (g) g.n++
+    else diasFlash.set(dia, { n: 1, ultimo: criado })
+  }
+  for (const g of diasFlash.values()) {
+    itens.push({
+      tipo: 'flashcards',
+      titulo: 'Revisão de flashcards',
+      detalhe: `${g.n} ${g.n === 1 ? 'cartão' : 'cartões'}`,
+      destaque: null,
+      quando: g.ultimo,
+    })
+  }
+
+  const diasPratica = new Map<string, { n: number; acertos: number; ultimo: string }>()
+  for (const r of praticas.data ?? []) {
+    const criado = r.created_at as string
+    const dia = criado.slice(0, 10)
+    const g = diasPratica.get(dia)
+    if (g) {
+      g.n++
+      if (r.acerto) g.acertos++
+    } else {
+      diasPratica.set(dia, { n: 1, acertos: r.acerto ? 1 : 0, ultimo: criado })
+    }
+  }
+  for (const g of diasPratica.values()) {
+    itens.push({
+      tipo: 'pratica',
+      titulo: 'Praticou questões avulsas',
+      detalhe: 'Correção na hora',
+      destaque: `${g.acertos}/${g.n} acertos`,
+      quando: g.ultimo,
+    })
+  }
+
+  itens.sort((a, b) => new Date(b.quando).getTime() - new Date(a.quando).getTime())
+  return itens.slice(0, limite)
+}
+
 /** Contadores reais da semana corrente (segunda a agora) para o card "Metas da semana". */
 export async function getMetasSemana(service: SupabaseClient, userId: string): Promise<MetasSemana> {
   const inicioISO = inicioSemana().toISOString()
