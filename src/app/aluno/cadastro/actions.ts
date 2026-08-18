@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit } from '@/lib/utils/rate-limit'
+import { verifyLeadToken } from '@/lib/marketing/lead-verification'
 
 export type CadastroState = { error: string } | null
 
@@ -80,6 +81,30 @@ export async function cadastroAlunoAction(
     return {
       error: 'Sua conta foi criada, mas houve uma falha ao liberar o acesso. Fale com o suporte.',
     }
+  }
+
+  // Vínculo lead → conta (migration 047). Best-effort: uma falha aqui não pode
+  // impedir o cadastro — o vínculo determina apenas a superfície restrita.
+  try {
+    const nowIso = new Date().toISOString()
+    const leadToken = ((formData.get('lt') as string) ?? '').trim()
+    const tokenLeadId = leadToken ? verifyLeadToken(leadToken) : null
+    if (tokenLeadId) {
+      await admin
+        .from('leads')
+        .update({ user_id: userId, converted_at: nowIso })
+        .eq('id', tokenLeadId)
+        .is('user_id', null)
+    }
+    // Reconciliação por e-mail cobre o caminho sem token (e outras campanhas
+    // do mesmo lead).
+    await admin
+      .from('leads')
+      .update({ user_id: userId, converted_at: nowIso })
+      .eq('email', email)
+      .is('user_id', null)
+  } catch (e) {
+    console.error('[aluno/cadastro] falha ao vincular lead à conta', e)
   }
 
   redirect('/aluno')

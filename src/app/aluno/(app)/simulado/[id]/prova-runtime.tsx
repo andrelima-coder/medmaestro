@@ -10,6 +10,7 @@ type Question = {
   origem?: string | null
   stem: string
   alternatives: Record<string, string>
+  images: { url: string; scope: string }[]
 }
 
 type Saved = Record<string, { alt: string | null; locked: boolean }>
@@ -53,6 +54,7 @@ export function ProvaRuntime({
   const [eliminated, setEliminated] = useState<Record<string, string[]>>({})
   const [flagged, setFlagged] = useState<Record<string, boolean>>({})
   const [reported, setReported] = useState<Record<string, boolean>>({})
+  const [mapOpen, setMapOpen] = useState(false)
   const stemRef = useRef<HTMLParagraphElement>(null)
   const submittedRef = useRef(false)
 
@@ -74,6 +76,19 @@ export function ProvaRuntime({
       router.push(`/aluno/simulado/${campaignId}/resultado`)
     })
   }, [attemptId, campaignId, router])
+
+  // Entrega manual: confirma quando ainda há questão sem resposta salva.
+  // O auto-finish do cronômetro NÃO passa por aqui (tempo esgotado entrega direto).
+  const manualFinish = useCallback(() => {
+    const pendentes = questions.length - Object.values(answers).filter((a) => a.locked).length
+    if (pendentes > 0) {
+      const ok = window.confirm(
+        `Você ainda tem ${pendentes === 1 ? '1 questão sem resposta' : `${pendentes} questões sem resposta`}. Finalizar a prova mesmo assim?`
+      )
+      if (!ok) return
+    }
+    finish()
+  }, [answers, questions.length, finish])
 
   // Cronômetro local (1s) + reconciliação com o servidor (a cada 20s).
   useEffect(() => {
@@ -172,11 +187,75 @@ export function ProvaRuntime({
   const elim = new Set(eliminated[q.id] ?? [])
 
   const answeredCount = Object.values(answers).filter((a) => a.locked).length
+  const stemImages = q.images.filter((img) => img.scope === 'statement')
+  const altImages = (alt: string) => q.images.filter((img) => img.scope === `alternative_${alt.toLowerCase()}`)
 
   return (
-    <div className="grid gap-6 md:grid-cols-[220px_1fr]">
-      {/* Mapa de questões + cronômetro */}
-      <aside className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-[220px_1fr] md:gap-6">
+      {/* Barra compacta mobile: cronômetro + progresso + mapa expansível */}
+      <div className="sticky top-14 z-30 md:hidden">
+        <div className="rounded-xl border border-border bg-card p-3 shadow-[var(--mm-shadow-sm)]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-mono text-lg font-bold text-foreground">{fmt(remaining)}</div>
+            <div className="text-xs text-muted-foreground">
+              {answeredCount}/{questions.length}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMapOpen((m) => !m)}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground"
+            >
+              {mapOpen ? 'Fechar mapa' : 'Mapa'}
+            </button>
+            <button
+              onClick={manualFinish}
+              disabled={isPending}
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              Finalizar
+            </button>
+          </div>
+          {mapOpen && (
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-8 gap-2">
+                {questions.map((qq, i) => {
+                  const st = answers[qq.id]
+                  const cls = st?.locked
+                    ? 'bg-primary text-primary-foreground'
+                    : i === current
+                      ? 'border-primary text-foreground'
+                      : 'border-border text-muted-foreground'
+                  const flag = flagged[qq.id] ? ' ring-2 ring-[#FBAE40]' : ''
+                  return (
+                    <button
+                      key={qq.id}
+                      onClick={() => {
+                        setCurrent(i)
+                        setMapOpen(false)
+                      }}
+                      className={`size-8 rounded-md border text-xs ${cls}${flag}`}
+                    >
+                      {i + 1}
+                    </button>
+                  )
+                })}
+              </div>
+              {pauseAllowed && (
+                <button
+                  onClick={onPause}
+                  disabled={isPending}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm text-foreground"
+                >
+                  Pausar e sair
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Mapa de questões + cronômetro (desktop) */}
+      <aside className="hidden space-y-4 md:block">
         <div className="rounded-xl border border-border bg-card p-4 text-center">
           <div className="text-xs text-muted-foreground">Tempo restante</div>
           <div className="font-mono text-2xl font-bold text-foreground">{fmt(remaining)}</div>
@@ -217,7 +296,7 @@ export function ProvaRuntime({
           </button>
         )}
         <button
-          onClick={finish}
+          onClick={manualFinish}
           disabled={isPending}
           className="mm-press w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-[0_4px_16px_rgba(212,7,84,0.25)] transition-[box-shadow,transform] duration-200 hover:shadow-[0_6px_22px_rgba(212,7,84,0.4)] disabled:bg-[#E8E8E8] disabled:text-[#A4A3A4] disabled:shadow-none"
         >
@@ -266,10 +345,25 @@ export function ProvaRuntime({
           {q.stem}
         </p>
 
+        {stemImages.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {stemImages.map((img, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={i}
+                src={img.url}
+                alt={`Figura da questão ${current + 1}`}
+                className="max-h-96 w-auto max-w-full rounded-lg border border-border"
+              />
+            ))}
+          </div>
+        )}
+
         <div className="mt-5 space-y-2">
           {ALTS.map((alt) => {
             const text = q.alternatives[alt]
-            if (!text) return null
+            // Alternativa pode ser só uma figura (imagem no lugar do texto).
+            if (!text && altImages(alt).length === 0) return null
             const isSel = selected === alt
             const isElim = elim.has(alt)
             return (
@@ -300,6 +394,15 @@ export function ProvaRuntime({
                 />
                 <span className={`flex-1 text-foreground ${isElim ? 'line-through' : ''}`}>
                   <strong>{alt})</strong> {text}
+                  {altImages(alt).map((img, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={i}
+                      src={img.url}
+                      alt={`Figura da alternativa ${alt}`}
+                      className="mt-2 max-h-60 w-auto max-w-full rounded-lg border border-border"
+                    />
+                  ))}
                 </span>
                 {!locked && (
                   <button

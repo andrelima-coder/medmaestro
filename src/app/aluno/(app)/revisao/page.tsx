@@ -20,7 +20,8 @@ export default async function RevisaoPage() {
     <div>
       <h1 className="mb-1 text-2xl font-bold text-foreground">Revisão de erros</h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Questões que você errou (na prática e nos simulados). Revise e marque as que já dominou.
+        Questões que você errou (na prática e nos simulados). Responda de novo — acertar libera o
+        &ldquo;Já dominei&rdquo;.
       </p>
       <RevisaoClient cards={cards} />
     </div>

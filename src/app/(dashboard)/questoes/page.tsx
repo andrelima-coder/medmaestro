@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { Card, CardBody, Badge, TagChip } from '@/components/ui'
 import { FilterDropdown } from '@/components/questoes/filter-dropdown'
 import { ExportProfessoresButton } from '@/components/questoes/export-professores-button'
+import { SelecaoProvider, SelecaoCheckbox, SelecaoBar } from '@/components/questoes/selecao-massa'
 
 export const metadata = { title: 'Questões — MedMaestro' }
 
@@ -308,7 +309,7 @@ export default async function QuestoesPage({
         </div>
       </div>
 
-      {/* Cards de questão */}
+      {/* Cards de questão + seleção em massa → simulado */}
       {total === 0 ? (
         <Card>
           <CardBody className="py-10 text-center text-[13px] text-[var(--mm-muted)]">
@@ -321,8 +322,14 @@ export default async function QuestoesPage({
           </CardBody>
         </Card>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {rows.map((q, rowIndex) => {
+        <SelecaoProvider>
+          <SelecaoBar
+            pageIds={rows.map((q) => q.id)}
+            filters={exportFilters}
+            total={total}
+          />
+          <div className="flex flex-col gap-2.5">
+            {rows.map((q, rowIndex) => {
             const tags = q.tags ?? []
             const dificuldadeTag = tags.find((t) => t.dimension === 'dificuldade')
             const tipoTag = tags.find((t) => t.dimension === 'tipo_questao')
@@ -336,8 +343,9 @@ export default async function QuestoesPage({
                 style={{ '--stagger': Math.min(rowIndex, 8) } as React.CSSProperties}
               >
                 <CardBody className="p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 font-[family-name:var(--font-syne)] text-[11px] font-bold text-[var(--mm-gold)]">
+                      <SelecaoCheckbox id={q.id} />
                       QUESTÃO {q.question_number}
                       {` · ${q.board ?? 'TEMI'} ${q.year}`}
                     </span>
@@ -386,7 +394,8 @@ export default async function QuestoesPage({
               </Card>
             )
           })}
-        </div>
+          </div>
+        </SelecaoProvider>
       )}
 
       {/* Paginação */}

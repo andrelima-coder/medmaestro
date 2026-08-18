@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { headers, cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/utils/rate-limit'
 
@@ -56,6 +56,11 @@ export async function loginAlunoAction(
     await supabase.auth.signOut()
     return { error: 'Esta área é exclusiva para alunos. Use o acesso interno.' }
   }
+
+  // Caches de papel/acesso do usuário anterior não valem para esta sessão.
+  const jar = await cookies()
+  jar.delete('mm-role')
+  jar.delete('mm-acesso')
 
   redirect('/aluno')
 }

@@ -6,8 +6,10 @@ import { cadastroAlunoAction } from './actions'
 
 export function CadastroForm({
   defaults,
+  leadToken,
 }: {
   defaults?: { fullName?: string; email?: string; phone?: string }
+  leadToken?: string
 }) {
   const [state, formAction, isPending] = useActionState(cadastroAlunoAction, null)
 
@@ -21,6 +23,7 @@ export function CadastroForm({
       </p>
 
       <form action={formAction} className="mt-6 space-y-4">
+        {leadToken && <input type="hidden" name="lt" value={leadToken} />}
         <Field label="Nome completo" name="full_name" type="text" autoComplete="name" defaultValue={defaults?.fullName} />
         <Field label="E-mail" name="email" type="email" autoComplete="email" defaultValue={defaults?.email} />
         <Field label="WhatsApp" name="phone" type="tel" autoComplete="tel" defaultValue={defaults?.phone} />

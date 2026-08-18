@@ -2,12 +2,18 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export async function logoutAluno() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  // Caches de papel/acesso (TTL 60s) não podem sobreviver à troca de usuário
+  // na mesma máquina — um lead herdaria a superfície do usuário anterior.
+  const jar = await cookies()
+  jar.delete('mm-role')
+  jar.delete('mm-acesso')
   redirect('/aluno/login')
 }
 

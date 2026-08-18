@@ -45,17 +45,8 @@ export async function startOrResumeAttempt(
     .eq('id', campaignId)
     .single()
 
-  if (!campaign || campaign.status !== 'publicada') {
+  if (!campaign) {
     return { ok: false, error: 'Campanha indisponível.' }
-  }
-
-  // Checagem de janela de acesso.
-  const now = Date.now()
-  if (campaign.access_mode !== 'imediato') {
-    if (campaign.window_start && now < new Date(campaign.window_start).getTime())
-      return { ok: false, error: 'A prova ainda não está liberada.' }
-    if (campaign.window_end && now > new Date(campaign.window_end).getTime())
-      return { ok: false, error: 'A janela desta prova foi encerrada.' }
   }
 
   const { data: existing } = await service
@@ -68,6 +59,37 @@ export async function startOrResumeAttempt(
   // Tentativa única: já entregue/expirada não refaz.
   if (existing && existing.status !== 'em_andamento') {
     return { ok: false, error: 'Você já realizou esta prova.' }
+  }
+
+  const resuming = !!existing
+
+  // Despublicar/fechar a janela no meio da aplicação NÃO derruba quem já está
+  // em prova (o cronômetro dele segue o deadline); só bloqueia inícios novos.
+  if (!resuming) {
+    if (campaign.status !== 'publicada') {
+      return { ok: false, error: 'Campanha indisponível.' }
+    }
+    const now = Date.now()
+    if (campaign.access_mode !== 'imediato') {
+      if (campaign.window_start && now < new Date(campaign.window_start).getTime())
+        return { ok: false, error: 'A prova ainda não está liberada.' }
+      if (campaign.window_end && now > new Date(campaign.window_end).getTime())
+        return { ok: false, error: 'A janela desta prova foi encerrada.' }
+    }
+  }
+
+  // Defesa em profundidade: conta de lead só inicia prova das campanhas de
+  // onde veio (a página já bloqueia, mas server action é endpoint invocável).
+  if (!resuming) {
+    const supabase = await createClient()
+    const { data: acessoData } = await supabase.rpc('mt_meu_acesso')
+    const acesso = acessoData as { kind?: string; campaign_ids?: unknown } | null
+    if (acesso?.kind === 'lead') {
+      const ids = Array.isArray(acesso.campaign_ids) ? (acesso.campaign_ids as string[]) : []
+      if (!ids.includes(campaignId)) {
+        return { ok: false, error: 'Esta prova não está disponível para o seu acesso.' }
+      }
+    }
   }
 
   if (existing) {

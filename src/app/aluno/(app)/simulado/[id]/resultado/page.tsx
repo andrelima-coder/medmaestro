@@ -1,11 +1,10 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { ResultadoClient, type ResultQuestion } from '../resultado-client'
+import { getErrorCardImages } from '@/lib/aluno/estudo'
+import { ResultadoClient, type ResultQuestion, type ModulePerf } from '../resultado-client'
 
 export const metadata = { title: 'Resultado — MedMaestro' }
-
-const MIN_DISTRIBUTION = 30 // volume mínimo por questão para exibir distribuição
 
 export default async function ResultadoPage({
   params,
@@ -42,15 +41,47 @@ export default async function ResultadoPage({
     nota_gabarito?: boolean
     comentarios_mode?: string
     comentarios_release_at?: string | null
+    comentarios_release_until?: string | null
     revisao?: boolean
   }
   const showScore = !!releases.nota_gabarito
   const allowReview = !!releases.revisao
-  const commentsReleased =
+
+  // Janela de comentários: imediato ou por data de início, com fim opcional.
+  const now = Date.now()
+  let commentsReleased =
     releases.comentarios_mode === 'imediato' ||
     (releases.comentarios_mode === 'data' &&
       !!releases.comentarios_release_at &&
-      Date.now() >= new Date(releases.comentarios_release_at).getTime())
+      now >= new Date(releases.comentarios_release_at).getTime())
+  if (
+    commentsReleased &&
+    releases.comentarios_release_until &&
+    now > new Date(releases.comentarios_release_until).getTime()
+  ) {
+    commentsReleased = false
+  }
+
+  // Comentários retidos: diz ao participante quando/onde eles aparecem
+  // (gancho da live), em vez de simplesmente sumir com eles.
+  const fmtBR = (iso: string) =>
+    new Date(iso).toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    })
+  let comentariosAviso: string | null = null
+  if (!commentsReleased) {
+    if (
+      releases.comentarios_mode === 'data' &&
+      releases.comentarios_release_at &&
+      now < new Date(releases.comentarios_release_at).getTime()
+    ) {
+      comentariosAviso = `Os comentários das questões serão liberados em ${fmtBR(releases.comentarios_release_at)}.`
+    } else if (releases.comentarios_mode === 'oculto' && (campaign?.live_url || campaign?.live_at)) {
+      comentariosAviso = 'Os comentários das questões serão apresentados na correção ao vivo.'
+    }
+  }
 
   // Questões do molde.
   const { data: rows } = await service
@@ -72,6 +103,7 @@ export default async function ResultadoPage({
     } | null
   }
   const qrows = ((rows ?? []) as unknown as QRow[]).filter((r) => r.questions)
+  const questionIds = qrows.map((r) => r.questions!.id)
 
   // Respostas do aluno.
   const { data: myAns } = await service
@@ -81,38 +113,61 @@ export default async function ResultadoPage({
   const selectedByQ: Record<string, string | null> = {}
   for (const a of myAns ?? []) selectedByQ[a.question_id] = a.selected_alt
 
-  // Distribuição agregada da campanha (para volume mínimo).
-  let distByQ: Record<string, Record<string, number>> = {}
-  let totalByQ: Record<string, number> = {}
-  if (allowReview) {
-    const { data: attemptIds } = await service
+  // Agregados da campanha (somente provas ENTREGUES): distribuição por
+  // alternativa e média geral dos participantes.
+  const distByQ: Record<string, Record<string, number>> = {}
+  const totalByQ: Record<string, number> = {}
+  let mediaGeral: { pct: number; participantes: number } | null = null
+  if (allowReview || showScore) {
+    // Tempo esgotado = entrega com o que foi feito: expirados contam na média
+    // e na distribuição, como numa prova real.
+    const { data: finished } = await service
       .from('simulado_attempts')
       .select('id')
       .eq('campaign_id', campaignId)
-    const ids = (attemptIds ?? []).map((a) => a.id)
+      .in('status', ['entregue', 'expirado'])
+    const ids = (finished ?? []).map((a) => a.id)
     if (ids.length > 0) {
       const { data: allAns } = await service
         .from('question_attempts')
-        .select('question_id, selected_alt')
+        .select('attempt_id, question_id, selected_alt')
         .in('attempt_id', ids)
+
+      const correctMap: Record<string, string | null> = {}
+      for (const r of qrows) correctMap[r.questions!.id] = r.questions!.correct_answer
+
+      const correctByAttempt: Record<string, number> = {}
       for (const a of allAns ?? []) {
         if (!a.selected_alt) continue
         distByQ[a.question_id] ??= {}
-        distByQ[a.question_id][a.selected_alt] = (distByQ[a.question_id][a.selected_alt] ?? 0) + 1
+        distByQ[a.question_id][a.selected_alt] =
+          (distByQ[a.question_id][a.selected_alt] ?? 0) + 1
         totalByQ[a.question_id] = (totalByQ[a.question_id] ?? 0) + 1
+        const corr = correctMap[a.question_id]
+        if (corr && a.selected_alt === corr) {
+          correctByAttempt[a.attempt_id] = (correctByAttempt[a.attempt_id] ?? 0) + 1
+        }
+      }
+      if (showScore && qrows.length > 0) {
+        const scores = ids.map((id) =>
+          Math.round(((correctByAttempt[id] ?? 0) / qrows.length) * 100)
+        )
+        mediaGeral = {
+          pct: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+          participantes: scores.length,
+        }
       }
     }
   }
 
-  // Comentários publicados (se liberados).
+  // Comentários (curadoria pode rejeitar; rejeitado nunca chega ao participante).
   const commentByQ: Record<string, string> = {}
-  if (commentsReleased) {
-    const ids = qrows.map((r) => r.questions!.id)
+  if (commentsReleased && questionIds.length > 0) {
     const { data: comments } = await service
       .from('question_comments')
       .select('question_id, content, comment_type')
-      .in('question_id', ids)
-      .eq('status', 'published')
+      .in('question_id', questionIds)
+      .neq('status', 'rejected')
       .order('comment_type', { ascending: true })
     for (const c of comments ?? []) {
       // prioriza explicacao; não sobrescreve uma explicacao já escolhida
@@ -122,16 +177,45 @@ export default async function ResultadoPage({
     }
   }
 
+  // Imagens das questões (revisão fica incompleta sem as figuras).
+  const imagesByQ = allowReview
+    ? await getErrorCardImages(service, questionIds)
+    : new Map<string, { url: string; scope: string }[]>()
+
+  // Módulo de cada questão (desempenho por área).
+  const moduleByQ: Record<string, string> = {}
+  if (showScore && questionIds.length > 0) {
+    const { data: qt } = await service
+      .from('question_tags')
+      .select('question_id, tags!inner(label, dimension)')
+      .in('question_id', questionIds)
+      .eq('tags.dimension', 'modulo')
+    for (const r of (qt ?? []) as unknown as {
+      question_id: string
+      tags: { label: string } | null
+    }[]) {
+      if (r.tags?.label && !moduleByQ[r.question_id]) moduleByQ[r.question_id] = r.tags.label
+    }
+  }
+
   // Monta as questões (sanitizadas por gating) e calcula o score.
   let correct = 0
   const total = qrows.length
+  const modAgg: Record<string, { correct: number; total: number }> = {}
   const questions: ResultQuestion[] = qrows.map((r) => {
     const q = r.questions!
     const selected = selectedByQ[q.id] ?? null
     const isCorrect = selected != null && q.correct_answer != null && selected === q.correct_answer
     if (isCorrect) correct++
 
-    const showDist = allowReview && (totalByQ[q.id] ?? 0) >= MIN_DISTRIBUTION
+    if (showScore) {
+      const mod = moduleByQ[q.id] ?? 'Outros'
+      modAgg[mod] ??= { correct: 0, total: 0 }
+      modAgg[mod].total++
+      if (isCorrect) modAgg[mod].correct++
+    }
+
+    const distTotal = totalByQ[q.id] ?? 0
     const alt = (q.alternatives ?? {}) as Record<string, string>
     return {
       id: q.id,
@@ -151,16 +235,36 @@ export default async function ResultadoPage({
           }
         : null,
       comment: commentsReleased ? (commentByQ[q.id] ?? null) : null,
-      distribution: showDist
-        ? { counts: distByQ[q.id] ?? {}, total: totalByQ[q.id] ?? 0 }
-        : null,
+      distribution:
+        allowReview && distTotal > 0
+          ? { counts: distByQ[q.id] ?? {}, total: distTotal }
+          : null,
+      images: allowReview ? (imagesByQ.get(q.id) ?? []) : [],
     }
   })
+
+  const modules: ModulePerf[] | null = showScore
+    ? Object.entries(modAgg)
+        .map(([label, v]) => ({
+          label,
+          correct: v.correct,
+          total: v.total,
+          pct: v.total > 0 ? Math.round((v.correct / v.total) * 100) : 0,
+        }))
+        .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label))
+    : null
 
   const completedSingleRun = attempt.status === 'entregue' && !attempt.was_paused
   const pct = total > 0 ? Math.round((correct / total) * 100) : 0
 
-  // Persiste o resultado (idempotente).
+  // Persiste o resultado (idempotente). `finished_at` marca a PRIMEIRA chegada
+  // aqui — é critério de desempate do ranking e não pode ser regravado a cada
+  // visita à página.
+  const { data: prevResult } = await service
+    .from('attempt_results')
+    .select('finished_at')
+    .eq('attempt_id', attempt.id)
+    .maybeSingle()
   await service
     .from('attempt_results')
     .upsert(
@@ -168,7 +272,7 @@ export default async function ResultadoPage({
         attempt_id: attempt.id,
         score: showScore ? pct : null,
         completed_single_run: completedSingleRun,
-        finished_at: new Date().toISOString(),
+        finished_at: prevResult?.finished_at ?? new Date().toISOString(),
       },
       { onConflict: 'attempt_id' }
     )
@@ -176,10 +280,14 @@ export default async function ResultadoPage({
   return (
     <ResultadoClient
       campaignName={campaign?.name ?? 'Simulado'}
-      confetti={completedSingleRun}
+      confetti={attempt.status === 'entregue'}
+      singleRun={completedSingleRun}
       score={showScore ? { correct, total, pct } : null}
+      media={mediaGeral}
+      modules={modules}
       allowReview={allowReview}
       liveUrl={campaign?.live_url ?? null}
+      comentariosAviso={comentariosAviso}
       questions={questions}
     />
   )

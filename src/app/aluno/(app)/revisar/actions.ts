@@ -38,7 +38,7 @@ export async function revisarRevelarAction(questionId: string, escolha: string):
     .from('questions')
     .select('correct_answer, question_comments(comment_type, content)')
     .eq('id', questionId)
-    .eq('question_comments.status', 'published')
+    .neq('question_comments.status', 'rejected')
     .single()
   if (!q?.correct_answer) return { ok: false, error: 'Não foi possível carregar o gabarito.' }
 

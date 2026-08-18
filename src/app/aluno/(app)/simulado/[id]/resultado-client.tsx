@@ -14,23 +14,34 @@ export type ResultQuestion = {
   alternatives: Record<string, string> | null
   comment: string | null
   distribution: { counts: Record<string, number>; total: number } | null
+  images: { url: string; scope: string }[]
 }
+
+export type ModulePerf = { label: string; correct: number; total: number; pct: number }
 
 const ALTS = ['A', 'B', 'C', 'D', 'E'] as const
 
 export function ResultadoClient({
   campaignName,
   confetti,
+  singleRun,
   score,
+  media,
+  modules,
   allowReview,
   liveUrl,
+  comentariosAviso,
   questions,
 }: {
   campaignName: string
   confetti: boolean
+  singleRun: boolean
   score: { correct: number; total: number; pct: number } | null
+  media: { pct: number; participantes: number } | null
+  modules: ModulePerf[] | null
   allowReview: boolean
   liveUrl: string | null
+  comentariosAviso: string | null
   questions: ResultQuestion[]
 }) {
   return (
@@ -41,14 +52,29 @@ export function ResultadoClient({
         <h1 className="text-xl font-bold text-foreground">{campaignName} — Resultado</h1>
         {confetti && (
           <p className="mt-1 text-sm text-[#006048]">
-            🎉 Parabéns! Você concluiu de uma só vez e dentro do prazo.
+            {singleRun
+              ? '🎉 Parabéns! Você concluiu de uma só vez e dentro do prazo.'
+              : '🎉 Prova concluída!'}
           </p>
         )}
         {score ? (
-          <p className="mt-3 text-3xl font-extrabold text-foreground">
-            {score.correct}/{score.total}{' '}
-            <span className="text-base font-medium text-muted-foreground">({score.pct}%)</span>
-          </p>
+          <>
+            <p className="mt-3 text-3xl font-extrabold text-foreground">
+              {score.correct}/{score.total}{' '}
+              <span className="text-base font-medium text-muted-foreground">({score.pct}%)</span>
+            </p>
+            {media && media.participantes > 1 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Média geral: <strong className="text-foreground">{media.pct}%</strong> entre{' '}
+                {media.participantes} participantes —{' '}
+                {score.pct >= media.pct ? (
+                  <span className="font-medium text-[#006048]">você ficou na média ou acima</span>
+                ) : (
+                  <span className="font-medium text-[#D3402A]">você ficou abaixo da média</span>
+                )}
+              </p>
+            )}
+          </>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
             A nota e o gabarito serão liberados pela organização.
@@ -63,7 +89,40 @@ export function ResultadoClient({
             </a>
           </p>
         )}
+        {comentariosAviso && (
+          <p className="mt-2 text-xs text-muted-foreground">{comentariosAviso}</p>
+        )}
       </header>
+
+      {/* Desempenho por módulo/área */}
+      {modules && modules.length > 0 && (
+        <section
+          className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]"
+          style={{ '--stagger': 1 } as CSSProperties}
+        >
+          <h2 className="mb-3 text-sm font-semibold text-foreground">Desempenho por área</h2>
+          <div className="space-y-2.5">
+            {modules.map((m) => (
+              <div key={m.label}>
+                <div className="mb-0.5 flex items-baseline justify-between gap-2 text-sm">
+                  <span className="truncate text-foreground">{m.label}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {m.correct}/{m.total} · {m.pct}%
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded bg-muted">
+                  <div
+                    className={`mm-grow-x h-2 rounded ${
+                      m.pct >= 70 ? 'bg-[#006048]' : m.pct >= 40 ? 'bg-primary' : 'bg-[#D3402A]'
+                    }`}
+                    style={{ width: `${m.pct}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Mapa de questões */}
       <section className="mm-animate-in rounded-2xl border border-border bg-card p-6 shadow-[var(--mm-shadow-sm)]" style={{ '--stagger': 1 } as CSSProperties}>
@@ -139,6 +198,24 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
       </div>
       {q.stem && <p className="whitespace-pre-line text-sm text-foreground">{q.stem}</p>}
 
+      {q.images.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {q.images.map((img, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={i}
+              src={img.url}
+              alt={
+                img.scope === 'statement'
+                  ? `Figura da questão ${q.number}`
+                  : `Figura da alternativa ${img.scope.replace('alternative_', '').toUpperCase()}`
+              }
+              className="max-h-96 w-auto max-w-full rounded-lg border border-border"
+            />
+          ))}
+        </div>
+      )}
+
       {q.alternatives && (
         <ul className="mt-3 space-y-1.5">
           {ALTS.map((alt) => {
@@ -175,6 +252,13 @@ function QuestionReview({ q }: { q: ResultQuestion }) {
             )
           })}
         </ul>
+      )}
+
+      {distTotal > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Percentuais baseados em {distTotal} resposta{distTotal > 1 ? 's' : ''} de quem entregou a
+          prova.
+        </p>
       )}
 
       {q.comment && (

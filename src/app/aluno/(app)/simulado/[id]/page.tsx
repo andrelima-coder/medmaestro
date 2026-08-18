@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
+import { getAlunoAcesso } from '@/lib/aluno/acesso'
+import { getErrorCardImages } from '@/lib/aluno/estudo'
 import { startOrResumeAttempt } from './actions'
 import { ProvaRuntime } from './prova-runtime'
 
@@ -27,7 +29,11 @@ function Aviso({ title, children }: { title: string; children?: React.ReactNode 
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  new Date(iso).toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo', // o servidor roda em UTC — sem isso o horário mostrado mente
+  })
 
 export default async function SimuladoPage({
   params,
@@ -43,14 +49,36 @@ export default async function SimuladoPage({
     .eq('id', campaignId)
     .single()
 
-  if (!campaign || campaign.status !== 'publicada') {
+  // Tentativa existente decide se a prova pode continuar mesmo com a campanha
+  // despublicada ou a janela fechada no meio da aplicação.
+  const supabaseSessao = await createClient()
+  const {
+    data: { user },
+  } = await supabaseSessao.auth.getUser()
+  const { data: myAttempt } = user
+    ? await service
+        .from('simulado_attempts')
+        .select('status')
+        .eq('user_id', user.id)
+        .eq('campaign_id', campaignId)
+        .maybeSingle()
+    : { data: null }
+  const emAndamento = myAttempt?.status === 'em_andamento'
+
+  if (!campaign || (campaign.status !== 'publicada' && !emAndamento)) {
     return <Aviso title="Simulado indisponível">Esta prova não está disponível no momento.</Aviso>
+  }
+
+  // Conta de lead só acessa as campanhas de onde veio (URL direta não vale).
+  const acesso = await getAlunoAcesso(supabaseSessao)
+  if (acesso.kind === 'lead' && !acesso.campaignIds.includes(campaignId)) {
+    return <Aviso title="Simulado indisponível">Esta prova não está disponível para o seu acesso.</Aviso>
   }
 
   const now = Date.now()
 
-  // T027 — Página de espera / janela encerrada.
-  if (campaign.access_mode !== 'imediato') {
+  // T027 — Página de espera / janela encerrada (não vale para prova em andamento).
+  if (campaign.access_mode !== 'imediato' && !emAndamento) {
     if (campaign.window_start && now < new Date(campaign.window_start).getTime()) {
       return (
         <Aviso title="Quase lá!">
@@ -60,24 +88,10 @@ export default async function SimuladoPage({
       )
     }
     if (campaign.window_end && now > new Date(campaign.window_end).getTime()) {
-      // Janela encerrada: se já fez, oferece o resultado.
-      const supabase = await createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      const { data: attempt } = user
-        ? await service
-            .from('simulado_attempts')
-            .select('status')
-            .eq('user_id', user.id)
-            .eq('campaign_id', campaignId)
-            .maybeSingle()
-        : { data: null }
-
       return (
         <Aviso title="Janela encerrada">
           <p>O período para realizar esta prova terminou em <strong>{fmt(campaign.window_end)}</strong>.</p>
-          {attempt && (
+          {myAttempt && (
             <p className="mt-3">
               <Link href={`/aluno/simulado/${campaignId}/resultado`} className="font-medium text-primary underline">
                 Ver meu resultado
@@ -105,25 +119,32 @@ export default async function SimuladoPage({
     .eq('simulado_id', campaign.simulado_id)
     .order('position', { ascending: true })
 
-  const questions = ((rows ?? []) as unknown as QuestionRow[])
-    .filter((r) => r.questions)
-    .map((r) => {
-      const q = r.questions!
-      const alt = (q.alternatives ?? {}) as Record<string, string>
-      return {
-        id: q.id,
-        number: q.question_number ?? r.position,
-        origem: q.exams?.year ? `Ano ${q.exams.year}` : null,
-        stem: q.stem ?? '',
-        alternatives: {
-          A: alt.A ?? '',
-          B: alt.B ?? '',
-          C: alt.C ?? '',
-          D: alt.D ?? '',
-          E: alt.E ?? '',
-        } as Record<string, string>,
-      }
-    })
+  const qrows = ((rows ?? []) as unknown as QuestionRow[]).filter((r) => r.questions)
+
+  // Figuras das questões (ECG, radiografia etc.) — a prova fica irrespondível sem elas.
+  const imagesByQ = await getErrorCardImages(
+    service,
+    qrows.map((r) => r.questions!.id)
+  )
+
+  const questions = qrows.map((r) => {
+    const q = r.questions!
+    const alt = (q.alternatives ?? {}) as Record<string, string>
+    return {
+      id: q.id,
+      number: q.question_number ?? r.position,
+      origem: q.exams?.year ? `Ano ${q.exams.year}` : null,
+      stem: q.stem ?? '',
+      alternatives: {
+        A: alt.A ?? '',
+        B: alt.B ?? '',
+        C: alt.C ?? '',
+        D: alt.D ?? '',
+        E: alt.E ?? '',
+      } as Record<string, string>,
+      images: imagesByQ.get(q.id) ?? [],
+    }
+  })
 
   const { data: saved } = await service
     .from('question_attempts')

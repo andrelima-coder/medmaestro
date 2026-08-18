@@ -227,6 +227,7 @@ export async function GET(
       if(j.error){el('mm-form-error').textContent=j.error;postHeight();return}
       if(!j.lead_id){el('mm-form-error').textContent='Não foi possível enviar. Tente novamente.';postHeight();return}
       leadId=j.lead_id;
+      if(j.cta){el('mm-cta').href=j.cta}
       if(j.next==='verificar'){
         el('mm-verify-email').textContent=String(d.get('email')||'');
         show('verify');

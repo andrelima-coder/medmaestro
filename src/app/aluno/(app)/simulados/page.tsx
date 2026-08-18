@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getSimuladosDisponiveis, getMeusSimulados } from '@/lib/aluno/estudo'
+import { getAlunoAcesso } from '@/lib/aluno/acesso'
 
 export const metadata = { title: 'Simulados — MedMaestro' }
 
@@ -13,7 +14,11 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const fmt = (iso: string) =>
-  new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  new Date(iso).toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Sao_Paulo', // o servidor roda em UTC — sem isso o horário mostrado mente
+  })
 
 export default async function SimuladosPage() {
   const supabase = await createClient()
@@ -23,8 +28,10 @@ export default async function SimuladosPage() {
   if (!user) redirect('/aluno/login')
 
   const service = createServiceClient()
+  const acesso = await getAlunoAcesso(supabase)
   const [disponiveis, meus] = await Promise.all([
-    getSimuladosDisponiveis(service),
+    // Conta de lead (porta pública) só enxerga as campanhas de onde veio.
+    getSimuladosDisponiveis(service, acesso.kind === 'lead' ? acesso.campaignIds : undefined),
     getMeusSimulados(service, user.id),
   ])
 
@@ -32,7 +39,9 @@ export default async function SimuladosPage() {
   // aparecem só no histórico abaixo.
   const finalizados = new Set(meus.filter((m) => m.status !== 'em_andamento').map((m) => m.campaignId))
   const emAndamento = new Set(meus.filter((m) => m.status === 'em_andamento').map((m) => m.campaignId))
-  const paraFazer = disponiveis.filter((c) => !finalizados.has(c.campaignId))
+  const paraFazer = disponiveis.filter(
+    (c) => !finalizados.has(c.campaignId) && c.janela !== 'encerrado'
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -47,20 +56,32 @@ export default async function SimuladosPage() {
             {paraFazer.map((c) => (
               <div
                 key={c.campaignId}
-                className="flex items-center justify-between rounded-xl bg-muted/40 p-4"
+                className="flex flex-col gap-3 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <div className="font-semibold text-foreground">{c.nome}</div>
-                  {c.totalQuestoes && (
-                    <div className="mt-0.5 text-xs text-muted-foreground">{c.totalQuestoes} questões</div>
-                  )}
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {c.totalQuestoes ? `${c.totalQuestoes} questões` : null}
+                    {c.janela === 'aguardando' && c.abreEm
+                      ? `${c.totalQuestoes ? ' · ' : ''}Abre em ${fmt(c.abreEm)}`
+                      : null}
+                    {c.janela === 'aberto' && c.encerraEm
+                      ? `${c.totalQuestoes ? ' · ' : ''}Até ${fmt(c.encerraEm)}`
+                      : null}
+                  </div>
                 </div>
-                <Link
-                  href={`/aluno/simulado/${c.campaignId}`}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-                >
-                  {emAndamento.has(c.campaignId) ? 'Continuar' : 'Iniciar'}
-                </Link>
+                {c.janela === 'aguardando' ? (
+                  <span className="shrink-0 rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-muted-foreground">
+                    Em breve
+                  </span>
+                ) : (
+                  <Link
+                    href={`/aluno/simulado/${c.campaignId}`}
+                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground"
+                  >
+                    {emAndamento.has(c.campaignId) ? 'Continuar' : 'Iniciar'}
+                  </Link>
+                )}
               </div>
             ))}
           </div>

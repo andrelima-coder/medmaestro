@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { flags } from '@/lib/flags'
 import { AlunoSidebar } from '@/components/aluno/aluno-sidebar'
 import { getMinhaBancaAtiva } from '@/lib/aluno/mentoria'
+import { getAlunoAcesso } from '@/lib/aluno/acesso'
 
 /**
  * Área autenticada do aluno (feature 001).
@@ -41,18 +42,24 @@ export default async function AlunoAppLayout({
   const userName = profile?.full_name?.trim() || user.email?.split('@')[0] || 'Aluno'
 
   const banca = await getMinhaBancaAtiva(supabase)
+  const acesso = await getAlunoAcesso(supabase)
+  const restrito = acesso.kind === 'lead'
   const userSub = banca
     ? `Candidata · ${banca.nomeCurto} ${banca.dataProva ? new Date(banca.dataProva).getUTCFullYear() : ''}`.trim()
-    : 'Candidata'
+    : restrito
+      ? 'Simulado gratuito'
+      : 'Candidata'
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <a href="#main-content" className="skip-to-content">
         Ir para o conteúdo
       </a>
-      <AlunoSidebar userName={userName} userSub={userSub} />
+      <AlunoSidebar userName={userName} userSub={userSub} restrito={restrito} />
       <main id="main-content" className="flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-5xl p-4 sm:p-6">{children}</div>
+        <div className="mx-auto w-full max-w-5xl p-4 pt-[4.5rem] sm:p-6 sm:pt-[4.5rem] md:pt-6">
+          {children}
+        </div>
       </main>
     </div>
   )

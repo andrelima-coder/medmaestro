@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { sendConversionEvent } from '@/lib/marketing/conversao'
 import { normalizeWhatsapp } from '@/lib/utils/whatsapp'
-import { issueVerificationCode } from '@/lib/marketing/lead-verification'
+import { issueVerificationCode, signLeadToken } from '@/lib/marketing/lead-verification'
 
 // Endpoint público de captação de lead (feature 001 — T014).
 // Contrato: _reversa_forward/001-camada-aluno-simulados/interfaces/embed-lead-capture.md
@@ -200,5 +200,12 @@ export async function POST(request: Request) {
       ? 'simulado'
       : 'espera'
 
-  return NextResponse.json({ lead_id: leadId, next }, { status: created ? 201 : 200 })
+  // CTA com token assinado: pré-preenche o cadastro e permite gravar o vínculo
+  // lead → conta criada (mesmo sem verificação de e-mail).
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  const alunoUrl = (process.env.NEXT_PUBLIC_ALUNO_URL ?? '').replace(/\/$/, '')
+  const cadastroUrl = alunoUrl ? `${alunoUrl}/cadastro` : `${appUrl}/aluno/cadastro`
+  const cta = `${cadastroUrl}?lt=${encodeURIComponent(signLeadToken(leadId))}`
+
+  return NextResponse.json({ lead_id: leadId, next, cta }, { status: created ? 201 : 200 })
 }

@@ -12,6 +12,18 @@ import { logAudit } from '@/lib/audit'
 
 export type CampaignState = { ok: boolean; error?: string; embedId?: string } | null
 
+/**
+ * Input datetime-local vem sem fuso ("YYYY-MM-DDTHH:mm"); sem tratamento o
+ * Postgres interpretaria como UTC (3h de erro). Interpreta como horário de
+ * Brasília (UTC-3 fixo — sem horário de verão desde 2019).
+ */
+function brLocalToIso(v: string | null): string | null {
+  if (!v) return null
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return `${v}:00-03:00`
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(v)) return `${v}-03:00`
+  return v
+}
+
 export async function createCampaignAction(
   _prev: CampaignState,
   formData: FormData
@@ -33,8 +45,8 @@ export async function createCampaignAction(
   }
   const duration = Number(formData.get('duration_minutes'))
   const accessMode = (formData.get('access_mode') as string)?.trim() // imediato|data_unica|janela
-  const windowStart = (formData.get('window_start') as string) || null
-  const windowEnd = (formData.get('window_end') as string) || null
+  const windowStart = brLocalToIso((formData.get('window_start') as string) || null)
+  const windowEnd = brLocalToIso((formData.get('window_end') as string) || null)
   const pauseAllowed = formData.get('pause_allowed') === 'on'
   const publish = formData.get('publish') === 'on'
 
@@ -42,12 +54,12 @@ export async function createCampaignAction(
   const releases = {
     nota_gabarito: formData.get('rel_nota') === 'on',
     comentarios_mode: (formData.get('rel_coment_mode') as string) || 'oculto', // oculto|imediato|data
-    comentarios_release_at: (formData.get('rel_coment_at') as string) || null,
+    comentarios_release_at: brLocalToIso((formData.get('rel_coment_at') as string) || null),
     revisao: formData.get('rel_revisao') === 'on',
     dashboard: formData.get('rel_dashboard') === 'on', // libera o dashboard de desempenho (Fase 2)
   }
 
-  const liveAt = (formData.get('live_at') as string) || null
+  const liveAt = brLocalToIso((formData.get('live_at') as string) || null)
   const liveUrl = (formData.get('live_url') as string)?.trim() || null
 
   // Rastreamento/pixel por campanha (T016).
@@ -172,6 +184,141 @@ export async function createCampaignAction(
 
   revalidatePath('/campanhas')
   return { ok: true, embedId }
+}
+
+// ── Edição e publicação da campanha pós-criação ─────────────────────────────
+
+export type CampaignReleasesConfig = {
+  nota_gabarito: boolean
+  comentarios_mode: 'oculto' | 'imediato' | 'data'
+  comentarios_release_at: string | null
+  /** Fim opcional da janela de comentários (após essa data, voltam a ficar ocultos). */
+  comentarios_release_until: string | null
+  revisao: boolean
+  dashboard: boolean
+}
+
+export type CampaignConfig = {
+  name: string
+  durationMinutes: number
+  accessMode: 'imediato' | 'data_unica' | 'janela'
+  windowStart: string | null // ISO UTC (o client converte do datetime-local)
+  windowEnd: string | null
+  pauseAllowed: boolean
+  liveAt: string | null
+  liveUrl: string | null
+  releases: CampaignReleasesConfig
+}
+
+export async function updateCampaignAction(
+  campaignId: string,
+  cfg: CampaignConfig
+): Promise<{ ok: boolean; error?: string }> {
+  const guard = await requireRole('admin')
+  if (!guard.ok) return { ok: false, error: guard.error }
+
+  const name = cfg.name?.trim()
+  if (!name) return { ok: false, error: 'O nome da campanha é obrigatório.' }
+  if (!Number.isFinite(cfg.durationMinutes) || cfg.durationMinutes <= 0)
+    return { ok: false, error: 'Duração inválida.' }
+  if (!['imediato', 'data_unica', 'janela'].includes(cfg.accessMode))
+    return { ok: false, error: 'Modo de acesso inválido.' }
+  if (cfg.accessMode === 'data_unica' && !cfg.windowStart)
+    return { ok: false, error: 'Informe a data de início da prova.' }
+  if (cfg.accessMode === 'janela') {
+    if (!cfg.windowStart || !cfg.windowEnd)
+      return { ok: false, error: 'A janela exige data de início e de fim.' }
+    if (new Date(cfg.windowEnd).getTime() <= new Date(cfg.windowStart).getTime())
+      return { ok: false, error: 'O fim da janela deve ser depois do início.' }
+  }
+  const rel = cfg.releases
+  if (!['oculto', 'imediato', 'data'].includes(rel.comentarios_mode))
+    return { ok: false, error: 'Modo de liberação de comentários inválido.' }
+  if (rel.comentarios_mode === 'data' && !rel.comentarios_release_at)
+    return { ok: false, error: 'Informe a data de liberação dos comentários.' }
+  if (
+    rel.comentarios_release_at &&
+    rel.comentarios_release_until &&
+    new Date(rel.comentarios_release_until).getTime() <=
+      new Date(rel.comentarios_release_at).getTime()
+  )
+    return { ok: false, error: 'O fim da janela de comentários deve ser depois do início.' }
+
+  const service = createServiceClient()
+  const { error } = await service
+    .from('campaigns')
+    .update({
+      name,
+      duration_minutes: Math.round(cfg.durationMinutes),
+      access_mode: cfg.accessMode,
+      window_start: cfg.accessMode === 'imediato' ? null : cfg.windowStart,
+      window_end: cfg.accessMode === 'janela' ? cfg.windowEnd : null,
+      pause_allowed: cfg.pauseAllowed,
+      live_at: cfg.liveAt,
+      live_url: cfg.liveUrl?.trim() || null,
+      releases: {
+        nota_gabarito: rel.nota_gabarito,
+        comentarios_mode: rel.comentarios_mode,
+        comentarios_release_at:
+          rel.comentarios_mode === 'data' ? rel.comentarios_release_at : null,
+        comentarios_release_until:
+          rel.comentarios_mode === 'oculto' ? null : rel.comentarios_release_until,
+        revisao: rel.revisao,
+        dashboard: rel.dashboard,
+      },
+    })
+    .eq('id', campaignId)
+
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit(guard.user.id, 'campaign', campaignId, 'campaign_updated', null, {
+    access_mode: cfg.accessMode,
+    pause_allowed: cfg.pauseAllowed,
+    comentarios_mode: rel.comentarios_mode,
+  })
+
+  revalidatePath(`/campanhas/${campaignId}`)
+  revalidatePath('/campanhas')
+  return { ok: true }
+}
+
+/** Publica ou despublica a campanha (a criação podia deixá-la presa em rascunho). */
+export async function setCampaignStatusAction(
+  campaignId: string,
+  publish: boolean
+): Promise<{ ok: boolean; error?: string }> {
+  const guard = await requireRole('admin')
+  if (!guard.ok) return { ok: false, error: guard.error }
+
+  const service = createServiceClient()
+
+  if (publish) {
+    const { data: camp } = await service
+      .from('campaigns')
+      .select('simulado_id')
+      .eq('id', campaignId)
+      .single()
+    if (!camp) return { ok: false, error: 'Campanha não encontrada.' }
+    const { count } = await service
+      .from('simulado_questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('simulado_id', camp.simulado_id)
+    if (!count) return { ok: false, error: 'A campanha não tem questões — adicione antes de publicar.' }
+  }
+
+  const { error } = await service
+    .from('campaigns')
+    .update({ status: publish ? 'publicada' : 'despublicada' })
+    .eq('id', campaignId)
+  if (error) return { ok: false, error: error.message }
+
+  await logAudit(guard.user.id, 'campaign', campaignId, 'campaign_status_changed', null, {
+    status: publish ? 'publicada' : 'despublicada',
+  })
+
+  revalidatePath(`/campanhas/${campaignId}`)
+  revalidatePath('/campanhas')
+  return { ok: true }
 }
 
 // ── Formulário embedável: edição pós-criação (seção "Formulário" na campanha) ──
@@ -499,6 +646,21 @@ export type CampaignDashboard = {
   totalQuestoes: number
   distribuicao: { faixa: string; n: number }[]
   finalizacoes: { nome: string; scorePct: number; tempoSeg: number | null; finishedAt: string | null }[]
+  /** Classificação completa: nota desc → menor tempo → entrega mais cedo. */
+  ranking: { nome: string; scorePct: number; tempoSeg: number | null; finishedAt: string | null }[]
+  /** Estatísticas por questão (para escolher o que comentar na live). */
+  questoesStats: {
+    questionId: string
+    position: number
+    number: number | null
+    stem: string
+    respostas: number
+    erroPct: number | null // % de erro entre quem respondeu
+    emBranco: number // finalizaram sem responder esta questão
+    counts: Record<string, number> // cliques por alternativa
+    correct: string | null
+    duvidas: number
+  }[]
 }
 
 export async function getCampaignDashboard(campaignId: string): Promise<CampaignDashboard> {
@@ -513,19 +675,22 @@ export async function getCampaignDashboard(campaignId: string): Promise<Campaign
   const simuladoId = camp?.simulado_id
   const durationSec = (camp?.duration_minutes ?? 0) * 60
 
-  // Gabarito do molde.
+  // Gabarito + metadados do molde (posição/enunciado alimentam a tabela por questão).
   const { data: sq } = await service
     .from('simulado_questions')
-    .select('question_id, questions(correct_answer)')
+    .select('question_id, position, questions(question_number, stem, correct_answer)')
     .eq('simulado_id', simuladoId)
-  const correctMap: Record<string, string | null> = {}
-  for (const r of (sq ?? []) as unknown as {
+    .order('position', { ascending: true })
+  const molde = (sq ?? []) as unknown as {
     question_id: string
-    questions: { correct_answer: string | null } | null
-  }[]) {
+    position: number
+    questions: { question_number: number | null; stem: string | null; correct_answer: string | null } | null
+  }[]
+  const correctMap: Record<string, string | null> = {}
+  for (const r of molde) {
     correctMap[r.question_id] = r.questions?.correct_answer ?? null
   }
-  const totalQuestoes = (sq ?? []).length
+  const totalQuestoes = molde.length
 
   // Cadastros + tentativas.
   const [{ count: cadastros }, { data: attemptsData }] = await Promise.all([
@@ -542,16 +707,21 @@ export async function getCampaignDashboard(campaignId: string): Promise<Campaign
     time_remaining: number | null
   }[]
   const iniciaram = att.length
-  const finishedAtt = att.filter((a) => a.status === 'entregue')
+  // Tempo esgotado = entrega com o que foi feito (como numa prova real):
+  // expirados entram nas notas, no ranking e nas estatísticas por questão.
+  const finishedAtt = att.filter((a) => a.status === 'entregue' || a.status === 'expirado')
   const finalizaram = finishedAtt.length
   const emAndamento = iniciaram - finalizaram
   const abandonoPct = iniciaram > 0 ? Math.round((emAndamento / iniciaram) * 100) : 0
   const conversaoPct =
     (cadastros ?? 0) > 0 ? Math.round((iniciaram / (cadastros ?? 1)) * 100) : 0
 
-  // Notas reais (independem do gating do aluno).
+  // Notas reais (independem do gating do aluno) + agregados por questão.
   const finishedIds = finishedAtt.map((a) => a.id)
   const scoreByAttempt: Record<string, number> = {}
+  const countsByQ: Record<string, Record<string, number>> = {}
+  const respostasByQ: Record<string, number> = {}
+  const errosByQ: Record<string, number> = {}
   if (finishedIds.length > 0 && totalQuestoes > 0) {
     const { data: qa } = await service
       .from('question_attempts')
@@ -567,9 +737,30 @@ export async function getCampaignDashboard(campaignId: string): Promise<Campaign
       if (corr && r.selected_alt === corr) {
         correctCount[r.attempt_id] = (correctCount[r.attempt_id] ?? 0) + 1
       }
+      if (r.selected_alt) {
+        countsByQ[r.question_id] ??= {}
+        countsByQ[r.question_id][r.selected_alt] =
+          (countsByQ[r.question_id][r.selected_alt] ?? 0) + 1
+        respostasByQ[r.question_id] = (respostasByQ[r.question_id] ?? 0) + 1
+        if (corr && r.selected_alt !== corr) {
+          errosByQ[r.question_id] = (errosByQ[r.question_id] ?? 0) + 1
+        }
+      }
     }
     for (const id of finishedIds) {
       scoreByAttempt[id] = Math.round(((correctCount[id] ?? 0) / totalQuestoes) * 100)
+    }
+  }
+
+  // Dúvidas por questão (enviadas para a live).
+  const duvidasByQ: Record<string, number> = {}
+  {
+    const { data: doubts } = await service
+      .from('question_doubts')
+      .select('question_id')
+      .eq('campaign_id', campaignId)
+    for (const d of (doubts ?? []) as { question_id: string }[]) {
+      duvidasByQ[d.question_id] = (duvidasByQ[d.question_id] ?? 0) + 1
     }
   }
   const scores = finishedIds.map((id) => scoreByAttempt[id] ?? 0)
@@ -624,15 +815,43 @@ export async function getCampaignDashboard(campaignId: string): Promise<Campaign
     nameMap[p.id] = p.full_name ?? '—'
   }
 
-  const finalizacoes = finishedAtt
-    .map((a) => ({
-      nome: nameMap[a.user_id] ?? 'Aluno',
-      scorePct: scoreByAttempt[a.id] ?? 0,
-      tempoSeg: tempoByAttempt[a.id] ?? null,
-      finishedAt: finAtMap[a.id] ?? null,
-    }))
+  const linhas = finishedAtt.map((a) => ({
+    nome: nameMap[a.user_id] ?? 'Aluno',
+    scorePct: scoreByAttempt[a.id] ?? 0,
+    tempoSeg: tempoByAttempt[a.id] ?? null,
+    finishedAt: finAtMap[a.id] ?? null,
+  }))
+
+  const finalizacoes = [...linhas]
     .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))
     .slice(0, 50)
+
+  // Ranking determinístico: nota desc → menor tempo (sem tempo vai por último) →
+  // entrega mais cedo.
+  const ranking = [...linhas].sort((a, b) => {
+    if (b.scorePct !== a.scorePct) return b.scorePct - a.scorePct
+    const ta = a.tempoSeg ?? Number.MAX_SAFE_INTEGER
+    const tb = b.tempoSeg ?? Number.MAX_SAFE_INTEGER
+    if (ta !== tb) return ta - tb
+    return (a.finishedAt ?? '9999').localeCompare(b.finishedAt ?? '9999')
+  })
+
+  const questoesStats = molde.map((r) => {
+    const respostas = respostasByQ[r.question_id] ?? 0
+    const erros = errosByQ[r.question_id] ?? 0
+    return {
+      questionId: r.question_id,
+      position: r.position,
+      number: r.questions?.question_number ?? null,
+      stem: (r.questions?.stem ?? '').slice(0, 120),
+      respostas,
+      erroPct: respostas > 0 ? Math.round((erros / respostas) * 100) : null,
+      emBranco: Math.max(0, finalizaram - respostas),
+      counts: countsByQ[r.question_id] ?? {},
+      correct: correctMap[r.question_id] ?? null,
+      duvidas: duvidasByQ[r.question_id] ?? 0,
+    }
+  })
 
   return {
     cadastros: cadastros ?? 0,
@@ -646,5 +865,7 @@ export async function getCampaignDashboard(campaignId: string): Promise<Campaign
     totalQuestoes,
     distribuicao,
     finalizacoes,
+    ranking,
+    questoesStats,
   }
 }

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getQuestionImageUrls } from '@/lib/storage/signed-urls'
 
 // Estudo recorrente (feature 003 — B004). Helpers server-side; recebem um client
 // service-role + o userId já autenticado (chamados sempre a partir do servidor
@@ -11,11 +12,18 @@ export type PracticeQuestion = {
   alternatives: Record<string, string>
 }
 
+export type ErrorCardComment = { type: string | null; content: string }
+export type ErrorCardImage = { url: string; scope: string }
+
 export type ErrorCard = {
   questionId: string
   stem: string
+  alternatives: Record<string, string>
   correctAnswer: string | null
-  comment: string | null
+  /** Última alternativa errada que o aluno marcou (prática ou simulado). */
+  selectedAlt: string | null
+  comments: ErrorCardComment[]
+  images: ErrorCardImage[]
 }
 
 type QRow = {
@@ -107,8 +115,9 @@ export async function getCorrection(
     .from('questions')
     .select('correct_answer, question_comments(content, comment_type)')
     .eq('id', questionId)
-    // Só comentário PUBLICADO chega ao aluno — nunca rascunho de IA não revisado.
-    .eq('question_comments.status', 'published')
+    // Comentário rejeitado pela curadoria nunca chega ao aluno. (O CHECK real da
+    // coluna é draft/approved/rejected — 'published' não existe e escondia tudo.)
+    .neq('question_comments.status', 'rejected')
     .single()
   const comment = pickComment(
     data?.question_comments as { content: string; comment_type: string | null }[] | null
@@ -186,15 +195,11 @@ export async function getErrorCards(
   userId: string,
   limit = 50
 ): Promise<ErrorCard[]> {
-  const wrong = new Set<string>()
+  // questionId → alternativa errada marcada (a mais recente que conseguirmos apurar)
+  const wrong = new Map<string, string | null>()
 
-  const { data: pw } = await service
-    .from('practice_attempts')
-    .select('question_id')
-    .eq('user_id', userId)
-    .eq('is_correct', false)
-  for (const r of pw ?? []) wrong.add(r.question_id as string)
-
+  // Simulado primeiro: se a questão também foi errada na prática, a prática
+  // (abaixo, ordenada por data) sobrescreve com a marcação mais recente.
   const { data: sw } = await service
     .from('question_attempts')
     .select('question_id, selected_alt, questions(correct_answer), simulado_attempts!inner(user_id)')
@@ -206,8 +211,18 @@ export async function getErrorCards(
     questions: { correct_answer: string | null } | null
   }[]) {
     if (r.questions?.correct_answer && r.selected_alt !== r.questions.correct_answer) {
-      wrong.add(r.question_id)
+      wrong.set(r.question_id, r.selected_alt)
     }
+  }
+
+  const { data: pw } = await service
+    .from('practice_attempts')
+    .select('question_id, selected_alt, created_at')
+    .eq('user_id', userId)
+    .eq('is_correct', false)
+    .order('created_at', { ascending: true })
+  for (const r of pw ?? []) {
+    wrong.set(r.question_id as string, (r.selected_alt as string | null) ?? null)
   }
 
   const { data: dismissed } = await service
@@ -216,22 +231,98 @@ export async function getErrorCards(
     .eq('user_id', userId)
   for (const r of dismissed ?? []) wrong.delete(r.question_id as string)
 
-  const ids = [...wrong].slice(0, limit)
+  const ids = [...wrong.keys()].slice(0, limit)
   if (ids.length === 0) return []
 
   const { data: qs } = await service
     .from('questions')
-    .select('id, stem, correct_answer, question_comments(content, comment_type)')
+    .select('id, stem, alternatives, correct_answer, question_comments(content, comment_type)')
     .in('id', ids)
-    // Só comentário PUBLICADO chega ao aluno — nunca rascunho de IA não revisado.
-    .eq('question_comments.status', 'published')
+    // Comentário rejeitado pela curadoria nunca chega ao aluno. (O CHECK real da
+    // coluna é draft/approved/rejected — 'published' não existe e escondia tudo.)
+    .neq('question_comments.status', 'rejected')
+
+  const imagesByQuestion = await getErrorCardImages(service, ids)
 
   return ((qs ?? []) as unknown as QRow[]).map((q) => ({
     questionId: q.id,
     stem: q.stem ?? '',
+    alternatives: toAlternatives(q),
     correctAnswer: q.correct_answer ?? null,
-    comment: pickComment(q.question_comments),
+    selectedAlt: wrong.get(q.id) ?? null,
+    comments: sortComments(q.question_comments),
+    images: imagesByQuestion.get(q.id) ?? [],
   }))
+}
+
+/** Todos os comentários publicados, com a explicação em primeiro. */
+function sortComments(
+  comments?: { content: string; comment_type: string | null }[] | null
+): ErrorCardComment[] {
+  const list = (comments ?? []).map((c) => ({ type: c.comment_type, content: c.content }))
+  return [
+    ...list.filter((c) => c.type === 'explicacao'),
+    ...list.filter((c) => c.type !== 'explicacao'),
+  ]
+}
+
+const IMAGE_SCOPE_ORDER = [
+  'statement',
+  'alternative_a',
+  'alternative_b',
+  'alternative_c',
+  'alternative_d',
+  'alternative_e',
+]
+
+/** Imagens das questões com signed URLs, agrupadas por questão. */
+export async function getErrorCardImages(
+  service: SupabaseClient,
+  questionIds: string[]
+): Promise<Map<string, ErrorCardImage[]>> {
+  const result = new Map<string, ErrorCardImage[]>()
+
+  const { data: imgs } = await service
+    .from('question_images')
+    .select('question_id, image_scope, full_page_path, cropped_path, use_cropped, figure_number')
+    .in('question_id', questionIds)
+  const rows = ((imgs ?? []) as unknown as {
+    question_id: string
+    image_scope: string | null
+    full_page_path: string
+    cropped_path: string | null
+    use_cropped: boolean | null
+    figure_number: number | null
+  }[]).map((r) => ({
+    questionId: r.question_id,
+    scope: r.image_scope ?? 'statement',
+    path: r.use_cropped && r.cropped_path ? r.cropped_path : r.full_page_path,
+    figure: r.figure_number ?? 0,
+  }))
+  if (rows.length === 0) return result
+
+  // Imagem é acessório do card: se a assinatura falhar, o card sai sem figura
+  // em vez de derrubar a página inteira.
+  let urls: Record<string, string> = {}
+  try {
+    urls = await getQuestionImageUrls([...new Set(rows.map((r) => r.path))])
+  } catch {
+    return result
+  }
+
+  rows.sort(
+    (a, b) =>
+      IMAGE_SCOPE_ORDER.indexOf(a.scope) - IMAGE_SCOPE_ORDER.indexOf(b.scope) ||
+      a.figure - b.figure
+  )
+  for (const r of rows) {
+    const url = urls[r.path]
+    if (!url) continue
+    const list = result.get(r.questionId) ?? []
+    list.push({ url, scope: r.scope })
+    result.set(r.questionId, list)
+  }
+  return result
 }
 
 export type ModuloDesempenho = {
@@ -277,15 +368,34 @@ export async function getModulosComDesempenho(
   })
 }
 
-export type SimuladoDisponivel = { campaignId: string; nome: string; totalQuestoes: number | null }
+export type SimuladoDisponivel = {
+  campaignId: string
+  nome: string
+  totalQuestoes: number | null
+  /** Situação da janela de acesso agora. */
+  janela: 'aberto' | 'aguardando' | 'encerrado'
+  abreEm: string | null
+  encerraEm: string | null
+}
 
-/** Campanhas publicadas e dentro da janela de acesso — disponíveis para qualquer aluno/lead. */
-export async function getSimuladosDisponiveis(service: SupabaseClient): Promise<SimuladoDisponivel[]> {
+/**
+ * Campanhas publicadas com a situação da janela de acesso. `onlyCampaignIds`
+ * restringe às campanhas de origem de uma conta de lead (porta pública).
+ */
+export async function getSimuladosDisponiveis(
+  service: SupabaseClient,
+  onlyCampaignIds?: string[]
+): Promise<SimuladoDisponivel[]> {
   const nowIso = new Date().toISOString()
-  const { data } = await service
+  let q = service
     .from('campaigns')
     .select('id, name, access_mode, window_start, window_end, simulados(total_questions)')
     .eq('status', 'publicada')
+  if (onlyCampaignIds) {
+    if (onlyCampaignIds.length === 0) return []
+    q = q.in('id', onlyCampaignIds)
+  }
+  const { data } = await q
   const rows = (data ?? []) as unknown as {
     id: string
     name: string
@@ -294,14 +404,21 @@ export async function getSimuladosDisponiveis(service: SupabaseClient): Promise<
     window_end: string | null
     simulados: { total_questions: number | null } | null
   }[]
-  return rows
-    .filter((c) => {
-      if (c.access_mode === 'imediato') return true
-      const afterStart = !c.window_start || c.window_start <= nowIso
-      const beforeEnd = !c.window_end || c.window_end >= nowIso
-      return afterStart && beforeEnd
-    })
-    .map((c) => ({ campaignId: c.id, nome: c.name, totalQuestoes: c.simulados?.total_questions ?? null }))
+  return rows.map((c) => {
+    let janela: SimuladoDisponivel['janela'] = 'aberto'
+    if (c.access_mode !== 'imediato') {
+      if (c.window_start && c.window_start > nowIso) janela = 'aguardando'
+      else if (c.window_end && c.window_end < nowIso) janela = 'encerrado'
+    }
+    return {
+      campaignId: c.id,
+      nome: c.name,
+      totalQuestoes: c.simulados?.total_questions ?? null,
+      janela,
+      abreEm: c.access_mode !== 'imediato' ? c.window_start : null,
+      encerraEm: c.access_mode !== 'imediato' ? c.window_end : null,
+    }
+  })
 }
 
 export type MeuSimuladoAttempt = {

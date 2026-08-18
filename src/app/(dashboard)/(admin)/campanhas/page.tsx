@@ -9,7 +9,14 @@ type CampaignRow = {
   status: string
   access_mode: string
   created_at: string
-  campaign_form: { embed_id: string }[] | null
+  // 1-para-1 (PK campaign_id): o PostgREST devolve objeto, não array.
+  campaign_form: { embed_id: string } | { embed_id: string }[] | null
+}
+
+function embedIdOf(c: CampaignRow): string | null {
+  const f = c.campaign_form
+  if (!f) return null
+  return Array.isArray(f) ? (f[0]?.embed_id ?? null) : f.embed_id
 }
 
 export default async function CampanhasPage() {
@@ -54,7 +61,7 @@ export default async function CampanhasPage() {
               <span className="text-muted-foreground">{c.status}</span>
               <span className="text-muted-foreground">{c.access_mode}</span>
               <code className="truncate text-xs text-muted-foreground">
-                {c.campaign_form?.[0]?.embed_id ?? '—'}
+                {embedIdOf(c) ?? '—'}
               </code>
             </Link>
           ))}

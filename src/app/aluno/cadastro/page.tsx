@@ -15,9 +15,11 @@ export default async function CadastroPage({
   const { lt } = await searchParams
 
   let defaults: { fullName?: string; email?: string; phone?: string } | undefined
+  let leadToken: string | undefined
   if (lt) {
     const leadId = verifyLeadToken(lt)
     if (leadId) {
+      leadToken = lt
       const service = createServiceClient()
       const { data: lead } = await service
         .from('leads')
@@ -35,5 +37,5 @@ export default async function CadastroPage({
     }
   }
 
-  return <CadastroForm defaults={defaults} />
+  return <CadastroForm defaults={defaults} leadToken={leadToken} />
 }

@@ -120,6 +120,36 @@ export async function proxy(request: NextRequest) {
       })
     }
 
+    // Conta de lead (porta pública): só a superfície de Simulados. O nível de
+    // acesso vem da RPC mt_meu_acesso (SECURITY DEFINER), com cache 60s.
+    if (isAlunoArea && role === 'aluno' && !isPublic) {
+      const LEAD_ALLOWED = ['/aluno/simulados', '/aluno/simulado/']
+      const allowed = LEAD_ALLOWED.some((r) => pathname === r || pathname.startsWith(r))
+      if (!allowed) {
+        const cachedAcesso = request.cookies.get('mm-acesso')?.value
+        let acesso: string
+        if (cachedAcesso) {
+          acesso = cachedAcesso
+        } else {
+          const { data, error } = await supabase.rpc('mt_meu_acesso')
+          acesso = ((data as { kind?: string } | null)?.kind === 'lead' ? 'lead' : 'pleno')
+          // Erro na RPC não pode virar 'pleno' cacheado por 60s (fail-open):
+          // só cacheia resposta real.
+          if (!error && data) {
+            supabaseResponse.cookies.set('mm-acesso', acesso, {
+              maxAge: 60,
+              httpOnly: true,
+              sameSite: 'lax',
+              path: '/',
+            })
+          }
+        }
+        if (acesso === 'lead') {
+          return NextResponse.redirect(new URL('/aluno/simulados', request.url))
+        }
+      }
+    }
+
     // Guards de papel só valem no back-office (não na área do aluno).
     if (!isAlunoArea) {
       if (SUPERADMIN_ROUTES.some((r) => pathname.startsWith(r)) && role !== 'superadmin') {
