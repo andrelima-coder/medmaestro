@@ -45,7 +45,7 @@ export default async function CampanhaDetailPage({
   const { data: c } = await service
     .from('campaigns')
     .select(
-      'id, name, status, access_mode, window_start, window_end, pause_allowed, duration_minutes, releases, live_at, live_url, simulado_id, campaign_form(embed_id, allowed_domains, fields, require_email_verification)'
+      'id, name, status, access_mode, window_start, window_end, pause_allowed, duration_minutes, releases, live_at, live_url, simulado_id, campaign_form(embed_id, allowed_domains, fields, require_email_verification, ask_segment)'
     )
     .eq('id', id)
     .single()
@@ -107,6 +107,7 @@ export default async function CampanhaDetailPage({
     allowed_domains: string[]
     fields: CampaignFormField[] | null
     require_email_verification: boolean
+    ask_segment: boolean
   }
   const formRel = c.campaign_form as unknown as FormRow | FormRow[] | null
   const form = Array.isArray(formRel) ? formRel[0] : (formRel ?? undefined)
@@ -290,6 +291,7 @@ export default async function CampanhaDetailPage({
         fields={form?.fields ?? []}
         allowedDomains={form?.allowed_domains ?? []}
         requireEmailVerification={form?.require_email_verification ?? false}
+        askSegment={form?.ask_segment ?? true}
         appUrl={appUrl}
       />
 

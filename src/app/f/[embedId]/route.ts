@@ -59,7 +59,7 @@ export async function GET(
 
   const { data: form } = await service
     .from('campaign_form')
-    .select('campaign_id, fields, allowed_domains, require_email_verification, campaigns(name)')
+    .select('campaign_id, fields, allowed_domains, require_email_verification, ask_segment, campaigns(name)')
     .eq('embed_id', embedId)
     .single()
 
@@ -122,6 +122,10 @@ export async function GET(
     color:#0E2841;background:#FFFFFF;font-family:inherit}
   .mm-field input::placeholder{color:#A4A3A4}
   .mm-field input:focus{outline:2px solid #D40754;outline-offset:0;border-color:#D40754}
+  .mm-field select{width:100%;padding:12px 14px;border:1px solid #E8E8E8;border-radius:10px;font-size:15px;
+    color:#0E2841;background:#FFFFFF;font-family:inherit;appearance:auto}
+  .mm-field select:focus{outline:2px solid #D40754;outline-offset:0;border-color:#D40754}
+  .mm-field select:invalid{color:#A4A3A4}
   .mm-consent{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;color:#3F5A75;margin:6px 0 16px}
   .mm-consent input{accent-color:#D40754;margin-top:2px}
   .mm-btn{display:block;width:100%;border:0;border-radius:10px;padding:14px 20px;background:#D40754;color:#FFFFFF;
@@ -144,6 +148,17 @@ export async function GET(
     <p class="mm-sub">Preencha seus dados para fazer o simulado gratuito.</p>
     <form id="mm-form">
       ${fields.map(fieldInput).join('\n      ')}
+      ${
+        form.ask_segment
+          ? `<label class="mm-field"><span>Você já é aluno(a) do MedMaestro?</span>
+        <select name="segment" required>
+          <option value="" disabled selected>Selecione…</option>
+          <option value="nao_aluno">Ainda não sou aluno(a)</option>
+          <option value="ja_aluno">Já sou aluno(a)</option>
+          <option value="aluno_outro_curso">Sou aluno(a) de outro curso</option>
+        </select></label>`
+          : ''
+      }
       <label class="mm-consent"><input type="checkbox" name="consent" required />
         <span>Autorizo o contato e o tratamento dos meus dados conforme a LGPD.</span></label>
       <input type="text" name="hp" style="display:none" tabindex="-1" autocomplete="off" />
@@ -220,6 +235,7 @@ export async function GET(
       body:JSON.stringify({
         embed_id:EMBED_ID,
         name:d.get('name'),email:d.get('email'),whatsapp:d.get('whatsapp'),
+        segment:d.get('segment')||null,
         fields:extras,consent:d.get('consent')==='on',consent_version:'v1',hp:d.get('hp')
       })
     }).then(function(r){return r.json()}).then(function(j){

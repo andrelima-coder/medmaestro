@@ -18,11 +18,14 @@ type LeadBody = {
   email?: string
   name?: string
   whatsapp?: string
+  segment?: string | null // enum lead_segment: ja_aluno | nao_aluno | aluno_outro_curso
   fields?: Record<string, unknown>
   consent?: boolean
   consent_version?: string
   hp?: string // honeypot — deve vir vazio
 }
+
+const SEGMENTS = new Set(['ja_aluno', 'nao_aluno', 'aluno_outro_curso'])
 
 function clientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for')
@@ -126,10 +129,13 @@ export async function POST(request: Request) {
   // Monta os campos capturados (mínimos + customizados).
   const fields = { name, whatsapp, ...(body.fields ?? {}) }
 
+  // Segmento "já é aluno?" — só valores do enum; qualquer outra coisa vira null.
+  const segment = body.segment && SEGMENTS.has(body.segment) ? body.segment : null
+
   // Insere o lead; dedup por (campaign_id, email).
   const { data: inserted, error: insErr } = await supabase
     .from('leads')
-    .insert({ campaign_id: form.campaign_id, email, fields, origin: originHost(request) })
+    .insert({ campaign_id: form.campaign_id, email, fields, segment, origin: originHost(request) })
     .select('id')
     .single()
 
@@ -147,6 +153,10 @@ export async function POST(request: Request) {
         .single()
       leadId = existing?.id
       created = false
+      // Reenvio do mesmo lead com o segmento informado: atualiza (info mais recente).
+      if (leadId && segment) {
+        await supabase.from('leads').update({ segment }).eq('id', leadId)
+      }
     } else {
       return NextResponse.json({ error: 'Falha ao registrar lead.' }, { status: 500 })
     }

@@ -22,6 +22,7 @@ export function EmbedFormSection({
   fields,
   allowedDomains,
   requireEmailVerification,
+  askSegment,
   appUrl,
 }: {
   campaignId: string
@@ -29,6 +30,7 @@ export function EmbedFormSection({
   fields: CampaignFormField[]
   allowedDomains: string[]
   requireEmailVerification: boolean
+  askSegment: boolean
   appUrl: string
 }) {
   const router = useRouter()
@@ -43,6 +45,7 @@ export function EmbedFormSection({
   )
   const [domains, setDomains] = useState(allowedDomains.join(', '))
   const [reqVerif, setReqVerif] = useState(requireEmailVerification)
+  const [askSeg, setAskSeg] = useState(askSegment)
 
   if (!embedId) {
     return (
@@ -90,6 +93,7 @@ export function EmbedFormSection({
         extraFields: extras,
         allowedDomains: domains.split(',').map((d) => d.trim()).filter(Boolean),
         requireEmailVerification: reqVerif,
+        askSegment: askSeg,
       })
       setMessage(
         r.ok
@@ -150,6 +154,23 @@ export function EmbedFormSection({
             Exigir verificação de e-mail
             <span className="block text-xs text-muted-foreground">
               O lead recebe um código de 6 dígitos e só avança para o simulado após confirmar.
+            </span>
+          </span>
+        </label>
+
+        <label className="flex items-start gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={askSeg}
+            onChange={(e) => setAskSeg(e.target.checked)}
+            className="mt-0.5 accent-primary"
+          />
+          <span>
+            Perguntar se já é aluno(a) do produto
+            <span className="block text-xs text-muted-foreground">
+              Adiciona ao formulário a pergunta &quot;Você já é aluno(a) do MedMaestro?&quot; (Ainda não
+              sou / Já sou / Sou de outro curso) e grava no segmento do lead — filtrável na aba Leads
+              e no export.
             </span>
           </span>
         </label>

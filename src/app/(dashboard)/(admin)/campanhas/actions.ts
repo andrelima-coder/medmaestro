@@ -334,6 +334,8 @@ export type CampaignFormSettings = {
   extraFields: { label: string; required: boolean }[]
   allowedDomains: string[]
   requireEmailVerification: boolean
+  /** Perguntar no embed se o lead já é aluno do produto (grava leads.segment). */
+  askSegment: boolean
 }
 
 const BASE_FORM_FIELDS: CampaignFormField[] = [
@@ -381,6 +383,7 @@ export async function updateCampaignFormAction(
       fields: buildFormFields(settings.extraFields),
       allowed_domains: cleanDomains(settings.allowedDomains),
       require_email_verification: settings.requireEmailVerification,
+      ask_segment: settings.askSegment,
     })
     .eq('campaign_id', campaignId)
     .select('embed_id')
